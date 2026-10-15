@@ -1,0 +1,227 @@
+﻿Timestamp: 2026-10-14 3:02 PM ET
+Percent complete: 0%
+Description of what you are working on.
+Initial project setup for 00-Eufy. Folder was empty on discovery, so the project goal is not yet known.
+What you have done so far:
+Copied D:\aiprod\project.md into this folder. Created checkpoint.log with this first entry. Listed folder contents (empty aside from project.md and checkpoint.log).
+What needs to be done.
+Dustin needs to say what this Eufy project should do (cameras, vacuums, security, API/local control, etc.). Once the goal is clear, break work into small chunks and continue appending checkpoint entries.
+What is important or stands out that needs attention or needs to be address.
+Folder name suggests Eufy smart-home gear, but there are no source files, docs, or specs yet. Do not invent a goal; wait for Dustin.
+
+
+---
+Timestamp: 2026-10-14 ET
+Percent complete: 2%
+Description of what you are working on.
+STEP 1 of project.md (DM LockGuard): inspecting the development environment.
+What you have done so far:
+Read project.md (DM LockGuard spec for Eufy C30 T85D0). Dustin confirmed project root is D:\aiprod\00-Eufy (overrides D:\aiprod\lockguard\ in the spec). Environment found: PHP 8.5.9 (ZTS x64), Composer 2.10.2, Node 24.14.1, npm 11.19.0, Git 2.56, Python 3.14.7, Docker 29.7.2, MySQL Server 9.7 (service MySQL97 running). No Apache installed. No existing source code or Eufy libraries in the folder.
+What needs to be done.
+Enable pdo_mysql in PHP; decide on Apache install vs php artisan serve for dev; write implementation plan + Eufy T85D0 compatibility research (Phase Zero); build integration proof of concept.
+What is important or stands out that needs attention or needs to be address.
+PHP is missing the pdo_mysql extension, which Laravel needs for MySQL. php.ini is the system-wide C:\Program Files\PHP\current\php.ini, so changing it affects other projects. Extra PHP ini scan dir points at C:\Users\scrff\WyzeKiosk\.php\conf.d (another project). MySQL is 9.7, not 8.x; should be compatible but note it. Still need to know whether Eufy account and physical lock are available for testing.
+
+---
+Timestamp: 2026-10-14 ET
+Percent complete: 5%
+Description of what you are working on.
+STEP 2 / Phase Zero: Eufy T85D0 compatibility research.
+What you have done so far:
+Dustin confirmed he has a Eufy account and locks for testing. Researched integrations and reviewed eufy-security-client source (4.1.1-1 and dev). Wrote docs/EUFY_COMPATIBILITY_REPORT.md.
+What needs to be done.
+Dustin to choose a direction (see attention item). Then: read-only PoC (login/discover/state/battery), implementation plan, Laravel scaffold.
+What is important or stands out that needs attention or needs to be address.
+CRITICAL: no community library currently has working lock/unlock for T85D0. eufy-security-client lists it "Supported" but lockDevice() throws NotSupportedError for T85D0, and it has no PIN/user commands. eufy-sdk (MQTT) has a T85D0 path but open issue #257 says commands don't reach the device. Read-only state/battery likely works. Still open: pdo_mysql not enabled in shared php.ini; no Apache.
+
+---
+Timestamp: 2026-10-14 ET
+Percent complete: 7%
+Description of what you are working on.
+STEP 3: Eufy read-only proof of concept.
+What you have done so far:
+Dustin approved enabling pdo_mysql (done; backup php.ini.bak-lockguard-20261014 next to php.ini), Laravel dev server for development, and the recommended plan (read-only PoC first, swappable Eufy module). Found eufy-security-client was ARCHIVED 2026-09-12 and is npm-deprecated; switched to its successor @mega-yfue/eufy-sdk 0.4.0 (Apache-2.0), which has a T85D0 MQTT lock/unlock path (unlock verified upstream, lock not physically observed, fire-and-forget). Created integrations/eufy (package.json, .env.example, .gitignore, src/poc-readonly.mjs). Script syntax-checked and exits cleanly without credentials. Compatibility report updated.
+What needs to be done.
+Dustin: create integrations/eufy/.env and run the read-only PoC (interactive 2FA/captcha). Then record results in the report; ask authorization for live lock test; begin Laravel scaffold.
+What is important or stands out that needs attention or needs to be address.
+PoC has NOT been run against the real lock yet. Upstream calls T85D0 a "garage door" in places; confirm classification on the real device. eufy-sdk issue #257 (T85D0 commands not reaching the device on 0.3) is still open. Still unanswered: which lock models Dustin owns.
+
+---
+Timestamp: 2026-10-15 ET
+Percent complete: 10%
+Description of what you are working on.
+STEP 3: analyzing the first live read-only PoC run.
+What you have done so far:
+Dustin ran poc:readonly successfully. VERIFIED: login with 2FA (code by email), discovery of 2x T85D0 (Front Door, Back Door). Read locked state (Front unlocked, Back locked) and battery (98/84). Received 3 lockState push events (all "unlocked") with actor name, latency 3-21s. Fixed PoC to mask full serials/user_id in event output. Updated compatibility report.
+What needs to be done.
+Dustin to confirm what he physically did during the 2-min window and whether reported states matched the doors. Rerun to confirm "locked" events arrive. Then request authorization for a live LOCK command test. Then Laravel scaffold.
+What is important or stands out that needs attention or needs to be address.
+No "locked" events seen; Front Door had two unlock events in a row, so a lock action may have gone unreported. SDK lastSeenMs is garbage (year 58756), so LockGuard must compute staleness itself. register_push_token returned 401 but push still worked. SDK says realtime "p2p" while its own docs say T85D0 is MQTT-only; this could misroute commands (related to issue #257).
+
+---
+Timestamp: 2026-10-15 ET
+Percent complete: 11%
+Description of what you are working on.
+STEP 3: second live read-only PoC run (lock-event check).
+What you have done so far:
+Second run: both locks started locked. 7 push events received, ALL "unlocked" (Back 4x, Front 3x consecutive), latency ~3s. Final cloud re-read: Front unlocked, Back locked, so the cloud record caught a lock that push never reported. Masking fix confirmed working. Report updated.
+What needs to be done.
+Dustin to check the Eufy app's "Locked" notification setting on both locks, turn it on, and rerun. Confirm the action sequence. Measure cloud-state refresh speed. Then request authorization for a live LOCK command test.
+What is important or stands out that needs attention or needs to be address.
+Push never delivers "locked" events. LockGuard confirmation must not depend on push alone; plan push + cloud polling. Each lock's clock differs from the server by up to ±4s; use server receipt time for ordering and staleness.
+
+---
+Timestamp: 2026-10-15 ET
+Percent complete: 13%
+Description of what you are working on.
+STEP 3: third read-only run plus command-routing check; preparing the live LOCK test.
+What you have done so far:
+After Dustin enabled the "Locked" notification, 9/9 manual actions were delivered as push events (264=locked, 261=unlocked, latency 2-5s). Lock state, battery and events are now VERIFIED. A read-only routing check shows both locks are api=mega with no p2pDid, so commands route via MQTT (the upstream-tested path). Wrote src/poc-command.mjs (LOCK only, single attempt, no retry, success only on reported state) and npm script poc:lock. NOT run.
+What needs to be done.
+Get Dustin's explicit authorization, then he runs poc:lock on one door while present. Then record the result. Then begin the Laravel scaffold (STEP 4/5).
+What is important or stands out that needs attention or needs to be address.
+Both Eufy app notifications (Locked and Unlocked) must stay ON for every lock; document this in INSTALLATION. Unlock command test is deliberately not built yet; it needs separate authorization.
+
+---
+Timestamp: 2026-10-15 ET
+Percent complete: 15%
+Description of what you are working on.
+STEP 3: first live LOCK command test (operator-authorized).
+What you have done so far:
+Dustin ran poc:lock on Front Door: precheck unlocked, lock() send/ack 7.0s, CONFIRMED_SUCCESS via cloud re-read at 12.5s. Verified in SDK source that the re-read is a fresh cloud call (getDeviceParamList), not an optimistic local value. Report updated: Lock command VERIFIED (1 trial).
+What needs to be done.
+Dustin to confirm the bolt physically moved. Optional: repeat on Back Door. Separate authorization needed before building/running an UNLOCK test. Then begin Laravel scaffold (STEP 4/5).
+What is important or stands out that needs attention or needs to be address.
+End-to-end lock takes ~12.5s, so the UI must show "Locking..." for 15-20s and the confirmation timeout should be about 45s. No push event arrived for the API-originated lock within 12.5s, so polling is required for command confirmation. Never retry on timeout.
+
+---
+Timestamp: 2026-10-15 ET
+Percent complete: 16%
+Description of what you are working on.
+STEP 3: preparing the live UNLOCK test (operator-authorized).
+What you have done so far:
+Dustin confirmed the bolt physically moved on the lock test, so Lock command is VERIFIED. He authorized an unlock test. Extended src/poc-command.mjs to handle lock|unlock. Unlock requires the door to report LOCKED plus a typed confirmation phrase "UNLOCK <door>", sends one command with no retry, and confirms only on reported state. Added npm script poc:unlock. Argument guards tested; NOT run against a lock.
+What needs to be done.
+Dustin runs poc:unlock at the door and pastes the output. Record the result. Then start the Laravel scaffold (STEP 4/5), as he agreed.
+What is important or stands out that needs attention or needs to be address.
+Lock confirmation took ~12.5s with no push event for the API-originated command; watch whether unlock behaves the same.
+
+---
+Timestamp: 2026-10-15 ET
+Percent complete: 18%
+Description of what you are working on.
+STEP 3 complete: Eufy proof of concept. Moving to STEP 4/5: Laravel scaffold.
+What you have done so far:
+Unlock test on Front Door: precheck locked, typed confirmation, unlock() ack 3.7s, CONFIRMED_SUCCESS via push event 261 at 10.9s. Report: Unlock VERIFIED (1 trial), command confirmation VERIFIED. Eufy PoC goals 1-6 done; disconnect/expired-auth/recovery not yet tested.
+What needs to be done.
+Scaffold Laravel backend + git init. Then: MySQL database/user, auth, roles/permissions, migrations.
+What is important or stands out that needs attention or needs to be address.
+Waiting for Dustin to confirm the bolt moved on unlock. Integration resilience (session expiry, disconnect) still needs testing during bridge-service work.
+
+---
+Timestamp: 2026-10-15 ET
+Percent complete: 20%
+Description of what you are working on.
+STEP 4/5: Laravel backend scaffold and MySQL setup.
+What you have done so far:
+Created backend/ with Laravel 13.36 (PHP 8.5); default tests pass (2/2). Installed laravel/boost (dev) and its guidelines/skills, as backend/CLAUDE.md requires. git init at the project root (no commits yet); .gitignore excludes .env files, data/ session folders and backups (verified with git check-ignore). Wrote scripts/setup-mysql.ps1 (generates a random app DB password, prompts for the MySQL root password, writes DB_* into backend/.env without printing them). Parse-checked with pwsh 7; NOT run.
+What needs to be done.
+Dustin runs setup-mysql.ps1. Then: Sanctum/auth, roles/permissions schema, migrations, permission resolver + tests.
+What is important or stands out that needs attention or needs to be address.
+Boost guidelines say not to change dependencies without approval, so ask before adding packages (e.g. Sanctum). The app DB user currently has ALL on the lockguard DB; split into migrator vs runtime users later, so audit tables can be protected against modification and deletion.
+
+---
+Timestamp: 2026-10-15 ET
+Percent complete: 24%
+Description of what you are working on.
+STEP 4: authorization foundation (roles, permissions, overrides, resolver).
+What you have done so far:
+Dustin confirmed the unlock bolt moved (Unlock VERIFIED) and approved laravel/sanctum (installed via install:api) and pragmarx/google2fa (installed). Added migrations: users identity fields (username, status, expiry, encrypted MFA secret/recovery codes, last login/access, admin notes), roles, permissions, role_permissions, user_roles, user_permissions (allow/deny). Enums: PermissionKey (34-permission catalog), RoleTemplate (7 templates; none grants proximity unlock), UserStatus, PermissionEffect. PermissionResolver: inactive account -> nothing; deny override > allow override > any role > deny by default; preview without saving; request-scoped memo. Every permission registered as a Gate ability. PermissionCatalogSeeder (idempotent, keeps admin edits to built-in roles). DatabaseSeeder no longer creates a default test user/password. Tests: 79/79 pass (SQLite in-memory), including allow+deny for EVERY permission.
+What needs to be done.
+Run migrations on MySQL once setup-mysql.ps1 has been run. Next: lockguard:create-admin command, auth API (login/logout/MFA/step-up via Sanctum SPA cookies), audit log foundation, user-management API with policies (no self-modification, no privilege escalation), docs/PERMISSIONS.md.
+What is important or stands out that needs attention or needs to be address.
+setup-mysql.ps1 has NOT been run yet (.env still uses sqlite). Role assignment needs an anti-escalation rule: admins may grant only permissions they hold themselves.
+
+---
+Timestamp: 2026-10-15 ET
+Percent complete: 24%
+Description of what you are working on.
+STEP 5 blocker: MySQL root password unknown (ERROR 1045 when running setup-mysql.ps1).
+What you have done so far:
+Added an -AdminUser option to setup-mysql.ps1. Dustin chose to reset root. Wrote scripts/reset-mysql-root.ps1 (run elevated): prompts twice for the new password; writes a locked-down one-time init file; temporarily adds --init-file to the MySQL97 service ImagePath; restarts; then ALWAYS restores ImagePath, deletes the file and restarts. Parse-checked; the ImagePath rewrite was dry-tested. NOT run.
+What needs to be done.
+Dustin runs reset-mysql-root.ps1 as Administrator, then setup-mysql.ps1. Then migrate on MySQL.
+What is important or stands out that needs attention or needs to be address.
+The reset restarts the shared MySQL97 service twice (~10-30s outage for other apps such as WyzeKiosk). The service runs as NetworkService, so mysqld is not started by hand (that would create admin-owned files in the data dir).
+
+---
+Timestamp: 2026-10-15 ET
+Percent complete: 24%
+Description of what you are working on.
+MySQL root reset, attempt 1 failed safely; script fixed.
+What you have done so far:
+Attempt 1: mysqld refused to start with --init-file on the service command line ("Too many arguments (first extra is 'MySQL97')"; the Windows service accepts only --defaults-file + service name). The finally-block restored ImagePath, deleted the init file and restarted MySQL; verified Running, original ImagePath, no leftover file. Root password NOT changed. Rewrote reset-mysql-root.ps1 to put init-file in my.ini (byte-exact backup and restore, hash-checked) instead. Parse-checked; my.ini insertion dry-tested.
+What needs to be done.
+Dustin reruns reset-mysql-root.ps1 elevated, verifies root, runs setup-mysql.ps1.
+What is important or stands out that needs attention or needs to be address.
+MySQL97 had ~5s of downtime during attempt 1. Lesson: test service-startup changes against how mysqld parses service arguments.
+
+---
+Timestamp: 2026-10-15 ET
+Percent complete: 26%
+Description of what you are working on.
+STEP 5: MySQL is live; next is the audit log foundation (STEP 7, pulled forward because every later feature records into it).
+What you have done so far:
+Dustin reset the MySQL root password (my.ini restored, no init-file left, backup removed) and ran setup-mysql.ps1. Laravel is connected to MySQL 9.7 as user 'lockguard'. All migrations applied and seeded on MySQL (34 permissions, 7 roles). Rollback of the 6 new migrations tested and re-applied cleanly. Tests 79/79.
+What needs to be done.
+Audit log (hash chain, DB triggers blocking UPDATE/DELETE, redaction, verify command), lockguard:create-admin, auth API, user management.
+What is important or stands out that needs attention or needs to be address.
+None blocking.
+
+---
+Timestamp: 2026-10-15 ET
+Percent complete: 29%
+Description of what you are working on.
+STEP 7 (pulled forward): audit log foundation + first-admin command.
+What you have done so far:
+audit_logs table (micro-timestamps, actor/targets/outcome/reason/correlation/session ref/IP/UA/metadata, previous_hash + hash). AuditLogger: HMAC-SHA256 hash chain keyed from APP_KEY, serialized by a cache lock + row lock, redaction of sensitive keys at any depth, throws AuditWriteFailed on failure. AuditLog model refuses update/delete. DB triggers reject UPDATE/DELETE: auto-created on SQLite; on MySQL the app user cannot create them (binlog on, error 1419), so the migration warns loudly and scripts/protect-audit-log.ps1 (run as root) adds them. lockguard:audit-verify checks triggers + chain (detects modified/removed records), nonzero exit if unprotected. lockguard:create-admin: interactive password (min 12, letters+numbers, confirmed), Super Administrator role, audited in the same transaction. Tests 93/93. MySQL: audit_logs migrated; verify currently reports UNPROTECTED (expected).
+What needs to be done.
+Dustin: run protect-audit-log.ps1 then lockguard:create-admin. Then I verify the chain on MySQL. Next: auth API (Sanctum SPA, login/logout, TOTP MFA, step-up), user-management API with anti-escalation, docs/PERMISSIONS.md.
+What is important or stands out that needs attention or needs to be address.
+Rotating APP_KEY breaks audit-chain verification of older records; document it in SECURITY/BACKUP docs (or add key versioning). The audit log should never be written with test data on MySQL, because records are permanent.
+
+---
+Timestamp: 2026-10-15 ET
+Percent complete: 30%
+Description of what you are working on.
+Audit log protection on MySQL.
+What you have done so far:
+Dustin ran protect-audit-log.ps1 (the first try was a password typo). Both triggers are installed. lockguard:audit-verify on MySQL: PROTECTED, chain INTACT (0 records), exit 0.
+What needs to be done.
+Dustin runs lockguard:create-admin. Then: verify the 1-record chain, confirm a real DELETE is rejected by the trigger (row-level triggers only fire when rows exist), then the auth API.
+What is important or stands out that needs attention or needs to be address.
+Triggers are row-level, so the live rejection test needs at least one audit row.
+
+---
+Timestamp: 2026-10-15 ET
+Percent complete: 32%
+Description of what you are working on.
+STEP 4: auth API part 1 done; starting part 2 (TOTP MFA + step-up).
+What you have done so far:
+Admin created by Dustin. MySQL: audit chain INTACT (1 record), triggers reject UPDATE/DELETE (error 1644). Auth API v1: POST auth/login (Sanctum stateful SPA session; 5 failures per email+IP -> 429 for 5 min; timing-safe for unknown emails; inactive -> 403 account_inactive; MFA accounts -> mfa_required; session regenerated), POST auth/logout, GET auth/me (roles + effective permissions). Uniform JSON error envelope {error:{code,message,...}} for all api/* errors. EnsureAccountIsActive middleware re-reads status from the DB on every request and ends the session if the account is inactive. CompleteLogin action. Tests 104/104. Live smoke test on MySQL: /api/v1/auth/me returns the 401 envelope; /up returns 200.
+What needs to be done.
+MFA (setup/confirm/verify/recovery codes/disable, replay protection), step-up confirm endpoint + middleware, then user-management API.
+What is important or stands out that needs attention or needs to be address.
+Avoid live login tests against MySQL from automation: every attempt writes permanent audit rows.
+
+---
+Timestamp: 2026-10-15 ET
+Percent complete: 35%
+Description of what you are working on.
+STEP 4: auth API part 2 (TOTP MFA + step-up) done.
+What you have done so far:
+Migration mfa_last_used_step (applied on MySQL). config/lockguard.php (step_up_seconds=600, mfa_issuer, recovery_code_count=8). TotpAuthenticator (RFC 6238, +/-1 step window, atomic compare-and-set replay protection). RecoveryCodes (8 one-time codes, only HMAC hashes stored, row-locked consumption). Endpoints: POST auth/mfa/verify (pending sign-in expires after 5 min; 5 wrong codes -> 429 and the attempt is discarded), POST auth/confirm (step-up: password + code when MFA is enabled), step-up-protected POST auth/mfa, POST auth/mfa/confirm, DELETE auth/mfa. RequireRecentConfirmation middleware (alias step-up) -> 403 step_up_required. All audited. Tests 114/114 (21 auth HTTP tests).
+What needs to be done.
+User-management API (create/edit/suspend/reactivate/revoke, roles, overrides, permission preview) with anti-escalation + no self-modification; session revocation on suspension; docs/PERMISSIONS.md; then locks/devices schema and the command service.
+What is important or stands out that needs attention or needs to be address.
+No policy forces MFA for administrators yet; add it as a security-policy setting (default ON for admin roles). Step-up window comes from config for now; it moves to GUI settings in the configuration-center step.

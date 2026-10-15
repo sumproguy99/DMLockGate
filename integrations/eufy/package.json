@@ -1,0 +1,18 @@
+{
+  "name": "lockguard-eufy-integration",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DM LockGuard Eufy integration layer (Node.js). Phase Zero: read-only proof of concept.",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "poc:readonly": "node --env-file=.env src/poc-readonly.mjs",
+    "poc:lock": "node --env-file=.env src/poc-command.mjs lock",
+    "poc:unlock": "node --env-file=.env src/poc-command.mjs unlock"
+  },
+  "dependencies": {
+    "@mega-yfue/eufy-sdk": "0.4.0"
+  }
+}

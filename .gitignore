@@ -1,0 +1,9 @@
+# Secrets and local state — never commit
+.env
+.env.*
+!.env.example
+**/data/
+*.bak*
+*.log
+!checkpoint.log
+node_modules/
