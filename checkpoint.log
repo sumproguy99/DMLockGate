@@ -237,3 +237,15 @@ What needs to be done.
 Locks/devices schema and the centralized lock-command service (STEP 5/6), then admin dashboard.
 What is important or stands out that needs attention or needs to be address.
 Audit metadata keys matching the redaction pattern (code, session, token, pin...) are stored as [redacted]; name metadata keys accordingly. Door-access exemption from the ceiling confirmed by Dustin 2026-10-16. No forced password change for API-created users yet. Custom-role CRUD not built.
+
+---
+Timestamp: 2026-10-16 ET
+Percent complete: 45%
+Description of what you are working on.
+STEP 5/6: locks schema + central lock command service (stage 1 of 2; stage 2 is the Eufy bridge driver).
+What you have done so far:
+Migrations (applied on MySQL, rollback tested): properties, locks, user_lock_access, access_requests, authorization_decisions, lock_state_events, lock_commands. LockCommandService: idempotency, per-lock row lock, 10 ordered checks stored with the decision, deny by default. SubmitLockCommand job: claim-before-send, never retried, confirmation only from reported state (push or fresh read), UNKNOWN_RESULT on timeout. lockguard:expire-commands scheduled every minute. LockDriver contract with Unconfigured (default) and Fake drivers. LockStateRecorder. API: locks list/show/history, commands, lock-requests, lock registration (commands start disabled), lock access grant/revoke, properties. docs/LOCK_COMMANDS.md. Tests 161/161.
+What needs to be done.
+Stage 2: Node bridge service (authenticated internal API around eufy-sdk, push events forwarded to Laravel) + EufyBridgeDriver + device sync command. Then admin dashboard.
+What is important or stands out that needs attention or needs to be address.
+All app requests are treated as remote until location exists, so Temporary Guests cannot unlock yet. Self-grant of lock access is forbidden (same anti-escalation rule); a single-admin household needs a bootstrap path, so ask Dustin. Push events that arrive after submission but describe an earlier manual action could falsely confirm; low risk, revisit with event timestamps once the bridge exists.

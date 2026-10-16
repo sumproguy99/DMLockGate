@@ -5,6 +5,10 @@ use App\Http\Controllers\Api\V1\Auth\CurrentUserController;
 use App\Http\Controllers\Api\V1\Auth\MfaChallengeController;
 use App\Http\Controllers\Api\V1\Auth\MfaController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
+use App\Http\Controllers\Api\V1\Locks\LockAccessController;
+use App\Http\Controllers\Api\V1\Locks\LockCommandController;
+use App\Http\Controllers\Api\V1\Locks\LockController;
+use App\Http\Controllers\Api\V1\Locks\PropertyController;
 use App\Http\Controllers\Api\V1\Users\PermissionPreviewController;
 use App\Http\Controllers\Api\V1\Users\RoleController;
 use App\Http\Controllers\Api\V1\Users\UserController;
@@ -47,6 +51,22 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('users/{user}/revoke', [UserStatusController::class, 'revoke'])->name('users.revoke');
             Route::put('users/{user}/roles', [UserRoleController::class, 'update'])->name('users.roles.update');
             Route::put('users/{user}/permissions', [UserPermissionController::class, 'update'])->name('users.permissions.update');
+        });
+
+        // Locks. Every lock/unlock goes through LockCommandService; step-up for unlock is a policy check there.
+        Route::get('locks', [LockController::class, 'index'])->name('locks.index');
+        Route::get('locks/{lock}', [LockController::class, 'show'])->name('locks.show');
+        Route::get('locks/{lock}/history', [LockController::class, 'history'])->name('locks.history');
+        Route::post('locks/{lock}/commands', [LockCommandController::class, 'store'])->middleware('throttle:lock-commands')->name('locks.commands.store');
+        Route::get('lock-requests/{accessRequest}', [LockCommandController::class, 'show'])->name('lock-requests.show');
+
+        Route::middleware('step-up')->group(function (): void {
+            Route::get('properties', [PropertyController::class, 'index'])->name('properties.index');
+            Route::post('properties', [PropertyController::class, 'store'])->name('properties.store');
+            Route::post('locks', [LockController::class, 'store'])->name('locks.store');
+            Route::patch('locks/{lock}', [LockController::class, 'update'])->name('locks.update');
+            Route::put('locks/{lock}/access/{user}', [LockAccessController::class, 'update'])->name('locks.access.update');
+            Route::delete('locks/{lock}/access/{user}', [LockAccessController::class, 'destroy'])->name('locks.access.destroy');
         });
     });
 });

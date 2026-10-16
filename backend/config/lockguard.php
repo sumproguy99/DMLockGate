@@ -20,4 +20,35 @@ return [
         'recovery_code_count' => 8,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Locks and the command service
+    |--------------------------------------------------------------------------
+    |
+    | driver: 'unconfigured' (default; every command fails safely), 'fake' (simulated
+    | lock for tests and development only) or 'eufy_bridge'.
+    |
+    | request_ttl_seconds: an authorized request not yet sent to the lock within this time
+    | expires and is never sent. Nothing is ever queued for execution later.
+    |
+    | confirm_timeout_seconds / confirm_poll_seconds: how long to wait for the lock to report
+    | the new state, and how often to re-read it. No confirmation means UNKNOWN_RESULT; the
+    | command is never retried automatically.
+    |
+    | state_stale_seconds: a reported state older than this is shown as stale.
+    |
+    | remote_unlock_policy: 'standard', 'step_up' (re-confirm identity first), 'location_required'
+    | (rejected until location-aware access exists) or 'disabled'.
+    |
+    */
+
+    'locks' => [
+        'driver' => env('LOCKGUARD_LOCK_DRIVER', 'unconfigured'),
+        'request_ttl_seconds' => (int) env('LOCKGUARD_COMMAND_TTL_SECONDS', 30),
+        'confirm_timeout_seconds' => (int) env('LOCKGUARD_CONFIRM_TIMEOUT_SECONDS', 45),
+        'confirm_poll_seconds' => (int) env('LOCKGUARD_CONFIRM_POLL_SECONDS', 5),
+        'state_stale_seconds' => (int) env('LOCKGUARD_STATE_STALE_SECONDS', 900),
+        'remote_unlock_policy' => env('LOCKGUARD_REMOTE_UNLOCK_POLICY', 'step_up'),
+    ],
+
 ];

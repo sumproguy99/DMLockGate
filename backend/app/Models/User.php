@@ -64,6 +64,18 @@ class User extends Authenticatable
     }
 
     /**
+     * Locks this user has been given access to. No row means no access.
+     *
+     * @return BelongsToMany<Lock, $this>
+     */
+    public function locks(): BelongsToMany
+    {
+        return $this->belongsToMany(Lock::class, 'user_lock_access')
+            ->withPivot('valid_from', 'valid_until', 'granted_by')
+            ->withTimestamps();
+    }
+
+    /**
      * Whether the account may currently make any request. Suspended, revoked and expired accounts may not.
      */
     public function isActive(): bool
