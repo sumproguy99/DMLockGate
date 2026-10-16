@@ -140,6 +140,23 @@ enum PermissionKey: string
     }
 
     /**
+     * Everyday door access that user administrators may delegate without holding it themselves
+     * (a Property Manager assigns the Resident role). Proximity unlocking is deliberately excluded.
+     * These permissions are ignored by the anti-escalation ceiling in UserManagementGuard.
+     */
+    public function isDoorAccess(): bool
+    {
+        return in_array($this, [
+            self::LockViewStatus,
+            self::LockLock,
+            self::LockUnlock,
+            self::LockRemoteUnlock,
+            self::LockViewHistory,
+            self::LocationUse,
+        ], true);
+    }
+
+    /**
      * Sensitive permissions require step-up authentication when that policy is enabled, and
      * changes to them are highlighted in the permission preview.
      */
