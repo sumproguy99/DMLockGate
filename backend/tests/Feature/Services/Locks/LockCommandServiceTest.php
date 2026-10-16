@@ -4,6 +4,7 @@ namespace Tests\Feature\Services\Locks;
 
 use App\Actions\Auth\CompleteLogin;
 use App\Enums\AccessRequestStatus;
+use App\Enums\LockAction;
 use App\Enums\LockConnectionStatus;
 use App\Enums\PermissionKey;
 use App\Enums\ReportedLockState;
@@ -13,6 +14,7 @@ use App\Models\AccessRequest;
 use App\Models\AuditLog;
 use App\Models\Lock;
 use App\Models\LockCommand;
+use App\Models\LockStateEvent;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
@@ -20,8 +22,10 @@ use App\Services\Locks\Integration\FakeLockDriver;
 use App\Services\Locks\Integration\IntegrationOutcomeUnknown;
 use App\Services\Locks\Integration\IntegrationUnavailable;
 use App\Services\Locks\Integration\LockDriver;
+use App\Services\Locks\Integration\ReportedState;
 use App\Services\Locks\Integration\UnconfiguredLockDriver;
 use App\Services\Locks\LockStateRecorder;
+use Carbon\CarbonImmutable;
 use Database\Seeders\PermissionCatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -222,6 +226,51 @@ class LockCommandServiceTest extends TestCase
         $this->assertCount(1, $this->driver->sent);
         $this->assertSame(ReportedLockState::Unlocked, $this->lock->fresh()->last_reported_state);
         $this->assertDatabaseHas('audit_logs', ['action' => 'lock.command_unconfirmed']);
+    }
+
+    public function test_a_push_observed_after_submission_confirms_the_command(): void
+    {
+        $this->useDriverThatPushesDuringSend(observedSecondsAfterSend: 2);
+        $resident = $this->userWithRole(RoleTemplate::Resident);
+
+        $id = $this->command($resident, 'lock')->assertAccepted()->json('data.id');
+
+        $request = AccessRequest::query()->where('public_id', $id)->sole();
+        $this->assertSame(AccessRequestStatus::ConfirmedSuccess, $request->status);
+        $this->assertSame('push', $request->command->confirmation_source);
+    }
+
+    public function test_a_late_push_about_an_earlier_manual_action_does_not_confirm_the_command(): void
+    {
+        // The push arrives after submission but describes something the lock saw before it.
+        $this->useDriverThatPushesDuringSend(observedSecondsAfterSend: -3);
+        $resident = $this->userWithRole(RoleTemplate::Resident);
+
+        $id = $this->command($resident, 'lock')->assertAccepted()->json('data.id');
+
+        $request = AccessRequest::query()->where('public_id', $id)->sole();
+        $this->assertSame(AccessRequestStatus::UnknownResult, $request->status);
+        $this->assertNull($request->command->confirming_state_event_id);
+    }
+
+    /**
+     * A simulated lock that ignores the command, while a "locked" push event lands during the send.
+     */
+    private function useDriverThatPushesDuringSend(int $observedSecondsAfterSend): void
+    {
+        $this->driver = new class($observedSecondsAfterSend) extends FakeLockDriver
+        {
+            public function __construct(private readonly int $offset) {}
+
+            public function send(Lock $lock, LockAction $action, string $commandId): void
+            {
+                parent::send($lock, $action, $commandId);
+                app(LockStateRecorder::class)->record($lock, new ReportedState(ReportedLockState::Locked, CarbonImmutable::now()->addSeconds($this->offset)), LockStateEvent::SOURCE_PUSH);
+            }
+        };
+        $this->driver->setState($this->lock, ReportedLockState::Unlocked);
+        $this->driver->ignoreCommands();
+        $this->app->instance(LockDriver::class, $this->driver);
     }
 
     public function test_an_unreachable_integration_fails_the_command_and_marks_the_lock(): void

@@ -2,12 +2,14 @@
   "name": "lockguard-eufy-integration",
   "version": "0.1.0",
   "private": true,
-  "description": "DM LockGuard Eufy integration layer (Node.js). Phase Zero: read-only proof of concept.",
+  "description": "DM LockGuard Eufy integration layer (Node.js): the authenticated bridge LockGuard uses to reach Eufy locks, plus the Phase Zero proof-of-concept scripts.",
   "type": "module",
   "engines": {
     "node": ">=24.0.0"
   },
   "scripts": {
+    "bridge": "node --env-file=.env src/bridge/main.mjs",
+    "test": "node --test",
     "poc:readonly": "node --env-file=.env src/poc-readonly.mjs",
     "poc:lock": "node --env-file=.env src/poc-command.mjs lock",
     "poc:unlock": "node --env-file=.env src/poc-command.mjs unlock"

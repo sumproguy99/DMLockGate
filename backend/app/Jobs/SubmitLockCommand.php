@@ -143,6 +143,11 @@ class SubmitLockCommand implements ShouldQueue
 
     /**
      * Wait for a push event or a fresh read showing the expected state. Returns the confirming event.
+     *
+     * A push confirms only if the lock both observed and delivered it after submission. Push events
+     * arrive 2–5 s late, so one describing a manual operation just before the command could
+     * otherwise be taken as the command's result. A genuine confirmation that the lock's clock
+     * stamps a little early is ignored, and the next poll confirms instead.
      */
     private function awaitConfirmation(AccessRequest $request, LockCommand $command, LockDriver $driver, LockStateRecorder $recorder): ?LockStateEvent
     {
@@ -156,6 +161,7 @@ class SubmitLockCommand implements ShouldQueue
                 ->where('source', LockStateEvent::SOURCE_PUSH)
                 ->where('state', $expected)
                 ->where('received_at', '>=', $command->submitted_at)
+                ->where('observed_at', '>=', $command->submitted_at)
                 ->oldest('id')
                 ->first();
             if ($pushed !== null) {

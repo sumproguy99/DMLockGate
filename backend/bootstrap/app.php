@@ -3,6 +3,7 @@
 use App\Exceptions\ApiException;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\RequireRecentConfirmation;
+use App\Http\Middleware\VerifyBridgeSignature;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -36,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'active' => EnsureAccountIsActive::class,
             'step-up' => RequireRecentConfirmation::class,
+            'bridge.signature' => VerifyBridgeSignature::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) use ($apiError): void {

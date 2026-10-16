@@ -48,7 +48,7 @@ These are separate records, never collapsed into one status:
   - `rejected`: the bridge was unreachable or refused the command, so it certainly was not delivered. The request becomes FAILED.
   - `ambiguous`: for example, a timeout after sending. The command may already have reached the lock, so the request continues to confirmation.
 - **Success means the lock reported the new state.** A request becomes CONFIRMED_SUCCESS only when the lock reports the expected state after submission. That report can come from either:
-  - a push event received after submission, or
+  - a push event that the lock observed, and LockGuard received, after submission (so a late event about an earlier manual action cannot confirm), or
   - a fresh state read every `LOCKGUARD_CONFIRM_POLL_SECONDS`.
 - **Unconfirmed commands are never retried.** If no confirmation arrives within `LOCKGUARD_CONFIRM_TIMEOUT_SECONDS`, or the lock reports jammed, the request becomes UNKNOWN_RESULT. It is not retried, and the user is told to check the door.
 - **The integration's acknowledgement is not proof.** An ack means the command was delivered, not that the bolt moved, so it is never treated as success.
@@ -78,6 +78,10 @@ Clients send an `idempotency_key` (8–64 characters, unique per user).
 | `POST /api/v1/locks`, `PATCH /api/v1/locks/{id}` | Register a lock or change its settings. Requires `admin.integration_settings` and step-up. New locks start with commands disabled. |
 | `PUT` / `DELETE /api/v1/locks/{id}/access/{user}` | Grant or remove a user's access, with an optional time window. Requires `access.grants_create` / `access.grants_revoke` and step-up, and follows the anti-escalation rules in `PERMISSIONS.md`. |
 
+**Console grant:** nobody can change their own access through the API. A household with only one administrator therefore uses `php artisan lockguard:grant-lock-access <email> <lock id> [--until=<date>] [--revoke]` at the server.
+- It asks for confirmation, refuses inactive accounts, and is audited with channel `console`.
+- It gives access to the lock only. The user's role still decides what they may do with it.
+
 ## Lock driver
 
 Set with `LOCKGUARD_LOCK_DRIVER`:
@@ -86,6 +90,6 @@ Set with `LOCKGUARD_LOCK_DRIVER`:
 |---|---|
 | `unconfigured` (default) | Every command fails safely as FAILED. Nothing is sent. |
 | `fake` | Simulated lock for tests and development. Never use it in production. |
-| `eufy_bridge` | The authenticated internal bridge to the Node.js Eufy integration (next step). |
+| `eufy_bridge` | The signed internal bridge to the Node.js Eufy integration. See `EUFY_BRIDGE.md`. Falls back to `unconfigured` when the secret is missing or short. |
 
 A queue worker must be running (`php artisan queue:work`) for commands to be sent. The scheduler (`php artisan schedule:work`, or a cron entry for `schedule:run`) must also be running.

@@ -49,6 +49,18 @@ return [
         'confirm_poll_seconds' => (int) env('LOCKGUARD_CONFIRM_POLL_SECONDS', 5),
         'state_stale_seconds' => (int) env('LOCKGUARD_STATE_STALE_SECONDS', 900),
         'remote_unlock_policy' => env('LOCKGUARD_REMOTE_UNLOCK_POLICY', 'step_up'),
+
+        /*
+        | The Node.js Eufy bridge (integrations/eufy, `npm run bridge`). Both directions are signed with
+        | the shared secret. send_timeout must exceed the bridge's own 25 s acknowledgement timeout.
+        */
+        'eufy_bridge' => [
+            'url' => env('LOCKGUARD_BRIDGE_URL', 'http://127.0.0.1:8787'),
+            'secret' => env('LOCKGUARD_BRIDGE_SECRET'),
+            'connect_timeout_seconds' => 3,
+            'send_timeout_seconds' => 30,
+            'read_timeout_seconds' => 15,
+        ],
     ],
 
 ];

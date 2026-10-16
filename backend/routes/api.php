@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Internal\EufyEventController;
 use App\Http\Controllers\Api\V1\Auth\ConfirmIdentityController;
 use App\Http\Controllers\Api\V1\Auth\CurrentUserController;
 use App\Http\Controllers\Api\V1\Auth\MfaChallengeController;
@@ -70,3 +71,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         });
     });
 });
+
+// Internal: lock events pushed by the Eufy bridge. Signed with the shared secret, no user session.
+Route::post('internal/eufy/events', EufyEventController::class)
+    ->middleware(['bridge.signature', 'throttle:240,1'])
+    ->name('api.internal.eufy.events');

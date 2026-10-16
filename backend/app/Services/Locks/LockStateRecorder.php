@@ -68,6 +68,20 @@ class LockStateRecorder
         });
     }
 
+    /**
+     * The lock itself reported going offline or coming back online. Says nothing about the bolt.
+     */
+    public function recordConnectivity(Lock $lock, bool $online): void
+    {
+        if (! $online) {
+            $this->recordError($lock, 'The lock reported that it is offline.', LockConnectionStatus::Disconnected);
+
+            return;
+        }
+
+        $lock->forceFill(['connection_status' => LockConnectionStatus::Connected, 'last_communication_at' => now()])->save();
+    }
+
     public function recordError(Lock $lock, string $message, LockConnectionStatus $status = LockConnectionStatus::Degraded): void
     {
         $lock->forceFill([

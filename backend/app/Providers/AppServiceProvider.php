@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Enums\PermissionKey;
 use App\Models\User;
 use App\Services\Authorization\PermissionResolver;
+use App\Services\Locks\Integration\EufyBridgeDriver;
 use App\Services\Locks\Integration\FakeLockDriver;
 use App\Services\Locks\Integration\LockDriver;
 use App\Services\Locks\Integration\UnconfiguredLockDriver;
@@ -25,6 +26,7 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(LockDriver::class, fn (): LockDriver => match (config('lockguard.locks.driver')) {
             'fake' => new FakeLockDriver,
+            'eufy_bridge' => EufyBridgeDriver::fromConfig((array) config('lockguard.locks.eufy_bridge')),
             default => new UnconfiguredLockDriver,
         });
     }

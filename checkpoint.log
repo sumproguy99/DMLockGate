@@ -249,3 +249,15 @@ What needs to be done.
 Stage 2: Node bridge service (authenticated internal API around eufy-sdk, push events forwarded to Laravel) + EufyBridgeDriver + device sync command. Then admin dashboard.
 What is important or stands out that needs attention or needs to be address.
 All app requests are treated as remote until location exists, so Temporary Guests cannot unlock yet. Self-grant of lock access is forbidden (same anti-escalation rule); a single-admin household needs a bootstrap path, so ask Dustin. Push events that arrive after submission but describe an earlier manual action could falsely confirm; low risk, revisit with event timestamps once the bridge exists.
+
+---
+Timestamp: 2026-10-16 ET
+Percent complete: 52%
+Description of what you are working on.
+STEP 5/6 stage 2: Eufy bridge (Node) + EufyBridgeDriver + signed event webhook + lock sync. Plus the lockguard:grant-lock-access bootstrap command (approved by Dustin 2026-10-16). Read project.md section 34 (UI design system); Logo.png, ServerGui.png and WebAppGUI.png are in the project root.
+What you have done so far:
+Node bridge (integrations/eufy/src/bridge, npm run bridge): HMAC-signed internal API (health, list locks, fresh state read, send command), loopback by default, refuses replays/stale timestamps, each command_id accepted once, one in-flight command per lock, replies rejected/acknowledged/ambiguous, never retries. Push events (lock/unlock, jam 517/519, offline 516/online 771) forwarded to LockGuard with signed retrying delivery. 10 node:test tests with a fake adapter. Laravel: EufyBridgeDriver (only "rejected" or cURL 6/7 count as not sent; everything else is outcome unknown), VerifyBridgeSignature middleware (fails closed), POST api/internal/eufy/events, LockStateRecorder::recordConnectivity, lockguard:sync-locks (every 5 min; registers new locks with commands disabled; never sends commands), lockguard:grant-lock-access (confirmed, audited, console channel). Push confirmation now requires observed_at >= submitted_at (late manual-action push can no longer confirm; regression test proves it). docs/EUFY_BRIDGE.md. PHP tests 195/195, Node 10/10.
+What needs to be done.
+Operator step: set the shared secret in both .env files, start the bridge, sync/register the locks, grant own access, then one supervised live lock/unlock through LockGuard (Dustin at the door). Then admin dashboard and UI checkpoints (project.md section 34): React/TS/Vite/Tailwind frontend, starting with branding assets and design tokens.
+What is important or stands out that needs attention or needs to be address.
+Not yet run against the real bridge/lock. Logo.png has no transparent background (RGB 1254x1254); compact icon variants will be crops only. Mockup features out of scope (camera, weather, user location map, proximity unlock, keypad-code sync) will be shown as unavailable, not faked. Bridge command dedupe and replay caches are in memory, so a bridge restart forgets command ids (LockGuard's own claim-before-send still prevents duplicates). Eufy app must have Locked and Unlocked notifications enabled per lock.
