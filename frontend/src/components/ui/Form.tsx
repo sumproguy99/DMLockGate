@@ -1,5 +1,5 @@
-import { CircleAlert, Search } from 'lucide-react'
-import { useId, type InputHTMLAttributes, type ReactNode, type Ref, type SelectHTMLAttributes } from 'react'
+import { CircleAlert, Eye, EyeOff, Search } from 'lucide-react'
+import { useId, useState, type InputHTMLAttributes, type ReactNode, type Ref, type SelectHTMLAttributes } from 'react'
 import { cx } from '../../lib/cx'
 
 const control =
@@ -71,7 +71,43 @@ export function TextField({ label, hint, error, required, className, type = 'tex
   )
 }
 
-type SelectFieldProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'id'> & {
+type PasswordFieldProps = Omit<TextFieldProps, 'type'>
+
+/** A password input with a show/hide toggle. The toggle never submits the form. */
+export function PasswordField({ label, hint, error, required, className, ...rest }: PasswordFieldProps) {
+  const id = useId()
+  const [visible, setVisible] = useState(false)
+
+  return (
+    <FieldShell id={id} label={label} hint={hint} error={error} required={required}>
+      <div className="relative">
+        <input
+          id={id}
+          type={visible ? 'text' : 'password'}
+          required={required}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy(id, hint, error)}
+          autoCapitalize="none"
+          spellCheck={false}
+          className={cx(control, 'pr-12', className)}
+          {...rest}
+        />
+        <button
+          type="button"
+          aria-pressed={visible}
+          aria-label="Show password"
+          title={visible ? 'Hide password' : 'Show password'}
+          onClick={() => setVisible((v) => !v)}
+          className="absolute top-1/2 right-1 flex size-9 -translate-y-1/2 items-center justify-center rounded-sm text-text-muted transition-colors hover:bg-elevated hover:text-text"
+        >
+          {visible ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+        </button>
+      </div>
+    </FieldShell>
+  )
+}
+
+type SelectFieldProps =Omit<SelectHTMLAttributes<HTMLSelectElement>, 'id'> & {
   label: ReactNode
   options: ReadonlyArray<{ value: string; label: string; disabled?: boolean }>
   hint?: ReactNode

@@ -112,13 +112,59 @@ All in `frontend/src/components`. Presentation only: no component calls the API 
 - `DeviceStatus`, `ConnectionBadge` and `BatteryBadge` show the connection status, the battery (or "Battery unknown") and the last contact.
 - `ActivityEntry`, `SecurityAlert` and `Timestamp`. Times are relative, with the exact time in the markup and on hover.
 
+## Application shell and sign-in
+
+**Sign-in** (`src/pages/LoginPage.tsx`, project.md 34.6 A):
+- **Fields:** email (the backend signs in by email only, not username) and password, with a show/hide toggle.
+- **Two-step verification:** when the account has MFA, the next step asks for the authenticator code, or a recovery code instead. "Start over" returns to the email and password step.
+- **Errors:**
+  - Empty fields are caught before anything is sent.
+  - The backend's field errors show under their fields.
+  - Other errors (rate limit, inactive account, network) show in a banner.
+- **Account recovery:** there's no self-service recovery yet, and the page says to ask an administrator.
+
+**Session** (`src/auth/`, `src/api/client.ts`):
+- **Cookies only:** Sanctum's session cookie and its CSRF cookie. No token is stored in the browser.
+- **Start-up:** the app asks `/api/v1/auth/me`. If LockGuard can't be reached, it shows "LockGuard is unreachable" with a Try again button.
+- **Expiry:** any later 401 returns the user to sign-in with "Your session ended".
+- **Timeouts:** requests time out after 20 s.
+- **CSRF:** the CSRF cookie is fetched before the first state-changing request, and refreshed once on a 419.
+
+**Origin:** in development the Vite server (`127.0.0.1:5173`) proxies `/api` and `/sanctum` to Laravel. `config/sanctum.php` lists that address as stateful by default. Production sets `SANCTUM_STATEFUL_DOMAINS` to its real host.
+
+**Shell** (`src/app/`):
+- **Sidebar** (large screens): logo, grouped navigation, current page highlighted. It collapses to icons only; links keep their names, show labels on hover or focus, and the setting is remembered in this browser.
+- **Smaller screens:** the same navigation opens as a drawer from the header's menu button.
+- **Header:** where you are (group and page), the user's name and role, and the account menu (Sign out).
+- **Keyboard and screen readers:** there's a skip link to the main content. Focus moves to the content after each navigation, and each page sets the browser tab title.
+
+**Navigation shows only screens the backend supports today, and only to users allowed to open them:**
+
+| Item | Shown with any of |
+|---|---|
+| Dashboard | every signed-in user |
+| Users, Roles and permissions | `users.*` (the backend's user-management view permissions) |
+| Properties | `admin.integration_settings` |
+| Locks | `lock.view_status`, `devices.view` |
+
+A user who types the address of a page they can't use sees "Not available to you". The backend refuses the data either way.
+
+**Not in the shell yet:**
+- **Integration health indicator:** comes with the dashboard (checkpoint 4), once the backend exposes health.
+- **Notification center, global search, settings shortcut:** these have no backend yet.
+- **Navigation items from project.md 34.4 that have no backend yet:** access codes, grants, schedules, trusted devices, location, security center, alerts, incidents, audit logs, notifications, device and system health, settings, help.
+  - They're added as their features are built.
+  - Until then the Dashboard, Users, Roles, Properties and Locks pages say "This screen is not built yet" and show no data.
+
+**Component gallery:** `/dev/components`, in development builds only.
 ## Testing and accessibility checks
 
 `npm test` runs Vitest with Testing Library in jsdom.
 - **Behaviour:** keyboard paths, focus management, live regions, validation wiring and lifecycle mapping.
 - **Accessibility:** axe-core runs against each component and against the whole gallery page, using the WCAG 2.0–2.2 A and AA rules.
 - **Contrast:** axe can't measure contrast in jsdom, so `src/styles/contrast.test.ts` reads `tokens.css` and checks every color pair the components use, including tone text on its own 12% tint. That test caught blue and gray badge text on `elevated` at 4.43:1 and 4.46:1. `primary-text` and `unknown` were lightened as a result.
-- **Phone width:** layout at 390 px was checked by screenshot, with no horizontal overflow.
+- **Phone width:** layout at 390 px is checked with headless Edge driven through the DevTools protocol, using a true 390 px viewport and checking that the page is no wider than the screen.
+- **App tests:** sign-in, MFA, session expiry, unreachable API, permission-filtered navigation, sidebar collapse, drawer, sign-out and the API client (CSRF, retry, timeout, 401) run against a mocked `fetch`.
 ## Development
 
 ```bash

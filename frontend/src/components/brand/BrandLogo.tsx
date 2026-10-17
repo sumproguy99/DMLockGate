@@ -10,6 +10,8 @@
  */
 type BrandLogoProps = {
   variant?: 'full' | 'mark'
+  /** Hide from screen readers when the product name is written right beside the logo. */
+  decorative?: boolean
   className?: string
 }
 
@@ -18,7 +20,7 @@ const sources = {
   mark: { src: '/assets/branding/dm-lock-mark-256.webp', width: 256, height: 256 },
 } as const
 
-export function BrandLogo({ variant = 'full', className = '' }: BrandLogoProps) {
+export function BrandLogo({ variant = 'full', decorative = false, className = '' }: BrandLogoProps) {
   const { src, width, height } = sources[variant]
 
   return (
@@ -26,7 +28,7 @@ export function BrandLogo({ variant = 'full', className = '' }: BrandLogoProps) 
       src={src}
       width={width}
       height={height}
-      alt="DM Lock"
+      alt={decorative ? '' : 'DM Lock'}
       draggable={false}
       className={`select-none mix-blend-lighten ${className}`}
     />

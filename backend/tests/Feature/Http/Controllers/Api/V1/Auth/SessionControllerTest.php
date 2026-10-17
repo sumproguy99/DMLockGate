@@ -157,4 +157,14 @@ class SessionControllerTest extends TestCase
             ->assertStatus(400)
             ->assertJsonPath('error.code', 'stateful_client_required');
     }
+
+    public function test_the_react_frontend_dev_server_is_an_allowed_origin(): void
+    {
+        $user = $this->resident();
+
+        $this->withHeaders(['Origin' => 'http://127.0.0.1:5173'])
+            ->postJson(route('api.v1.auth.login'), ['email' => $user->email, 'password' => self::PASSWORD])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'authenticated');
+    }
 }

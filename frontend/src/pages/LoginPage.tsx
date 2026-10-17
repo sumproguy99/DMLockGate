@@ -1,0 +1,170 @@
+import { LogIn } from 'lucide-react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { Navigate, useLocation } from 'react-router'
+import { ApiError } from '../api/client'
+import { useAuth } from '../auth/auth-context'
+import { BrandLogo } from '../components/brand/BrandLogo'
+import { Banner } from '../components/ui/Banner'
+import { Button } from '../components/ui/Button'
+import { PasswordField, TextField } from '../components/ui/Form'
+
+type FieldErrors = Record<string, string | null>
+
+function errorsFrom(error: unknown): { form: string | null; fields: FieldErrors } {
+  if (error instanceof ApiError) {
+    if (error.status === 422) {
+      return { form: null, fields: Object.fromEntries(Object.keys(error.fields).map((k) => [k, error.field(k)])) }
+    }
+    return { form: error.message, fields: {} }
+  }
+
+  return { form: 'Something went wrong. Try again.', fields: {} }
+}
+
+/** Sign-in (project.md 34.6 A): email and password, then the MFA code when the account has one. */
+export function LoginPage() {
+  const { state } = useAuth()
+  const location = useLocation()
+  const from = (location.state as { from?: string } | null)?.from ?? '/'
+
+  useEffect(() => {
+    document.title = 'Sign in · DM LockGuard'
+  }, [])
+
+  if (state.status === 'signed_in') {
+    return <Navigate to={from} replace />
+  }
+
+  return (
+    <main className="flex min-h-dvh items-center justify-center px-4 py-10">
+      <div className="w-full max-w-sm">
+        <div className="rounded-lg border border-border bg-panel p-6 shadow-panel">
+          {/* On panel, not bg: the logo's own background blends away only on panel or lighter. */}
+          <div className="mb-6 flex flex-col items-center text-center">
+            <BrandLogo className="size-36" />
+            <h1 className="mt-1 text-section">Sign in to DM LockGuard</h1>
+          </div>
+          {state.status === 'mfa_required' ? <MfaStep /> : <PasswordStep notice={state.status === 'signed_out' ? state.notice : undefined} />}
+        </div>
+        <p className="mt-6 text-center text-caption text-text-muted">
+          Forgot your password or lost your authenticator? Ask your LockGuard administrator.
+        </p>
+      </div>
+    </main>
+  )
+}
+
+function PasswordStep({ notice }: { notice?: string }) {
+  const { signIn } = useAuth()
+  const [busy, setBusy] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [fields, setFields] = useState<FieldErrors>({})
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const data = new FormData(event.currentTarget)
+    const email = String(data.get('email') ?? '').trim()
+    const password = String(data.get('password') ?? '')
+    const missing: FieldErrors = {
+      email: email ? null : 'Enter your email address.',
+      password: password ? null : 'Enter your password.',
+    }
+    if (missing.email || missing.password) {
+      setFields(missing)
+      setFormError(null)
+      return
+    }
+
+    setBusy(true)
+    setFormError(null)
+    setFields({})
+    try {
+      await signIn(email, password)
+    } catch (error) {
+      const { form, fields: fieldErrors } = errorsFrom(error)
+      setFormError(form)
+      setFields(fieldErrors)
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form onSubmit={submit} noValidate className="flex flex-col gap-4">
+      {notice && !formError && <Banner tone="unknown" title={notice} />}
+      {formError && <Banner tone="danger" title="Could not sign in">{formError}</Banner>}
+      <TextField name="email" label="Email" type="email" autoComplete="username" error={fields.email} required autoFocus />
+      <PasswordField name="password" label="Password" autoComplete="current-password" error={fields.password} required />
+      <Button type="submit" icon={LogIn} loading={busy} fullWidth>
+        Sign in
+      </Button>
+    </form>
+  )
+}
+
+function MfaStep() {
+  const { verifyMfa, restart } = useAuth()
+  const [useRecovery, setUseRecovery] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [fieldError, setFieldError] = useState<string | null>(null)
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const value = String(new FormData(event.currentTarget).get('code') ?? '').trim()
+    if (!value) {
+      setFieldError(useRecovery ? 'Enter a recovery code.' : 'Enter the code from your authenticator app.')
+      return
+    }
+
+    setBusy(true)
+    setFormError(null)
+    setFieldError(null)
+    try {
+      await verifyMfa(useRecovery ? { recovery_code: value } : { code: value })
+    } catch (error) {
+      const { form, fields } = errorsFrom(error)
+      setFormError(form)
+      setFieldError(fields.code ?? fields.recovery_code ?? null)
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form onSubmit={submit} noValidate className="flex flex-col gap-4" key={useRecovery ? 'recovery' : 'code'}>
+      <div>
+        <h2 className="text-panel-title">Two-step verification</h2>
+        <p className="mt-1 text-support text-text-muted">
+          {useRecovery
+            ? 'Enter one of the recovery codes you saved when you set up two-step verification. Each works once.'
+            : 'Enter the 6-digit code from your authenticator app.'}
+        </p>
+      </div>
+      {formError && <Banner tone="danger" title="Could not verify">{formError}</Banner>}
+      {useRecovery ? (
+        <TextField name="code" label="Recovery code" autoComplete="off" spellCheck={false} error={fieldError} required autoFocus />
+      ) : (
+        <TextField
+          name="code"
+          label="Authentication code"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={6}
+          error={fieldError}
+          required
+          autoFocus
+        />
+      )}
+      <Button type="submit" loading={busy} fullWidth>
+        Verify
+      </Button>
+      <div className="flex flex-wrap justify-between gap-2">
+        <Button variant="ghost" size="sm" onClick={() => setUseRecovery((v) => !v)} disabled={busy}>
+          {useRecovery ? 'Use an authenticator code' : 'Use a recovery code'}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={restart} disabled={busy}>
+          Start over
+        </Button>
+      </div>
+    </form>
+  )
+}

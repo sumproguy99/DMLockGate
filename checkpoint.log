@@ -345,3 +345,14 @@ What needs to be done.
 Commit when Dustin asks. UI CHECKPOINT 3: desktop shell (sidebar, header, responsive layout, authorized navigation) with Sanctum SPA login from the Vite origin.
 What is important or stands out that needs attention or needs to be address.
 axe cannot measure contrast in jsdom, so contrast relies on the token test; component-specific colors outside the tokens would bypass it. Headless Edge cannot render narrower than about 500 px, so phone widths are checked through a 390 px iframe.
+---
+Timestamp: 2026-10-17 ET
+Percent complete: 66%
+Description of what you are working on.
+UI CHECKPOINT 3: desktop application shell (project.md section 34.14).
+What you have done so far:
+Committed 4815c5f (shared components). Backend: config/sanctum.php now lists the Vite dev origin (127.0.0.1:5173, localhost:5173) as stateful by default, with a test (PHP 210/210). Frontend: API client (session and CSRF cookies, 419 refresh and retry, 20 s timeout, 401 broadcast, standard error shape), AuthProvider (session check on start, signed out, MFA required, signed in, unreachable with retry), React Router 7 routes. Sign-in page: email and password with show/hide, then authenticator or recovery code; client-side empty checks, backend field errors, banners for rate limit and other errors. Shell: sidebar with logo, grouped permission-filtered navigation, active highlighting, icon-only collapse remembered per browser; navigation drawer below 1024 px; header with location, name and role, account menu with sign-out; skip link; focus moves to content on navigation; tab titles. Pages a user may not open show "Not available to you"; unknown addresses show "Page not found". Dashboard, Users, Roles, Properties and Locks pages say "not built yet" and show no data. Component gallery moved to /dev/components (development builds only). 141 frontend tests pass. Verified live through the Vite proxy: CSRF cookie set, session check 401, a bogus sign-in returns the normal 422 (so origin and CSRF are accepted). Screenshots at 1440 px and a true 390 px viewport (DevTools emulation): no overflow. Not committed.
+What needs to be done.
+Commit when Dustin asks. Dustin to sign in at http://127.0.0.1:5173 (npm run dev in frontend/) and check the shell. UI CHECKPOINT 4: dashboard on real data, including a backend health endpoint for the integration indicator.
+What is important or stands out that needs attention or needs to be address.
+The bogus sign-in probe (nobody@example.invalid) is in the audit log as a failed login from 127.0.0.1. Login is by email only; project.md mentions username or email. Navigation lists only screens with backend support, so most 34.4 items are absent until their features exist.

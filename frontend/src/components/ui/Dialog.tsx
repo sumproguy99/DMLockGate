@@ -26,6 +26,8 @@ type DialogProps = {
   initialFocusRef?: RefObject<HTMLElement | null>
   /** Hides the close button, for dialogs that must be answered through the footer. */
   hideCloseButton?: boolean
+  /** "left" slides in as a full-height drawer from the left edge, for navigation. */
+  placement?: 'center' | 'left'
   className?: string
 }
 
@@ -43,6 +45,7 @@ export function Dialog({
   role = 'dialog',
   initialFocusRef,
   hideCloseButton = false,
+  placement = 'center',
   className,
 }: DialogProps) {
   const titleId = useId()
@@ -104,7 +107,10 @@ export function Dialog({
   return createPortal(
     <div
       data-dialog-root=""
-      className="fixed inset-0 z-50 flex items-end justify-center bg-bg/80 p-4 backdrop-blur-sm sm:items-center"
+      className={cx(
+        'fixed inset-0 z-50 flex bg-bg/80 backdrop-blur-sm',
+        placement === 'left' ? 'items-stretch justify-start' : 'items-end justify-center p-4 sm:items-center',
+      )}
       onMouseDown={(event) => event.target === event.currentTarget && onClose()}
     >
       <div
@@ -116,7 +122,10 @@ export function Dialog({
         tabIndex={-1}
         onKeyDown={onKeyDown}
         className={cx(
-          'flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col rounded-lg border border-border bg-panel-2 shadow-raised',
+          'flex flex-col border-border bg-panel-2 shadow-raised',
+          placement === 'left'
+            ? 'h-full w-full max-w-xs border-r'
+            : 'max-h-[calc(100dvh-2rem)] w-full max-w-md rounded-lg border',
           className,
         )}
       >
