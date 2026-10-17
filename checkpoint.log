@@ -285,3 +285,27 @@ What needs to be done.
 Supervised live UNLOCK (Dustin runs live-unlock.php at the door), a few repeat trials, then the Back Door (check its broker instance with diag:listen before enabling its commands). Commit when Dustin asks. Then admin dashboard and UI checkpoints (project.md section 34).
 What is important or stands out that needs attention or needs to be address.
 The broker pin is one IP for all locks and Eufy can move a lock's session; commands then end no_device_ack (never a false success) and diag:listen finds the new instance. Longer term: have the bridge learn the instance automatically, or report this upstream (eufy-sdk issue #257) with Dustin's OK. Bridge still lacks a "degraded Eufy session" health signal. Production must run bridge, worker and scheduler as Windows services.
+
+---
+Timestamp: 2026-10-17 ET
+Percent complete: 57%
+Description of what you are working on.
+STEP 5/6 live testing: repeat trials on the Front Door.
+What you have done so far:
+Committed 5919a6c (pre-send check, broker pin, device ack, poll lag). Live UNLOCK verified 10:12 UTC (step-up, typed confirmation, bolt retracted). Repeat trials 10:21-10:25 UTC through LockCommandService: 7/7 alternating lock/unlock CONFIRMED_SUCCESS, device ack 2.0-2.7 s, each confirmed by its own push 6-7 s after submission, reported state tracked every step, door ended locked. Scratch scripts: live-lock.php, live-unlock.php, live-trials.php.
+What needs to be done.
+Back Door: diag:listen to find its broker instance, then enable its commands and trial it. Bridge health signal for a degraded Eufy session. Then admin dashboard and UI checkpoints (project.md section 34).
+What is important or stands out that needs attention or needs to be address.
+Front Door commands now reliable with the broker pin. The pin is global and can go stale if Eufy moves the session (commands then end no_device_ack, never a false success).
+
+---
+Timestamp: 2026-10-17 ET
+Percent complete: 58%
+Description of what you are working on.
+STEP 5/6 live testing: Back Door.
+What you have done so far:
+diag:listen while Dustin used the Eufy app: Back Door session is on 3.139.229.186, the same instance as the Front Door, so the global broker pin covers both. Granted Dustin Back Door access (lockguard:grant-lock-access) and enabled its commands (audited lock.updated, console). Trials 10:32-10:34 UTC: 4/4 alternating unlock/lock CONFIRMED_SUCCESS, device ack 1.8-2.5 s, each confirmed by its own push, ended locked. Front Door earlier: 7/7, bolt matched every line.
+What needs to be done.
+Bridge health signal for a degraded Eufy session (and LockGuard refusing to send while degraded). Then admin dashboard and UI checkpoints (project.md section 34), starting with branding assets and design tokens.
+What is important or stands out that needs attention or needs to be address.
+Both locks verified for remote lock and unlock through LockGuard. Both share one broker instance today; if Eufy moves either session, its commands end no_device_ack and diag:listen finds the new instance.
