@@ -2,7 +2,8 @@
 //
 // Verified behaviour (docs/EUFY_COMPATIBILITY_REPORT.md):
 // - lock()/unlock() are fire-and-forget over MQTT; resolving means "sent", not "bolt moved".
-// - getDevice(sn) re-reads the cloud record, so lock().locked is a fresh reported state.
+// - getDevice(sn) re-reads the cloud record, but when that cloud call fails it silently falls back
+//   to the cached device list. readState() therefore only answers when a state fetch succeeded.
 // - Push lockState events carry `locked` for lock/unlock transitions (types 257..269).
 // - lastSeenMs is broken and is never used.
 
@@ -15,16 +16,35 @@ const TARGET_MODEL = /^T85D0/i;
 const JAM_EVENT_TYPES = new Set([517, 519]);
 const OFFLINE_EVENT = 516;
 const ONLINE_EVENT = 771;
+// The mega cloud calls that carry device params: one device's, and every device's.
+const PARAM_LIST_PATH = "/app/devicemanage/get_device_param_list";
+const DEVICE_LIST_PATH = "/app/house/get_devs_list";
+// The SDK answers from a device list fetched this recently instead of fetching again (LIST_REUSE_MS).
+const LIST_REUSE_MS = 5_000;
+// Mega API code for "only the owner can change settings": the cloud answered, so it is healthy.
+const OWNER_ONLY_CODE = 20004;
+export const DEGRADED_AFTER_FAILURES = 2;
+export const DEGRADED_AFTER_SILENT_MS = 15 * 60 * 1000;
+
+/** The Eufy cloud did not return fresh state, so any value would be a cached guess. */
+export class StaleStateError extends Error {
+  name = "StaleStateError";
+}
 
 export class EufyAdapter extends EventEmitter {
-  constructor({ email, password, countryCode, brokerIp = null, dataDir, log = () => {} }) {
+  /**
+   * @param {object} [options.eufy] An EufyMega-shaped client, for tests. Defaults to the real SDK.
+   */
+  constructor({ email, password, countryCode, brokerIp = null, dataDir, log = () => {}, eufy = null, now = Date.now }) {
     super();
     this.log = log;
+    this.now = now;
     this.status = "starting";
     this.lastError = null;
     this.lastSyncAt = null;
     this.locks = new Map();
-    this.eufy = new EufyMega({
+    this.cloud = { okAt: null, failedAt: null, error: null, failures: 0, listFetchedAt: 0, paramsFetchedAt: new Map() };
+    this.eufy = eufy ?? new EufyMega({
       email,
       password,
       countryCode: countryCode || "US",
@@ -32,6 +52,7 @@ export class EufyAdapter extends EventEmitter {
       pushStore: new FileFcmStore(join(dataDir, "push.json")),
       logger: this.sdkLogger(),
     });
+    this.watchCloud();
     this.eufy.on("error", (err) => this.noteError(err));
     this.eufy.on("connect", () => this.log("info", "realtime connected"));
     this.eufy.on("disconnect", () => this.log("warn", "realtime disconnected"));
@@ -70,6 +91,52 @@ export class EufyAdapter extends EventEmitter {
   }
 
   /**
+   * Every Eufy cloud call goes through mega.post(). Watching it is the only reliable way to know
+   * whether the cloud is answering, because the SDK swallows failed state fetches (see the header).
+   * SDK internal (EufyMega.mega); re-check after any eufy-sdk upgrade.
+   */
+  watchCloud() {
+    const mega = this.eufy.mega;
+    if (typeof mega?.post !== "function") {
+      this.log("error", "cannot watch Eufy cloud calls: the SDK internals changed");
+      return;
+    }
+    const post = mega.post.bind(mega);
+    mega.post = async (service, path, body) => {
+      try {
+        const result = await post(service, path, body);
+        this.cloud.okAt = this.now();
+        this.cloud.failures = 0;
+        if (path === DEVICE_LIST_PATH) this.cloud.listFetchedAt = this.now();
+        if (path === PARAM_LIST_PATH) {
+          for (const sn of body?.device_sns ?? []) this.cloud.paramsFetchedAt.set(sn, this.now());
+        }
+        return result;
+      } catch (err) {
+        if (err?.code === OWNER_ONLY_CODE) {
+          this.cloud.okAt = this.now();
+          this.cloud.failures = 0;
+        } else {
+          this.cloud.failedAt = this.now();
+          this.cloud.failures += 1;
+          this.cloud.error = String(err?.message ?? err).slice(0, 200);
+        }
+        throw err;
+      }
+    };
+  }
+
+  /**
+   * Why the Eufy cloud should not be trusted right now, or null. Commands are refused while this
+   * is set: their outcome could not be confirmed.
+   */
+  degraded() {
+    if (this.cloud.failures >= DEGRADED_AFTER_FAILURES) return "cloud_errors";
+    if (this.cloud.okAt !== null && this.now() - this.cloud.okAt > DEGRADED_AFTER_SILENT_MS) return "cloud_silent";
+    return null;
+  }
+
+  /**
    * Log in from the saved session. Interactive steps (captcha, 2FA) are never attempted here: the
    * operator completes them once with `npm run poc:readonly`.
    */
@@ -94,10 +161,16 @@ export class EufyAdapter extends EventEmitter {
   }
 
   health() {
+    const reason = this.degraded();
+    const iso = (ms) => (ms === null ? null : new Date(ms).toISOString());
     return {
-      status: this.status,
+      status: this.status === "connected" && reason !== null ? "degraded" : this.status,
+      degraded_reason: reason,
       locks: this.locks.size,
       last_sync_at: this.lastSyncAt,
+      cloud_ok_at: iso(this.cloud.okAt),
+      cloud_failures: this.cloud.failures,
+      cloud_last_error: this.cloud.error,
       last_error: this.lastError,
     };
   }
@@ -122,8 +195,19 @@ export class EufyAdapter extends EventEmitter {
     }));
   }
 
+  /**
+   * A fresh cloud read. Throws StaleStateError unless this lock's params were fetched during the
+   * read, or the device list (which carries every lock's params) within the SDK's reuse window;
+   * otherwise the SDK would hand back an old cached device list.
+   */
   async readState(sn) {
+    const startedAt = this.now();
     const lock = (await this.eufy.getDevice(sn)).lock?.();
+    const paramsFresh = (this.cloud.paramsFetchedAt.get(sn) ?? 0) >= startedAt;
+    const listFresh = this.cloud.listFetchedAt >= startedAt - LIST_REUSE_MS;
+    if (!paramsFresh && !listFresh) {
+      throw new StaleStateError("The Eufy cloud did not return fresh state for this lock.");
+    }
     this.lastSyncAt = new Date().toISOString();
     return {
       external_id: sn,

@@ -27,7 +27,7 @@ Phone/browser ──► LockGuard (Laravel) ──signed HTTP──► Bridge (N
 |---|---|
 | `GET /v1/health` | Shows `status` (`starting`, `connected`, `needs_login` or `error`), the lock count, the last sync and the last error. |
 | `GET /v1/locks` | Lists the T85D0 locks this Eufy account can see. |
-| `GET /v1/locks/{sn}/state` | A fresh cloud re-read: `locked`, `unlocked` or `unknown`, plus the battery level. |
+| `GET /v1/locks/{sn}/state` | A fresh cloud re-read: `locked`, `unlocked` or `unknown`, plus the battery level. `503 eufy_degraded` when the cloud returned no fresh state (see below). |
 | `POST /v1/locks/{sn}/commands` `{action, command_id}` | Sends one lock or unlock command. See the table below. |
 
 Each command reply says whether the command could have reached the lock:
@@ -35,7 +35,7 @@ Each command reply says whether the command could have reached the lock:
 | Reply | Meaning | What LockGuard does |
 |---|---|---|
 | `200 acknowledged` | The lock replied that it received the command (`device_acked: true`). This does not prove the bolt moved. | Waits for confirmation. |
-| `401/404/422/423/503 rejected` | Not sent. Causes: bad signature, unknown lock, invalid request, a command already in flight for this lock, or Eufy not connected. | FAILED |
+| `401/404/422/423/503 rejected` | Not sent. Causes: bad signature, unknown lock, invalid request, a command already in flight for this lock, Eufy not connected, or the Eufy cloud degraded (`eufy_degraded`, see below). | FAILED |
 | `409 ambiguous` | This `command_id` was already accepted. | Waits for confirmation; never sends again. |
 | `502 ambiguous` | The send failed, had no reply within 25 s, or the lock never replied (`no_device_ack`: Eufy's broker took the message but the lock did not answer). It may still have reached the lock. | Waits for confirmation, then UNKNOWN_RESULT if none comes. |
 
@@ -46,6 +46,16 @@ On the LockGuard side (`EufyBridgeDriver`), only two things count as "not sent":
 Timeouts and every other failure count as **outcome unknown**.
 
 **Why `no_device_ack` matters:** eufy-sdk's `lock()`/`unlock()` resolve whether or not the lock replied. The lock's reply arrives only on the SDK's `commandAck` event, which the bridge waits for. Before 2026-10-17 the bridge reported any resolved send as `acknowledged`, which hid the broker problem below.
+
+## Eufy cloud health
+
+When eufy-sdk's live state fetch fails, `getDevice()` quietly answers from its cached device list. On 2026-10-16 the bridge reported "unlocked" for hours this way while every cloud call failed. The bridge therefore watches every cloud call (it wraps the SDK's `mega.post`):
+
+- **State reads must be fresh.** A read is answered only if this lock's params were fetched during the read, or the device list (which carries every lock's state) within the SDK's 5 s reuse window. Otherwise it returns `503 eufy_degraded`, which LockGuard treats as "could not read": the check before sending ends FAILED with nothing sent, and `lockguard:sync-locks` marks the lock degraded.
+- **Degraded cloud.** After 2 consecutive failed cloud calls, or 15 minutes without a successful one, `GET /v1/health` reports `status: degraded` with `degraded_reason` (`cloud_errors` or `cloud_silent`), and commands are refused with `503 rejected eufy_degraded`: their outcome could not be confirmed. Any successful cloud call clears it.
+- Health also reports `cloud_ok_at`, `cloud_failures` and `cloud_last_error`.
+
+This relies on SDK internals (`EufyMega.mega.post`), so re-check it after any eufy-sdk upgrade.
 
 ## Command broker (`EUFY_MQTT_BROKER_IP`)
 

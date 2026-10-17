@@ -309,3 +309,15 @@ What needs to be done.
 Bridge health signal for a degraded Eufy session (and LockGuard refusing to send while degraded). Then admin dashboard and UI checkpoints (project.md section 34), starting with branding assets and design tokens.
 What is important or stands out that needs attention or needs to be address.
 Both locks verified for remote lock and unlock through LockGuard. Both share one broker instance today; if Eufy moves either session, its commands end no_device_ack and diag:listen finds the new instance.
+
+---
+Timestamp: 2026-10-17 ET
+Percent complete: 59%
+Description of what you are working on.
+Bridge health signal for a degraded Eufy cloud session.
+What you have done so far:
+Found that eufy-sdk getDevice() silently falls back to its cached device list when the live fetch fails (the cause of the stale "unlocked" readings on 2026-10-16). The bridge now wraps the SDK's mega.post to track every cloud call. State reads are answered only when this lock's params were fetched during the read or the device list within the SDK's 5 s reuse window (the Back Door's per-lock fetch appears owner-gated, so it reads from the list); otherwise 503 eufy_degraded, which LockGuard treats as unreadable (pre-send FAILED, nothing sent; sync marks the lock degraded). Health reports degraded after 2 consecutive cloud failures or 15 min of silence, and commands are then refused (503 rejected eufy_degraded). Adapter accepts an injected client for tests. Node 19/19 (8 new), PHP 209/209. Verified live: both locks read normally on the new bridge, health connected. Docs: EUFY_BRIDGE.md "Eufy cloud health". Not committed.
+What needs to be done.
+Commit when Dustin asks. Then admin dashboard and UI checkpoints (project.md section 34), starting with branding assets and design tokens.
+What is important or stands out that needs attention or needs to be address.
+The health watch, like the broker pin, relies on eufy-sdk internals (EufyMega.mega, MqttCommandRouter.ensureSecurityMqttFor); re-check both after any SDK upgrade. Degraded state is visible on the bridge's /v1/health and as lock connection_status after sync, but there is no alerting yet.

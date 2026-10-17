@@ -119,6 +119,32 @@ test("a send error or timeout is ambiguous, never retried", async () => {
   assert.equal(adapter.sent.length, 1);
 });
 
+test("refuses commands while the Eufy cloud is degraded, without sending", async () => {
+  const adapter = new FakeAdapter();
+  adapter.degraded = () => "cloud_errors";
+  await withServer(adapter, async (call) => {
+    const res = await call("POST", `/v1/locks/${SN}/commands`, { action: "lock", command_id: "cmd-0000010" });
+    assert.equal(res.status, 503);
+    assert.equal(res.json.result, "rejected");
+    assert.equal(res.json.error, "eufy_degraded");
+  });
+  assert.equal(adapter.sent.length, 0);
+});
+
+test("a state read without fresh cloud data is refused, not answered from cache", async () => {
+  const adapter = new FakeAdapter();
+  adapter.readState = async () => {
+    const err = new Error("not fresh");
+    err.name = "StaleStateError";
+    throw err;
+  };
+  await withServer(adapter, async (call) => {
+    const res = await call("GET", `/v1/locks/${SN}/state`);
+    assert.equal(res.status, 503);
+    assert.equal(res.json.error, "eufy_degraded");
+  });
+});
+
 test("rejects before sending when disconnected, unknown lock, invalid action or busy", async () => {
   const adapter = new FakeAdapter();
   let release;

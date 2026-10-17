@@ -41,6 +41,10 @@ export function createBridgeServer({ adapter, secret, commandTimeoutMs = 25_000,
     if (!adapter.ready()) {
       return [503, { result: "rejected", error: "eufy_not_connected" }];
     }
+    if (adapter.degraded?.()) {
+      // The outcome could not be confirmed, so the command is not sent at all.
+      return [503, { result: "rejected", error: "eufy_degraded" }];
+    }
     if (!(await adapter.hasLock(sn))) {
       return [404, { result: "rejected", error: "unknown_lock" }];
     }
@@ -94,7 +98,14 @@ export function createBridgeServer({ adapter, secret, commandTimeoutMs = 25_000,
     if (method === "GET" && state) {
       if (!adapter.ready()) return [503, { error: "eufy_not_connected" }];
       if (!(await adapter.hasLock(state[1]))) return [404, { error: "unknown_lock" }];
-      return [200, { data: await adapter.readState(state[1]) }];
+      try {
+        return [200, { data: await adapter.readState(state[1]) }];
+      } catch (err) {
+        if (err?.name !== "StaleStateError") throw err;
+        log("warn", "state read not fresh", { lock: mask(state[1]) });
+
+        return [503, { error: "eufy_degraded" }];
+      }
     }
 
     const command = path.match(/^\/v1\/locks\/([A-Za-z0-9_-]{4,64})\/commands$/);

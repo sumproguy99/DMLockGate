@@ -63,6 +63,14 @@ class EufyBridgeDriverTest extends TestCase
         $this->driver->send($this->lock, LockAction::Lock, 'req-0002-abcd');
     }
 
+    public function test_a_degraded_eufy_cloud_means_not_delivered(): void
+    {
+        Http::fake(['bridge.test/*' => Http::response(['result' => 'rejected', 'error' => 'eufy_degraded'], 503)]);
+
+        $this->expectException(IntegrationUnavailable::class);
+        $this->driver->send($this->lock, LockAction::Unlock, 'req-0006-abcd');
+    }
+
     public function test_a_refused_connection_means_not_delivered(): void
     {
         Http::fake(['bridge.test/*' => Http::failedConnection('cURL error 7: Failed to connect to bridge.test port 80')]);
@@ -86,6 +94,7 @@ class EufyBridgeDriverTest extends TestCase
     {
         return [
             'send failed after leaving the bridge' => [502, ['result' => 'ambiguous', 'error' => 'no acknowledgement']],
+            'lock never replied' => [502, ['result' => 'ambiguous', 'error' => 'no_device_ack']],
             'duplicate command id' => [409, ['result' => 'ambiguous', 'error' => 'duplicate_command_id']],
             'bridge crashed' => [500, ['error' => 'internal_error']],
             'success status without acknowledgement' => [200, []],
@@ -121,9 +130,21 @@ class EufyBridgeDriverTest extends TestCase
         $this->assertSame(ReportedLockState::Unknown, $this->driver->readState($this->lock)->state);
     }
 
-    public function test_a_failed_read_is_unavailable(): void
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function failedReads(): array
     {
-        Http::fake(['bridge.test/*' => Http::response(['error' => 'eufy_not_connected'], 503)]);
+        return [
+            'eufy not connected' => ['eufy_not_connected'],
+            'cloud returned no fresh state' => ['eufy_degraded'],
+        ];
+    }
+
+    #[DataProvider('failedReads')]
+    public function test_a_failed_read_is_unavailable(string $error): void
+    {
+        Http::fake(['bridge.test/*' => Http::response(['error' => $error], 503)]);
 
         $this->expectException(IntegrationUnavailable::class);
         $this->driver->readState($this->lock);
