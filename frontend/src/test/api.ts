@@ -1,5 +1,6 @@
 import { vi } from 'vitest'
 import type { CurrentUser } from '../api/auth'
+import type { Dashboard, SystemHealth } from '../api/system'
 
 type Handler = (request: { body: unknown; headers: Record<string, string> }) => Response | Promise<Response>
 
@@ -57,5 +58,24 @@ export function clearCookies() {
     if (name) {
       document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`
     }
+  }
+}
+
+export const quietHealth: SystemHealth = {
+  integration: { status: 'connected', checked_at: '2026-10-17T12:00:00.000Z', last_sync_at: '2026-10-17T11:58:00.000Z' },
+}
+
+export const emptyDashboard: Dashboard = { users: null, security: null, activity: null, last_requests: null }
+
+/**
+ * Handlers for a signed-in session whose screens have nothing to show: the session check, system
+ * health, and an empty dashboard. Spread them first and override what a test cares about.
+ */
+export function signedIn(user: CurrentUser): Record<string, Handler> {
+  return {
+    'GET /api/v1/auth/me': () => json(200, { data: user }),
+    'GET /api/v1/system/health': () => json(200, { data: quietHealth }),
+    'GET /api/v1/locks': () => json(200, { data: [] }),
+    'GET /api/v1/dashboard': () => json(200, { data: emptyDashboard }),
   }
 }

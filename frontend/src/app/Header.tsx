@@ -5,6 +5,7 @@ import { useAuth, useCurrentUser } from '../auth/auth-context'
 import { IconButton } from '../components/ui/Button'
 import { Menu } from '../components/ui/Menu'
 import { useToast } from '../components/ui/toast-context'
+import { IntegrationIndicator } from './IntegrationIndicator'
 import { findNavItem } from './navigation'
 
 function initials(name: string): string {
@@ -16,10 +17,7 @@ function initials(name: string): string {
     .join('')
 }
 
-/**
- * The application header: where you are, who you are, and the account menu. The integration
- * health indicator joins it with the dashboard (UI checkpoint 4), once the backend reports health.
- */
+/** The application header: where you are, the Eufy integration's status, who you are, and the account menu. */
 export function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
   const user = useCurrentUser()
   const { signOut } = useAuth()
@@ -54,6 +52,7 @@ export function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
       </p>
 
       <div className="flex items-center gap-3">
+        <IntegrationIndicator />
         <div className="hidden text-right leading-tight md:block">
           <p className="text-support font-medium">{user.name}</p>
           <p className="text-caption text-text-muted">{role}</p>

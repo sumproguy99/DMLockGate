@@ -356,3 +356,14 @@ What needs to be done.
 Commit when Dustin asks. Dustin to sign in at http://127.0.0.1:5173 (npm run dev in frontend/) and check the shell. UI CHECKPOINT 4: dashboard on real data, including a backend health endpoint for the integration indicator.
 What is important or stands out that needs attention or needs to be address.
 The bogus sign-in probe (nobody@example.invalid) is in the audit log as a failed login from 127.0.0.1. Login is by email only; project.md mentions username or email. Navigation lists only screens with backend support, so most 34.4 items are absent until their features exist.
+---
+Timestamp: 2026-10-17 ET
+Percent complete: 70%
+Description of what you are working on.
+UI CHECKPOINT 4: desktop dashboard (project.md section 34.14).
+What you have done so far:
+Committed b51671f (sign-in and shell). Backend: GET /api/v1/system/health (integration status for everyone; bridge diagnostics and measured subsystems for admin.integration_settings or admin.incidents_view: application, database, queue backlog and failures, lock state sync age, Eufy bridge with a 15 s cache and 5 s timeout, audit triggers, notifications and live updates "not_implemented"). GET /api/v1/dashboard (users and time-limited access counts, 24 h failed and denied counts from the audit log, recent activity: the audit trail for incidents viewers, otherwise requests on the user's locks with other names withheld, last request per lock; each section null without permission; audit metadata never sent). Audit trigger check moved to AuditIntegrity, shared with lockguard:audit-verify. 16 new tests, PHP 226/226. Frontend: header Eufy indicator, dashboard with lock cards (reported state, freshness, connection, battery, last problem, last request), Lock and confirmed Unlock with step-up, progress on the real request lifecycle by polling, same-key "Check again" after no answer, integration, security, users, activity and system health panels, 30 s refresh, stale-data warning, retry. 153 frontend tests pass; build and lint clean. Screenshots at 1440 px and 390 px with made-up data: no overflow. No lock command was sent; the command flow is tested against mocks only. Not committed.
+What needs to be done.
+Commit when Dustin asks. Dustin to sign in and try the dashboard, including one Lock and one Unlock on a real lock (he runs live commands). UI CHECKPOINT 5: administrative screens (users, roles, locks, access, audit, configuration).
+What is important or stands out that needs attention or needs to be address.
+Not shown because the backend lacks them: lockdown, alert acknowledgement and Security Center, revoked devices, widget customization. Bridge error text appears in admin diagnostics as the bridge reports it (truncated to 200 characters by the bridge). The queue check can only see the database queue; a stopped worker with an empty queue still reads healthy.

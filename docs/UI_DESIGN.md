@@ -149,14 +149,47 @@ All in `frontend/src/components`. Presentation only: no component calls the API 
 
 A user who types the address of a page they can't use sees "Not available to you". The backend refuses the data either way.
 
+**Integration indicator:** the header shows the Eufy integration status from `GET /api/v1/system/health`, refreshed every 60 seconds and shared with the dashboard. While the first check runs, or if the check fails, it says so ("Checking Eufy…", "Eufy status unavailable") instead of guessing.
+
 **Not in the shell yet:**
-- **Integration health indicator:** comes with the dashboard (checkpoint 4), once the backend exposes health.
 - **Notification center, global search, settings shortcut:** these have no backend yet.
 - **Navigation items from project.md 34.4 that have no backend yet:** access codes, grants, schedules, trusted devices, location, security center, alerts, incidents, audit logs, notifications, device and system health, settings, help.
   - They're added as their features are built.
-  - Until then the Dashboard, Users, Roles, Properties and Locks pages say "This screen is not built yet" and show no data.
+  - Until then the Users, Roles, Properties and Locks pages say "This screen is not built yet" and show no data.
 
 **Component gallery:** `/dev/components`, in development builds only.
+## Dashboard
+
+The dashboard (project.md 34.5) reads `GET /api/v1/locks`, `GET /api/v1/dashboard` and `GET /api/v1/system/health`. It reloads every 30 seconds while the tab is visible, at once when the tab comes back, and on **Refresh**. If a reload fails, the last data stays on screen under a warning; if the first load fails, the page offers **Try again**.
+
+The backend leaves out (returns null for) each section the user may not see, so the page shows only what the server would allow:
+
+| Panel | Shown to | Source |
+|---|---|---|
+| Locks | anyone with locks they may see | `/locks`; last request per lock from `/dashboard` when the user has `lock.view_history` |
+| Eufy integration | everyone; diagnostics with `admin.integration_settings` or `admin.incidents_view` | `/system/health` |
+| Security | `admin.incidents_view` | audit log, last 24 hours |
+| Users and access | any `users.*` permission | users table and time-limited lock access |
+| Recent activity | `admin.incidents_view`: the audit trail; otherwise `lock.view_history`: requests on the user's locks, other people shown as "Another user" | `/dashboard` |
+| System health | same as the integration diagnostics | `/system/health` |
+
+**Lock cards** show the reported state and its freshness (stale is gray, with the age of the report), connection, battery, last contact, the last problem, and the last request with its real outcome.
+- **Lock** sends at once. **Unlock** asks first ("Unlock Front Door?"; Cancel has focus). Buttons appear only with `lock.lock`, or `lock.unlock` plus `lock.remote_unlock`. They're disabled, with the reason, when commands are off for the lock.
+- **Identity re-check:** when the server answers `step_up_required`, the card asks for the password (and the authenticator code if two-step verification is on), then sends a new request.
+- **Progress:** after a 202 the card polls `GET /lock-requests/{id}` every 1.5 seconds and shows the six stages from 34.9 until the request is final. Only "Confirmed" means the lock reported the new state. After 3 minutes it stops polling on screen and says so.
+- **No answer:** if the send itself gets no answer, the card says the request may or may not have been received. **Check again** resends with the same idempotency key, which returns the existing request and can't create a second command.
+
+**System health** is measured, not assumed:
+- application;
+- database (a query);
+- background jobs (database-queue jobs waiting over 2 minutes, failures in 24 hours);
+- lock state sync (newest scheduled poll; a warning after 15 minutes);
+- Eufy integration (the bridge's `/v1/health`, cached 15 seconds, 5-second timeout);
+- audit trail (append-only triggers installed);
+- notifications and live updates, which show "Not built yet".
+
+**Not on the dashboard, because the backend has no support yet:** lockdown status and quick action, alert acknowledgement and the Security Center, revoked devices, proximity-unlock controls, widget customization.
+
 ## Testing and accessibility checks
 
 `npm test` runs Vitest with Testing Library in jsdom.
@@ -164,6 +197,7 @@ A user who types the address of a page they can't use sees "Not available to you
 - **Accessibility:** axe-core runs against each component and against the whole gallery page, using the WCAG 2.0–2.2 A and AA rules.
 - **Contrast:** axe can't measure contrast in jsdom, so `src/styles/contrast.test.ts` reads `tokens.css` and checks every color pair the components use, including tone text on its own 12% tint. That test caught blue and gray badge text on `elevated` at 4.43:1 and 4.46:1. `primary-text` and `unknown` were lightened as a result.
 - **Phone width:** layout at 390 px is checked with headless Edge driven through the DevTools protocol, using a true 390 px viewport and checking that the page is no wider than the screen.
+- **Dashboard tests:** permission-filtered panels for a resident and an administrator, stale state, unreachable bridge, load failure and retry, and lock commands (stage-by-stage progress, unlock confirmation, identity re-check with a fresh key, refusal, final unknown outcome, same-key retry after no answer, disabled and hidden buttons).
 - **App tests:** sign-in, MFA, session expiry, unreachable API, permission-filtered navigation, sidebar collapse, drawer, sign-out and the API client (CSRF, retry, timeout, 401) run against a mocked `fetch`.
 ## Development
 

@@ -3,11 +3,11 @@
 namespace App\Console\Commands;
 
 use App\Models\AuditLog;
+use App\Services\Audit\AuditIntegrity;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 #[Signature('lockguard:audit-verify')]
 #[Description('Verify the audit log hash chain and that the append-only triggers are installed')]
@@ -16,9 +16,9 @@ class AuditVerifyCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(AuditIntegrity $integrity): int
     {
-        $protected = $this->triggersInstalled();
+        $protected = $integrity->triggersInstalled();
         $protected
             ? $this->components->info('Append-only triggers: PROTECTED (UPDATE and DELETE are rejected by the database).')
             : $this->components->error('Append-only triggers: UNPROTECTED. Run scripts\\protect-audit-log.ps1 as the MySQL administrator.');
@@ -61,23 +61,6 @@ class AuditVerifyCommand extends Command
         $this->components->info("Hash chain: INTACT ({$checked} record(s) verified).");
 
         return $protected ? self::SUCCESS : self::FAILURE;
-    }
-
-    private function triggersInstalled(): bool
-    {
-        $names = match (DB::getDriverName()) {
-            'mysql', 'mariadb' => DB::table('information_schema.TRIGGERS')
-                ->where('TRIGGER_SCHEMA', DB::getDatabaseName())
-                ->where('EVENT_OBJECT_TABLE', 'audit_logs')
-                ->pluck('TRIGGER_NAME'),
-            'sqlite' => DB::table('sqlite_master')
-                ->where('type', 'trigger')
-                ->where('tbl_name', 'audit_logs')
-                ->pluck('name'),
-            default => collect(),
-        };
-
-        return $names->contains('audit_logs_no_update') && $names->contains('audit_logs_no_delete');
     }
 
     /**

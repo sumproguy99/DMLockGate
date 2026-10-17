@@ -7,6 +7,7 @@ import { useAuth } from './auth/auth-context'
 import { Banner } from './components/ui/Banner'
 import { Button } from './components/ui/Button'
 import { LoadingState } from './components/ui/Spinner'
+import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { PendingScreen } from './pages/PendingScreen'
 
@@ -66,13 +67,7 @@ export function AppRoutes() {
       >
         <Route
           index
-          element={
-            <PendingScreen
-              title="Dashboard"
-              description="Locks, integration health, alerts and recent activity at a glance."
-              checkpoint={4}
-            />
-          }
+          element={<DashboardPage />}
         />
         <Route
           path="users"

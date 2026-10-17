@@ -35,6 +35,14 @@ export async function verifyMfa(input: { code: string } | { recovery_code: strin
   return data.user
 }
 
+/**
+ * Step-up: prove identity again (password, plus an authenticator code when two-step verification is
+ * on) before a sensitive action. Lasts for the server's configured window.
+ */
+export async function confirmIdentity(input: { password: string; code?: string }): Promise<void> {
+  await api<unknown>('/auth/confirm', { method: 'POST', body: input })
+}
+
 export async function logout(): Promise<void> {
   await api<void>('/auth/logout', { method: 'POST' })
 }

@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router'
 import { BrandLogo } from '../components/brand/BrandLogo'
 import { Dialog } from '../components/ui/Dialog'
 import { Header } from './Header'
+import { HealthProvider } from './HealthProvider'
 import { NavigationList, Sidebar } from './Sidebar'
 
 const COLLAPSED_KEY = 'lockguard.sidebar.collapsed'
@@ -46,38 +47,40 @@ export function AppShell() {
   }
 
   return (
-    <div className="flex min-h-dvh">
-      <a
-        href="#main"
-        className="sr-only z-50 rounded-md bg-primary-strong px-4 py-2 font-semibold text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
-      >
-        Skip to main content
-      </a>
+    <HealthProvider>
+      <div className="flex min-h-dvh">
+        <a
+          href="#main"
+          className="sr-only z-50 rounded-md bg-primary-strong px-4 py-2 font-semibold text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+        >
+          Skip to main content
+        </a>
 
-      <Sidebar collapsed={collapsed} onToggle={toggleCollapsed} />
+        <Sidebar collapsed={collapsed} onToggle={toggleCollapsed} />
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Header onOpenNavigation={() => setDrawerOpen(true)} />
-        <main id="main" ref={mainRef} tabIndex={-1} className="flex-1 px-4 py-6 outline-none sm:px-6 lg:px-8">
-          <Outlet />
-        </main>
-      </div>
-
-      <Dialog
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        placement="left"
-        title={
-          <span className="flex items-center gap-3">
-            <BrandLogo variant="mark" decorative className="size-9" />
-            DM LockGuard
-          </span>
-        }
-      >
-        <div className="pb-4">
-          <NavigationList onNavigate={() => setDrawerOpen(false)} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Header onOpenNavigation={() => setDrawerOpen(true)} />
+          <main id="main" ref={mainRef} tabIndex={-1} className="flex-1 px-4 py-6 outline-none sm:px-6 lg:px-8">
+            <Outlet />
+          </main>
         </div>
-      </Dialog>
-    </div>
+
+        <Dialog
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          placement="left"
+          title={
+            <span className="flex items-center gap-3">
+              <BrandLogo variant="mark" decorative className="size-9" />
+              DM LockGuard
+            </span>
+          }
+        >
+          <div className="pb-4">
+            <NavigationList onNavigate={() => setDrawerOpen(false)} />
+          </div>
+        </Dialog>
+      </div>
+    </HealthProvider>
   )
 }

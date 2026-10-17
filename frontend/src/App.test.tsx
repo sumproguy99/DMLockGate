@@ -7,7 +7,7 @@ import { AppRoutes } from './App'
 import { USER_ADMIN_PERMISSIONS } from './app/navigation'
 import { AuthProvider } from './auth/AuthProvider'
 import { ToastProvider } from './components/ui/ToastProvider'
-import { apiError, clearCookies, json, makeUser, mockFetch } from './test/api'
+import { apiError, clearCookies, json, makeUser, mockFetch, signedIn } from './test/api'
 import { expectNoAxeViolations } from './test/axe'
 
 function renderApp(path = '/') {
@@ -169,13 +169,14 @@ describe('signing in', () => {
 
   it('offers a retry when LockGuard cannot be reached', async () => {
     let up = false
+    const handlers = signedIn(admin)
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => {
+      vi.fn(async (input: RequestInfo | URL) => {
         if (!up) {
           throw new TypeError('Failed to fetch')
         }
-        return json(200, { data: admin })
+        return handlers[`GET ${String(input)}`]({ body: undefined, headers: {} })
       }),
     )
     renderApp('/')
@@ -189,7 +190,7 @@ describe('signing in', () => {
 
 describe('the signed-in shell', () => {
   it('shows only the navigation this user may use', async () => {
-    mockFetch({ 'GET /api/v1/auth/me': () => json(200, { data: resident }) })
+    mockFetch(signedIn(resident))
     renderApp('/')
 
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' })
@@ -197,7 +198,7 @@ describe('the signed-in shell', () => {
   })
 
   it('shows administrators every built screen', async () => {
-    mockFetch({ 'GET /api/v1/auth/me': () => json(200, { data: admin }) })
+    mockFetch(signedIn(admin))
     const { container } = renderApp('/')
 
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' })
@@ -209,14 +210,14 @@ describe('the signed-in shell', () => {
   })
 
   it('explains, rather than shows, a page the user may not open', async () => {
-    mockFetch({ 'GET /api/v1/auth/me': () => json(200, { data: resident }) })
+    mockFetch(signedIn(resident))
     renderApp('/users')
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Not available to you' })).toBeInTheDocument()
   })
 
   it('navigates, highlights the current page and moves focus to the content', async () => {
-    mockFetch({ 'GET /api/v1/auth/me': () => json(200, { data: admin }) })
+    mockFetch(signedIn(admin))
     renderApp('/')
     const user = userEvent.setup()
 
@@ -230,7 +231,7 @@ describe('the signed-in shell', () => {
   })
 
   it('collapses the sidebar to icons, keeps link names, and remembers it', async () => {
-    mockFetch({ 'GET /api/v1/auth/me': () => json(200, { data: admin }) })
+    mockFetch(signedIn(admin))
     const { unmount } = renderApp('/')
     const user = userEvent.setup()
 
@@ -247,7 +248,7 @@ describe('the signed-in shell', () => {
   })
 
   it('opens the navigation drawer and closes it after following a link', async () => {
-    mockFetch({ 'GET /api/v1/auth/me': () => json(200, { data: admin }) })
+    mockFetch(signedIn(admin))
     renderApp('/')
     const user = userEvent.setup()
 
@@ -262,7 +263,7 @@ describe('the signed-in shell', () => {
 
   it('signs out from the account menu', async () => {
     mockFetch({
-      'GET /api/v1/auth/me': () => json(200, { data: admin }),
+      ...signedIn(admin),
       'POST /api/v1/auth/logout': () => json(204, null),
     })
     renderApp('/')
@@ -277,7 +278,7 @@ describe('the signed-in shell', () => {
 
   it('returns to sign-in with a notice when the session expires mid-use', async () => {
     mockFetch({
-      'GET /api/v1/auth/me': () => json(200, { data: admin }),
+      ...signedIn(admin),
       'GET /api/v1/locks': () => apiError(401, 'unauthenticated', 'Sign in to continue.'),
     })
     renderApp('/')
@@ -290,7 +291,7 @@ describe('the signed-in shell', () => {
   })
 
   it('has a skip link to the main content', async () => {
-    mockFetch({ 'GET /api/v1/auth/me': () => json(200, { data: admin }) })
+    mockFetch(signedIn(admin))
     renderApp('/')
 
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' })
@@ -298,7 +299,7 @@ describe('the signed-in shell', () => {
   })
 
   it('shows a not-found page for unknown addresses', async () => {
-    mockFetch({ 'GET /api/v1/auth/me': () => json(200, { data: admin }) })
+    mockFetch(signedIn(admin))
     renderApp('/nowhere')
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Page not found' })).toBeInTheDocument()

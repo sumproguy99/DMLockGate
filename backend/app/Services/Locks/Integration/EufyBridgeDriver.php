@@ -101,13 +101,16 @@ class EufyBridgeDriver implements LockDriver
     }
 
     /**
+     * The bridge's own view of its Eufy session. Answered from memory by the bridge, so the timeout is
+     * short: a dashboard waits on it.
+     *
      * @return array<string, mixed>
      *
      * @throws IntegrationUnavailable
      */
     public function health(): array
     {
-        return $this->getJson('/v1/health', unwrap: false);
+        return $this->getJson('/v1/health', unwrap: false, timeoutSeconds: min(5, $this->readTimeoutSeconds));
     }
 
     /**
@@ -115,10 +118,10 @@ class EufyBridgeDriver implements LockDriver
      *
      * @throws IntegrationUnavailable
      */
-    private function getJson(string $path, bool $unwrap = true): array
+    private function getJson(string $path, bool $unwrap = true, ?int $timeoutSeconds = null): array
     {
         try {
-            $response = $this->request('GET', $path, '', $this->readTimeoutSeconds);
+            $response = $this->request('GET', $path, '', $timeoutSeconds ?? $this->readTimeoutSeconds);
         } catch (ConnectionException $exception) {
             throw new IntegrationUnavailable('The Eufy bridge is not reachable.', previous: $exception);
         }

@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\V1\Locks\LockAccessController;
 use App\Http\Controllers\Api\V1\Locks\LockCommandController;
 use App\Http\Controllers\Api\V1\Locks\LockController;
 use App\Http\Controllers\Api\V1\Locks\PropertyController;
+use App\Http\Controllers\Api\V1\System\DashboardController;
+use App\Http\Controllers\Api\V1\System\SystemHealthController;
 use App\Http\Controllers\Api\V1\Users\PermissionPreviewController;
 use App\Http\Controllers\Api\V1\Users\RoleController;
 use App\Http\Controllers\Api\V1\Users\UserController;
@@ -27,6 +29,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('auth/logout', [SessionController::class, 'destroy'])->name('auth.logout');
         Route::get('auth/me', CurrentUserController::class)->name('auth.me');
         Route::post('auth/confirm', ConfirmIdentityController::class)->name('auth.confirm');
+
+        // Dashboard and health. Read-only; each section is filtered by the caller's permissions.
+        Route::get('dashboard', DashboardController::class)->name('dashboard');
+        Route::get('system/health', SystemHealthController::class)->name('system.health');
 
         Route::middleware('step-up')->group(function (): void {
             Route::post('auth/mfa', [MfaController::class, 'store'])->name('auth.mfa.store');
