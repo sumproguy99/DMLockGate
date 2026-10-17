@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Carbon;
 
 /**
  * A user as administrators see them in user management. Never includes secrets.
@@ -40,6 +41,13 @@ class ManagedUserResource extends JsonResource
                 'permission' => $permission->key->value,
                 'effect' => $permission->pivot->effect,
                 'reason' => $permission->pivot->reason,
+            ])->values()),
+            'locks' => $this->whenLoaded('locks', fn () => $this->locks->map(fn ($lock): array => [
+                'id' => $lock->id,
+                'name' => $lock->name,
+                'property' => $lock->relationLoaded('property') ? ['id' => $lock->property->id, 'name' => $lock->property->name] : null,
+                'valid_from' => $lock->pivot->valid_from === null ? null : Carbon::parse($lock->pivot->valid_from)->toIso8601String(),
+                'valid_until' => $lock->pivot->valid_until === null ? null : Carbon::parse($lock->pivot->valid_until)->toIso8601String(),
             ])->values()),
         ];
     }

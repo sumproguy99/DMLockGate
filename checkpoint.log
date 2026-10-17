@@ -367,3 +367,15 @@ What needs to be done.
 Commit when Dustin asks. Dustin to sign in and try the dashboard, including one Lock and one Unlock on a real lock (he runs live commands). UI CHECKPOINT 5: administrative screens (users, roles, locks, access, audit, configuration).
 What is important or stands out that needs attention or needs to be address.
 Not shown because the backend lacks them: lockdown, alert acknowledgement and Security Center, revoked devices, widget customization. Bridge error text appears in admin diagnostics as the bridge reports it (truncated to 200 characters by the bridge). The queue check can only see the database queue; a stopped worker with an empty queue still reads healthy.
+
+---
+Timestamp: 2026-10-17 ET
+Percent complete: 76%
+Description of what you are working on.
+UI CHECKPOINT 5: administrative screens (project.md section 34.14).
+What you have done so far:
+Committed 07423d5 (dashboard). Backend: user list filters by role, lock and property; user detail includes lock access with its window; POST users/{user}/sessions/revoke (devices.revoke_sessions, step-up, reason, audited, account stays active); security history times now ISO UTC; GET properties no longer needs step-up (creating still does); audit API GET audit-logs (filters, pagination, names), GET audit-logs/{event_id} (redacted metadata, request context, hash), GET audit-logs/export (CSV, admin.reports_export, audited, 10,000 rows, 6 a minute, formula cells quoted); viewing needs admin.incidents_view and refusals are audited. 11 new tests, PHP 237/237. Frontend: one shared identity re-check dialog for step-up; Users list with filters, Add user, user page (profile, roles and overrides with the server preview gating Save, lock access, security history, suspend, reactivate, sign out everywhere, revoke, all with reasons); Roles page grouped by area; Locks list and lock page (diagnostics with masked serial, settings, who has access, history), Register lock; Properties; Audit log with filters, detail and CSV export; System health page; Security group in the sidebar. 175 frontend tests pass; build and lint clean. Screenshots at 1440 px and 390 px with made-up data.
+What needs to be done.
+Commit when Dustin asks. UI CHECKPOINT 6: mobile application shell.
+What is important or stands out that needs attention or needs to be address.
+Not built (no backend): access codes as their own screen, location and proximity, Security Center incidents and alert acknowledgement, trusted devices, editable settings, role editing. Property listing moved out of step-up (read-only, still admin.integration_settings). The audit export metadata records the filters used.

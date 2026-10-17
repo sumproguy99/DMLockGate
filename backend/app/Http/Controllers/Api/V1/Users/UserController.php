@@ -28,7 +28,7 @@ class UserController extends Controller
     ) {}
 
     /**
-     * List users, optionally filtered by status or a name/username/email search.
+     * List users, optionally filtered by status, role, lock or property access, or a name/username/email search.
      */
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -37,12 +37,18 @@ class UserController extends Controller
         $filters = $request->validate([
             'status' => ['nullable', Rule::enum(UserStatus::class)],
             'search' => ['nullable', 'string', 'max:255'],
+            'role' => ['nullable', 'string', 'exists:roles,key'],
+            'lock_id' => ['nullable', 'integer'],
+            'property_id' => ['nullable', 'integer'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
         $users = User::query()
             ->with('roles')
             ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('status', $status))
+            ->when($filters['role'] ?? null, fn ($query, string $role) => $query->whereHas('roles', fn ($roles) => $roles->where('key', $role)))
+            ->when($filters['lock_id'] ?? null, fn ($query, int $lockId) => $query->whereHas('locks', fn ($locks) => $locks->whereKey($lockId)))
+            ->when($filters['property_id'] ?? null, fn ($query, int $propertyId) => $query->whereHas('locks', fn ($locks) => $locks->where('property_id', $propertyId)))
             ->when($filters['search'] ?? null, function ($query, string $search): void {
                 $query->where(fn ($inner) => $inner
                     ->where('name', 'like', "%{$search}%")
@@ -60,7 +66,7 @@ class UserController extends Controller
     {
         $this->guard->requireAnyPermission($request->user(), UserManagementGuard::VIEW_PERMISSIONS, 'user.view');
 
-        return new ManagedUserResource($user->load('roles', 'permissionOverrides'));
+        return new ManagedUserResource($user->load('roles', 'permissionOverrides', 'locks.property'));
     }
 
     /**

@@ -14,6 +14,7 @@ use App\Services\Audit\AuditLogger;
 use App\Services\Auth\SessionRevoker;
 use App\Services\Authorization\PermissionResolver;
 use App\Services\Authorization\UserManagementGuard;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -42,6 +43,27 @@ class UserStatusController extends Controller
     public function revoke(ChangeUserStatusRequest $request, User $user): ManagedUserResource
     {
         return $this->transition($request, $user, PermissionKey::UsersRevoke, 'user.revoked', [UserStatus::Active, UserStatus::Suspended], UserStatus::Revoked);
+    }
+
+    /**
+     * Sign the user out everywhere without changing their status, for a lost phone or a shared
+     * computer. They can sign in again with their password.
+     */
+    public function revokeSessions(ChangeUserStatusRequest $request, User $user): JsonResponse
+    {
+        $actor = $request->user();
+        $this->guard->authorizeOnTarget($actor, $user, PermissionKey::DevicesRevokeSessions, 'user.sessions_revoked');
+
+        $ended = DB::transaction(function () use ($request, $actor, $user): array {
+            $ended = $this->sessions->revokeAll($user);
+            $this->audit->record('user.sessions_revoked', AuditOutcome::Success, actor: $actor, targets: ['user' => $user->id], reason: $request->validated('reason'), metadata: [
+                'signed_out' => $ended,
+            ]);
+
+            return $ended;
+        });
+
+        return response()->json(['data' => ['signed_out' => $ended]]);
     }
 
     /**

@@ -2,14 +2,22 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { AppShell } from './app/AppShell'
 import { NotFound, RequireAuth, RequirePermission } from './app/guards'
-import { USER_ADMIN_PERMISSIONS } from './app/navigation'
+import { DIAGNOSTICS_PERMISSIONS, USER_ADMIN_PERMISSIONS } from './app/navigation'
 import { useAuth } from './auth/auth-context'
 import { Banner } from './components/ui/Banner'
 import { Button } from './components/ui/Button'
 import { LoadingState } from './components/ui/Spinner'
 import { DashboardPage } from './pages/DashboardPage'
+import { LockDetailPage } from './pages/locks/LockDetailPage'
+import { LocksPage } from './pages/locks/LocksPage'
+import { PropertiesPage } from './pages/locks/PropertiesPage'
 import { LoginPage } from './pages/LoginPage'
-import { PendingScreen } from './pages/PendingScreen'
+import { AuditLogPage } from './pages/security/AuditLogPage'
+import { SystemHealthPage } from './pages/security/SystemHealthPage'
+import { NewUserPage } from './pages/users/NewUserPage'
+import { RolesPage } from './pages/users/RolesPage'
+import { UserDetailPage } from './pages/users/UserDetailPage'
+import { UsersPage } from './pages/users/UsersPage'
 
 /** The component gallery, bundled only into development builds. */
 const ComponentGallery = import.meta.env.DEV ? lazy(() => import('./dev/ComponentGallery')) : null
@@ -73,7 +81,23 @@ export function AppRoutes() {
           path="users"
           element={
             <RequirePermission permissions={USER_ADMIN_PERMISSIONS}>
-              <PendingScreen title="Users" description="LockGuard accounts, their status, roles and security history." checkpoint={5} />
+              <UsersPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="users/new"
+          element={
+            <RequirePermission permissions={['users.create']}>
+              <NewUserPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="users/:id"
+          element={
+            <RequirePermission permissions={USER_ADMIN_PERMISSIONS}>
+              <UserDetailPage />
             </RequirePermission>
           }
         />
@@ -81,7 +105,7 @@ export function AppRoutes() {
           path="roles"
           element={
             <RequirePermission permissions={USER_ADMIN_PERMISSIONS}>
-              <PendingScreen title="Roles and permissions" description="What each role allows, grouped by area." checkpoint={5} />
+              <RolesPage />
             </RequirePermission>
           }
         />
@@ -89,7 +113,7 @@ export function AppRoutes() {
           path="properties"
           element={
             <RequirePermission permissions={['admin.integration_settings']}>
-              <PendingScreen title="Properties" description="The places LockGuard manages, and their locks." checkpoint={5} />
+              <PropertiesPage />
             </RequirePermission>
           }
         />
@@ -97,7 +121,31 @@ export function AppRoutes() {
           path="locks"
           element={
             <RequirePermission permissions={['lock.view_status', 'devices.view']}>
-              <PendingScreen title="Locks" description="Every lock, its reported state, connection and access." checkpoint={5} />
+              <LocksPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="locks/:id"
+          element={
+            <RequirePermission permissions={['lock.view_status', 'devices.view']}>
+              <LockDetailPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="audit"
+          element={
+            <RequirePermission permissions={['admin.incidents_view']}>
+              <AuditLogPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="system"
+          element={
+            <RequirePermission permissions={DIAGNOSTICS_PERMISSIONS}>
+              <SystemHealthPage />
             </RequirePermission>
           }
         />

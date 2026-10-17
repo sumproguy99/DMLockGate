@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Services\Authorization\UserManagementGuard;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -36,7 +37,7 @@ class UserSecurityHistoryController extends Controller
         return response()->json([
             'data' => $records->getCollection()->map(fn (AuditLog $record): array => [
                 'event_id' => $record->event_id,
-                'occurred_at' => $record->occurred_at,
+                'occurred_at' => CarbonImmutable::parse($record->occurred_at, 'UTC')->toIso8601ZuluString('millisecond'),
                 'action' => $record->action,
                 'outcome' => $record->outcome->value,
                 'actor' => $record->actor === null ? null : ['id' => $record->actor->id, 'name' => $record->actor->name],

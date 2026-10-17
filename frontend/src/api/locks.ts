@@ -81,3 +81,43 @@ export function newIdempotencyKey(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(16))
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
 }
+
+export async function fetchLock(id: number, signal?: AbortSignal): Promise<LockSummary> {
+  return (await api<{ data: LockSummary }>(`/locks/${id}`, { signal })).data
+}
+
+/** One reported state, as the lock or the scheduled sync recorded it. */
+export type LockStateEvent = {
+  state: ReportedLockState
+  source: string
+  observed_at: string
+  battery_level: number | null
+  external_actor: string | null
+}
+
+export async function fetchLockHistory(id: number, signal?: AbortSignal): Promise<{ states: LockStateEvent[]; requests: LockRequest[] }> {
+  return (await api<{ data: { states: LockStateEvent[]; requests: LockRequest[] } }>(`/locks/${id}/history`, { signal })).data
+}
+
+export type LockChanges = Partial<{ name: string; commands_enabled: boolean; registration_status: 'active' | 'disabled' }>
+
+export async function updateLock(id: number, changes: LockChanges): Promise<LockSummary> {
+  return (await api<{ data: LockSummary }>(`/locks/${id}`, { method: 'PATCH', body: changes })).data
+}
+
+export type NewLock = { property_id: number; name: string; model: string | null; external_id: string }
+
+/** Register a lock LockGuard does not know yet. Commands start turned off. */
+export async function registerLock(input: NewLock): Promise<LockSummary> {
+  return (await api<{ data: LockSummary }>('/locks', { method: 'POST', body: input })).data
+}
+
+export type Property = { id: number; name: string; address: string | null; timezone: string; locks_count: number }
+
+export async function fetchProperties(signal?: AbortSignal): Promise<Property[]> {
+  return (await api<{ data: Property[] }>('/properties', { signal })).data
+}
+
+export async function createProperty(input: { name: string; address: string | null; timezone?: string }): Promise<Property> {
+  return (await api<{ data: Property }>('/properties', { method: 'POST', body: input })).data
+}

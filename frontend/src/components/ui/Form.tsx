@@ -1,5 +1,13 @@
 import { CircleAlert, Eye, EyeOff, Search } from 'lucide-react'
-import { useId, useState, type InputHTMLAttributes, type ReactNode, type Ref, type SelectHTMLAttributes } from 'react'
+import {
+  useId,
+  useState,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type Ref,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+} from 'react'
 import { cx } from '../../lib/cx'
 
 const control =
@@ -65,6 +73,31 @@ export function TextField({ label, hint, error, required, className, type = 'tex
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy(id, hint, error)}
         className={cx(control, className)}
+        {...rest}
+      />
+    </FieldShell>
+  )
+}
+
+type TextAreaFieldProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'id'> & {
+  label: ReactNode
+  hint?: ReactNode
+  error?: string | null
+  ref?: Ref<HTMLTextAreaElement>
+}
+
+export function TextAreaField({ label, hint, error, required, className, rows = 3, ...rest }: TextAreaFieldProps) {
+  const id = useId()
+
+  return (
+    <FieldShell id={id} label={label} hint={hint} error={error} required={required}>
+      <textarea
+        id={id}
+        rows={rows}
+        required={required}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy(id, hint, error)}
+        className={cx(control, 'py-2', className)}
         {...rest}
       />
     </FieldShell>

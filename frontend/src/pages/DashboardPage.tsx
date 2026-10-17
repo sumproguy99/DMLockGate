@@ -1,12 +1,13 @@
-import { Activity, KeyRound, RefreshCw, ShieldCheck } from 'lucide-react'
-import { useCallback, type ReactNode } from 'react'
+import { Activity, KeyRound, RefreshCw } from 'lucide-react'
+import { useCallback } from 'react'
 import { Link } from 'react-router'
 import { fetchLocks, type LockSummary } from '../api/locks'
-import { fetchDashboard, type ActivityItem, type Dashboard, type SystemHealth } from '../api/system'
+import { fetchDashboard, type ActivityItem, type Dashboard } from '../api/system'
 import { useSystemHealth } from '../app/health-context'
 import { USER_ADMIN_PERMISSIONS } from '../app/navigation'
 import { hasAnyPermission, useCurrentUser } from '../auth/auth-context'
 import { LockCard } from '../components/locks/LockCard'
+import { DetailRow as Row, IntegrationPanel, SystemHealthPanel } from '../components/system/HealthPanels'
 import { ActivityEntry } from '../components/status/ActivityEntry'
 import { Timestamp } from '../components/status/Timestamp'
 import { Banner } from '../components/ui/Banner'
@@ -15,10 +16,8 @@ import { Card, Metric } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
 import { PageHeader } from '../components/ui/PageHeader'
 import { LoadingState } from '../components/ui/Spinner'
-import { StatusBadge } from '../components/ui/StatusBadge'
 import { describeActivity } from '../lib/activity'
 import { cx } from '../lib/cx'
-import { describeIntegration, describeSubsystem, subsystemLabel } from '../lib/health'
 import { usePolled } from '../lib/usePolled'
 
 /** How often the dashboard reloads locks and summaries. */
@@ -143,75 +142,6 @@ export function DashboardPage() {
   )
 }
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 border-b border-border py-2 last:border-b-0">
-      <dt className="text-support text-text-muted">{label}</dt>
-      <dd className="text-support">{children}</dd>
-    </div>
-  )
-}
-
-function MaybeTime({ iso, missing }: { iso: string | null | undefined; missing: string }) {
-  return iso ? <Timestamp iso={iso} /> : <span className="text-text-muted">{missing}</span>
-}
-
-function IntegrationPanel({ health, failed }: { health: SystemHealth | null; failed: boolean }) {
-  if (!health) {
-    return (
-      <Card title="Eufy integration">
-        {failed ? (
-          <Banner tone="unknown" title="Integration status unavailable" live="none">
-            LockGuard could not report the integration's health. Lock states below may be out of date.
-          </Banner>
-        ) : (
-          <LoadingState label="Checking the integration…" />
-        )}
-      </Card>
-    )
-  }
-
-  const { integration } = health
-  const { tone, label, icon, explanation } = describeIntegration(integration.status)
-  const details = integration.details
-
-  return (
-    <Card title="Eufy integration" description="The bridge between LockGuard and your Eufy account.">
-      <div className="mb-3 flex flex-col gap-2">
-        <StatusBadge tone={tone} label={label} icon={icon} className="self-start" />
-        <p className="text-support text-text-muted">{explanation}</p>
-      </div>
-      <dl>
-        <Row label="Last state sync">
-          <MaybeTime iso={integration.last_sync_at} missing="None recorded" />
-        </Row>
-        <Row label="Checked">
-          <Timestamp iso={integration.checked_at} />
-        </Row>
-        {details && (
-          <>
-            {details.error && <Row label="Bridge error">{details.error}</Row>}
-            {details.degraded_reason && (
-              <Row label="Degraded because">
-                {details.degraded_reason === 'cloud_silent' ? 'Eufy cloud stopped answering' : 'Repeated Eufy cloud errors'}
-              </Row>
-            )}
-            {details.cloud_ok_at !== undefined && (
-              <Row label="Eufy cloud last answered">
-                <MaybeTime iso={details.cloud_ok_at} missing="Not yet" />
-              </Row>
-            )}
-            {details.cloud_failures != null && <Row label="Cloud failures in a row">{details.cloud_failures}</Row>}
-            {details.cloud_last_error && <Row label="Last cloud error">{details.cloud_last_error}</Row>}
-            {details.last_error && <Row label="Last bridge error">{details.last_error}</Row>}
-            {details.locks_visible != null && <Row label="Locks the bridge can see">{details.locks_visible}</Row>}
-          </>
-        )}
-      </dl>
-    </Card>
-  )
-}
-
 function SecurityPanel({ security }: { security: NonNullable<Dashboard['security']> }) {
   const counts = [
     { label: 'Failed sign-ins', value: security.failed_sign_ins },
@@ -296,27 +226,6 @@ function ActivityPanel({ activity }: { activity: NonNullable<Dashboard['activity
       ) : (
         <ActivityList items={activity} />
       )}
-    </Card>
-  )
-}
-
-function SystemHealthPanel({ subsystems }: { subsystems: NonNullable<SystemHealth['subsystems']> }) {
-  return (
-    <Card title="System health" description="Measured by the backend. Parts that are not built yet say so.">
-      <ul className="divide-y divide-border">
-        {subsystems.map((subsystem) => {
-          const { tone, label } = describeSubsystem(subsystem.status)
-          return (
-            <li key={subsystem.key} className="flex flex-col gap-1 py-2.5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-support font-medium">{subsystemLabel[subsystem.key] ?? subsystem.key}</span>
-                <StatusBadge tone={tone} label={label} icon={subsystem.status === 'ok' ? ShieldCheck : undefined} />
-              </div>
-              <p className="text-caption text-text-muted">{subsystem.summary}</p>
-            </li>
-          )
-        })}
-      </ul>
     </Card>
   )
 }

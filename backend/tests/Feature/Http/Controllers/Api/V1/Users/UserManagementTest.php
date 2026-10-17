@@ -8,7 +8,9 @@ use App\Enums\PermissionKey;
 use App\Enums\RoleTemplate;
 use App\Enums\UserStatus;
 use App\Models\AuditLog;
+use App\Models\Lock;
 use App\Models\Permission;
+use App\Models\Property;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\Authorization\PermissionResolver;
@@ -488,5 +490,78 @@ class UserManagementTest extends TestCase
         $this->getJson(route('api.v1.permissions.index'))
             ->assertOk()
             ->assertJsonCount(count(PermissionKey::cases()), 'data');
+    }
+
+    public function test_listing_filters_by_role_lock_and_property(): void
+    {
+        $admin = $this->userWithRole(RoleTemplate::SuperAdministrator, ['name' => 'Ada Admin']);
+        $home = Property::factory()->create();
+        $front = Lock::factory()->for($home)->create();
+        $elsewhere = Lock::factory()->create();
+        $rhea = $this->userWithRole(RoleTemplate::Resident, ['name' => 'Rhea Resident']);
+        $rhea->locks()->attach($front->id);
+        $gus = $this->userWithRole(RoleTemplate::TemporaryGuest, ['name' => 'Gus Guest']);
+        $gus->locks()->attach($elsewhere->id);
+
+        $this->actingAs($admin)->getJson(route('api.v1.users.index', ['role' => 'resident']))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Rhea Resident');
+
+        $this->getJson(route('api.v1.users.index', ['lock_id' => $elsewhere->id]))
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Gus Guest');
+
+        $this->getJson(route('api.v1.users.index', ['property_id' => $home->id]))
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Rhea Resident');
+
+        $this->getJson(route('api.v1.users.index', ['role' => 'no_such_role']))->assertUnprocessable();
+    }
+
+    public function test_user_detail_lists_lock_access_with_its_window(): void
+    {
+        $admin = $this->userWithRole(RoleTemplate::SuperAdministrator);
+        $lock = Lock::factory()->create(['name' => 'Garage']);
+        $guest = $this->userWithRole(RoleTemplate::TemporaryGuest);
+        $guest->locks()->attach($lock->id, ['valid_until' => now()->addDays(2)]);
+
+        $this->actingAs($admin)->getJson(route('api.v1.users.show', $guest))
+            ->assertOk()
+            ->assertJsonPath('data.locks.0.name', 'Garage')
+            ->assertJsonPath('data.locks.0.property.id', $lock->property_id)
+            ->assertJsonPath('data.locks.0.valid_from', null)
+            ->assertJsonPath('data.locks.0.valid_until', fn (?string $until): bool => $until !== null);
+    }
+
+    public function test_signing_a_user_out_everywhere_keeps_the_account_active(): void
+    {
+        config(['session.driver' => 'database']);
+        $admin = $this->userWithRole(RoleTemplate::SuperAdministrator);
+        $resident = $this->userWithRole(RoleTemplate::Resident);
+        DB::table('sessions')->insert(['id' => 'resident-session', 'user_id' => $resident->id, 'payload' => '', 'last_activity' => now()->getTimestamp()]);
+
+        $this->actingAs($admin)->postJson(route('api.v1.users.sessions.revoke', $resident), ['reason' => 'Shared computer'])
+            ->assertForbidden()
+            ->assertJsonPath('error.code', 'step_up_required');
+
+        $this->actingWithStepUp($admin)->postJson(route('api.v1.users.sessions.revoke', $resident), ['reason' => 'Shared computer'])
+            ->assertOk()
+            ->assertJsonPath('data.signed_out.browser_logins', 1);
+
+        $this->assertDatabaseMissing('sessions', ['user_id' => $resident->id]);
+        $this->assertSame(UserStatus::Active, $resident->fresh()->status);
+        $audit = AuditLog::query()->where('action', 'user.sessions_revoked')->sole();
+        $this->assertSame('Shared computer', $audit->reason);
+    }
+
+    public function test_signing_users_out_requires_the_permission(): void
+    {
+        $manager = $this->userWithRole(RoleTemplate::PropertyManager);
+        $resident = $this->userWithRole(RoleTemplate::Resident);
+
+        $this->actingWithStepUp($manager)->postJson(route('api.v1.users.sessions.revoke', $resident), ['reason' => 'Shared computer'])
+            ->assertForbidden();
+        $this->deniedAudit('user.sessions_revoked');
     }
 }

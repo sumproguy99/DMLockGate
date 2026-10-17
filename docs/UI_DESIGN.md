@@ -146,6 +146,8 @@ All in `frontend/src/components`. Presentation only: no component calls the API 
 | Users, Roles and permissions | `users.*` (the backend's user-management view permissions) |
 | Properties | `admin.integration_settings` |
 | Locks | `lock.view_status`, `devices.view` |
+| Audit log | `admin.incidents_view` |
+| System health | `admin.integration_settings`, `admin.incidents_view` |
 
 A user who types the address of a page they can't use sees "Not available to you". The backend refuses the data either way.
 
@@ -153,9 +155,7 @@ A user who types the address of a page they can't use sees "Not available to you
 
 **Not in the shell yet:**
 - **Notification center, global search, settings shortcut:** these have no backend yet.
-- **Navigation items from project.md 34.4 that have no backend yet:** access codes, grants, schedules, trusted devices, location, security center, alerts, incidents, audit logs, notifications, device and system health, settings, help.
-  - They're added as their features are built.
-  - Until then the Users, Roles, Properties and Locks pages say "This screen is not built yet" and show no data.
+- **Navigation items from project.md 34.4 that have no backend yet:** access codes, schedules, trusted devices, location, security center, alerts, incidents, notifications, settings, help. They're added as their features are built.
 
 **Component gallery:** `/dev/components`, in development builds only.
 ## Dashboard
@@ -190,6 +190,55 @@ The backend leaves out (returns null for) each section the user may not see, so 
 
 **Not on the dashboard, because the backend has no support yet:** lockdown status and quick action, alert acknowledgement and the Security Center, revoked devices, proximity-unlock controls, widget customization.
 
+## Administrative screens
+
+**Identity re-check (step-up):** many admin changes answer `step_up_required` until the administrator has re-entered their password (and code) in the last few minutes. One shared dialog (`StepUpProvider`) asks for it, then the change runs once more. Cancelling it changes nothing and shows no error.
+
+**Users** (`/users`, 34.6 B):
+- **List:** search, plus status, role, property and lock filters. Filters live in the address, so links and Back keep them.
+- **Add user** (`/users/new`): name, email, optional username and expiry, a first password, and roles, with the permission preview. Overrides are added afterwards.
+- **User page** has four tabs:
+  - **Profile:** edit details, expiry and notes. Only changed fields are sent.
+  - **Roles and permissions:** role checkboxes and a per-permission "Follow roles / Always allow / Always deny" choice. The server's preview shows the effective permissions and where each comes from, what would change (sensitive gains highlighted), and whether you're allowed to save. Save stays disabled until the preview says yes.
+  - **Lock access:** give access with an optional time window, or remove it. These are LockGuard records, never keypad codes on the lock.
+  - **Security history:** the user's sign-in and admin events, with older pages on request.
+- **Account actions:** each asks for a reason, which the audit log keeps.
+  - **Suspend:** signs them out everywhere.
+  - **Reactivate.**
+  - **Sign out everywhere:** ends all sessions but leaves the account active.
+  - **Revoke:** permanent, so the dialog says so.
+- **Your own account:** you can't change it; the page says so.
+
+**Roles and permissions** (`/roles`, 34.6 C): pick a role to see what it includes, grouped by area, with sensitive permissions marked. Roles are fixed by LockGuard; individual changes are overrides on a user's page.
+
+**Locks** (`/locks`, `/locks/:id`, 34.6 D):
+- **The list shows:** reported state and freshness, connection, battery, last contact, last command outcome, and whether commands are on. A banner explains when the Eufy integration isn't connected.
+- **A lock's page shows:**
+  - the lock card, with Lock and Unlock;
+  - integration diagnostics, including the serial number shown as `••••1234`;
+  - settings: rename, commands on/off (turning them on asks first), and disable or re-enable the lock;
+  - who has access, linking to their user pages;
+  - the last 50 requests and reported states.
+- **Register lock:** commands start off.
+
+**Properties** (`/properties`): list with lock counts, and add a property in this browser's time zone.
+
+**Audit log** (`/audit`, 34.6 H):
+- **Filtering:** search (action, reason or event ID), category, outcome, lock, and a date range. Click a person to filter by them.
+- **Pages:** 50 events per page.
+- **Detail dialog:** request context, the metadata (already redacted when it was written), and the record hash.
+- **Export CSV:** needs `admin.reports_export`. Each export is recorded in the audit log, limited to 10,000 rows and 6 exports a minute. Cells that a spreadsheet would treat as formulas are prefixed with a quote.
+
+**System health** (`/system`, 34.6 I): the integration diagnostics and subsystem list from the dashboard, on their own page. Settings can't be edited here: they live in the server's `.env`, so no secret is shown.
+
+**Not built, because the backend has no support yet:**
+- access codes and temporary access as their own screen (34.6 E; time-limited lock access is on each user's page);
+- location and proximity (F);
+- the Security Center's incidents and alert acknowledgement (G; the audit log's failure and denial filters cover the event feed);
+- trusted devices;
+- editable settings;
+- role editing.
+
 ## Testing and accessibility checks
 
 `npm test` runs Vitest with Testing Library in jsdom.
@@ -197,6 +246,7 @@ The backend leaves out (returns null for) each section the user may not see, so 
 - **Accessibility:** axe-core runs against each component and against the whole gallery page, using the WCAG 2.0–2.2 A and AA rules.
 - **Contrast:** axe can't measure contrast in jsdom, so `src/styles/contrast.test.ts` reads `tokens.css` and checks every color pair the components use, including tone text on its own 12% tint. That test caught blue and gray badge text on `elevated` at 4.43:1 and 4.46:1. `primary-text` and `unknown` were lightened as a result.
 - **Phone width:** layout at 390 px is checked with headless Edge driven through the DevTools protocol, using a true 390 px viewport and checking that the page is no wider than the screen.
+- **Admin screen tests:** user list filters, suspend with a reason, revoke after the identity re-check, a cancelled re-check, own account, preview-gated saving of roles, giving and removing lock access, creating a user; lock list, registration, lock page diagnostics and settings, a resident's view, an unknown lock; properties; audit log filters, detail and export, a refused export, the permission guard; system health.
 - **Dashboard tests:** permission-filtered panels for a resident and an administrator, stale state, unreachable bridge, load failure and retry, and lock commands (stage-by-stage progress, unlock confirmation, identity re-check with a fresh key, refusal, final unknown outcome, same-key retry after no answer, disabled and hidden buttons).
 - **App tests:** sign-in, MFA, session expiry, unreachable API, permission-filtered navigation, sidebar collapse, drawer, sign-out and the API client (CSRF, retry, timeout, 401) run against a mocked `fetch`.
 ## Development

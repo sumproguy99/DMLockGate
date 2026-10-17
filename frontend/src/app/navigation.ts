@@ -1,4 +1,4 @@
-import { Building2, LayoutDashboard, Lock, ShieldCheck, Users, type LucideIcon } from 'lucide-react'
+import { Activity, Building2, LayoutDashboard, Lock, ScrollText, ShieldCheck, Users, type LucideIcon } from 'lucide-react'
 import type { CurrentUser } from '../api/auth'
 import { hasAnyPermission } from '../auth/auth-context'
 
@@ -26,11 +26,14 @@ export const USER_ADMIN_PERMISSIONS = [
   'users.modify_permissions',
 ] as const
 
+/** Who may see system health diagnostics: the backend's rule for the detailed /system/health. */
+export const DIAGNOSTICS_PERMISSIONS = ['admin.integration_settings', 'admin.incidents_view'] as const
+
 /**
  * The sidebar (project.md 34.4), limited to screens LockGuard's backend supports today. Items in
  * the spec without a backend yet (access codes, grants, schedules, trusted devices, location,
- * security center, alerts, incidents, audit logs, notifications, device and system health,
- * settings) are added with their features, so nothing here leads to a feature that does not exist.
+ * security center, alerts, incidents, notifications, settings) are added with their features, so
+ * nothing here leads to a feature that does not exist.
  */
 export const navigation: readonly NavGroup[] = [
   {
@@ -44,6 +47,13 @@ export const navigation: readonly NavGroup[] = [
       { label: 'Roles and permissions', path: '/roles', icon: ShieldCheck, permissions: USER_ADMIN_PERMISSIONS },
       { label: 'Properties', path: '/properties', icon: Building2, permissions: ['admin.integration_settings'] },
       { label: 'Locks', path: '/locks', icon: Lock, permissions: ['lock.view_status', 'devices.view'] },
+    ],
+  },
+  {
+    label: 'Security',
+    items: [
+      { label: 'Audit log', path: '/audit', icon: ScrollText, permissions: ['admin.incidents_view'] },
+      { label: 'System health', path: '/system', icon: Activity, permissions: DIAGNOSTICS_PERMISSIONS },
     ],
   },
 ]

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Internal\EufyEventController;
+use App\Http\Controllers\Api\V1\Audit\AuditLogController;
 use App\Http\Controllers\Api\V1\Auth\ConfirmIdentityController;
 use App\Http\Controllers\Api\V1\Auth\CurrentUserController;
 use App\Http\Controllers\Api\V1\Auth\MfaChallengeController;
@@ -34,6 +35,11 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
         Route::get('system/health', SystemHealthController::class)->name('system.health');
 
+        // Audit trail: read-only, for security administrators and auditors. Exporting is audited.
+        Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+        Route::get('audit-logs/export', [AuditLogController::class, 'export'])->middleware('throttle:6,1')->name('audit-logs.export');
+        Route::get('audit-logs/{eventId}', [AuditLogController::class, 'show'])->whereUuid('eventId')->name('audit-logs.show');
+
         Route::middleware('step-up')->group(function (): void {
             Route::post('auth/mfa', [MfaController::class, 'store'])->name('auth.mfa.store');
             Route::post('auth/mfa/confirm', [MfaController::class, 'confirm'])->name('auth.mfa.confirm');
@@ -56,6 +62,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
             Route::post('users/{user}/reactivate', [UserStatusController::class, 'reactivate'])->name('users.reactivate');
             Route::post('users/{user}/revoke', [UserStatusController::class, 'revoke'])->name('users.revoke');
+            Route::post('users/{user}/sessions/revoke', [UserStatusController::class, 'revokeSessions'])->name('users.sessions.revoke');
             Route::put('users/{user}/roles', [UserRoleController::class, 'update'])->name('users.roles.update');
             Route::put('users/{user}/permissions', [UserPermissionController::class, 'update'])->name('users.permissions.update');
         });
@@ -66,9 +73,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('locks/{lock}/history', [LockController::class, 'history'])->name('locks.history');
         Route::post('locks/{lock}/commands', [LockCommandController::class, 'store'])->middleware('throttle:lock-commands')->name('locks.commands.store');
         Route::get('lock-requests/{accessRequest}', [LockCommandController::class, 'show'])->name('lock-requests.show');
+        Route::get('properties', [PropertyController::class, 'index'])->name('properties.index');
 
         Route::middleware('step-up')->group(function (): void {
-            Route::get('properties', [PropertyController::class, 'index'])->name('properties.index');
             Route::post('properties', [PropertyController::class, 'store'])->name('properties.store');
             Route::post('locks', [LockController::class, 'store'])->name('locks.store');
             Route::patch('locks/{lock}', [LockController::class, 'update'])->name('locks.update');
