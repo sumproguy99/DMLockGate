@@ -7,6 +7,7 @@ Every lock and unlock request goes through `LockCommandService` (`backend/app/Se
 ```text
 RECEIVED → AUTHENTICATING → DENIED
                           → AUTHORIZED → QUEUED → EXPIRED            (never sent)
+                                                → ALREADY_IN_STATE   (fresh read already showed it; never sent)
                                                 → SUBMITTED → CONFIRMED_SUCCESS
                                                             → FAILED          (certainly not delivered)
                                                             → UNKNOWN_RESULT  (may have reached the lock)
@@ -42,6 +43,9 @@ These are separate records, never collapsed into one status:
 
 ## Sending and confirmation (`SubmitLockCommand` job)
 
+- **Checked before it is sent.** The job first reads the lock's current state fresh, records it, and uses the lock's resulting state. Eufy's cloud copy trails the lock by a few seconds, so a push from the lock within `LOCKGUARD_POLL_LAG_SECONDS` (default 15) outranks that read. A door locked by hand moments before a lock command is therefore seen as locked.
+  - **Already in the requested state:** nothing is sent, and the request becomes ALREADY_IN_STATE. A later confirmation could not tell a working command from a door that was already locked. The first live test on 2026-10-16 showed exactly this.
+  - **State unreadable, unknown or jammed:** nothing is sent, and the request becomes FAILED.
 - **Claimed before it is sent.** The job moves the request from QUEUED to SUBMITTED in its own transaction before it calls the integration. A crash or a duplicate job therefore cannot send the command twice.
 - **Never retried.** The job has `$tries = 1`.
 - **Integration results:**

@@ -18,6 +18,17 @@ enum LockAction: string
         };
     }
 
+    /**
+     * The state the lock must report before sending, so that a later confirmation shows a real change.
+     */
+    public function oppositeState(): ReportedLockState
+    {
+        return match ($this) {
+            self::Lock => ReportedLockState::Unlocked,
+            self::Unlock => ReportedLockState::Locked,
+        };
+    }
+
     public function label(): string
     {
         return match ($this) {

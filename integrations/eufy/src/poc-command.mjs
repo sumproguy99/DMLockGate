@@ -35,8 +35,14 @@ const eufy = new EufyMega({
   countryCode: process.env.EUFY_COUNTRY || "US",
   store: new FileSessionStore(join(DATA_DIR, "session.json")),
   pushStore: new FileFcmStore(join(DATA_DIR, "push.json")),
+  // Shows which broker instance carried the command and whether the lock replied.
+  logger: (() => {
+    const pass = (message) => /dispatchFf09|broker|instance/i.test(String(message)) && log("sdk", String(message).slice(0, 300));
+    return { debug: pass, info: pass, warn: pass, error: pass };
+  })(),
 });
 eufy.on("error", (err) => log("error", err?.message ?? String(err)));
+eufy.on("commandAck", (info) => log("ack", JSON.stringify({ kind: info?.kind, acked: info?.acked, broker: info?.instanceIp })));
 
 async function readLocked(sn) {
   return (await eufy.getDevice(sn)).lock?.()?.locked;

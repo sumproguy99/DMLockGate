@@ -96,6 +96,18 @@ test("a repeated command id is never sent again", async () => {
   assert.equal(adapter.sent.length, 1);
 });
 
+test("a send the lock never acknowledged is ambiguous, not acknowledged", async () => {
+  const adapter = new FakeAdapter();
+  adapter.sendImpl = async () => ({ deviceAcked: false, broker: "203.0.113.7" });
+  await withServer(adapter, async (call) => {
+    const res = await call("POST", `/v1/locks/${SN}/commands`, { action: "lock", command_id: "cmd-0000009" });
+    assert.equal(res.status, 502);
+    assert.equal(res.json.result, "ambiguous");
+    assert.equal(res.json.error, "no_device_ack");
+  });
+  assert.equal(adapter.sent.length, 1);
+});
+
 test("a send error or timeout is ambiguous, never retried", async () => {
   const adapter = new FakeAdapter();
   adapter.sendImpl = () => new Promise(() => {});

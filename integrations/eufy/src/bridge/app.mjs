@@ -55,15 +55,22 @@ export function createBridgeServer({ adapter, secret, commandTimeoutMs = 25_000,
 
     let timer;
     try {
-      await Promise.race([
+      const sent = await Promise.race([
         adapter.send(sn, action),
         new Promise((_, reject) => {
           timer = setTimeout(() => reject(new Error(`no acknowledgement within ${commandTimeoutMs} ms`)), commandTimeoutMs);
         }),
       ]);
-      log("info", "command acknowledged", { command_id: commandId, latency_ms: Date.now() - startedAt });
+      const latencyMs = Date.now() - startedAt;
+      if (sent?.deviceAcked === false) {
+        // The broker took the message but the lock never replied. It may still have acted.
+        log("warn", "lock did not acknowledge", { command_id: commandId, broker: sent.broker, latency_ms: latencyMs });
 
-      return [200, { result: "acknowledged", latency_ms: Date.now() - startedAt }];
+        return [502, { result: "ambiguous", error: "no_device_ack", latency_ms: latencyMs }];
+      }
+      log("info", "command acknowledged", { command_id: commandId, device_acked: sent?.deviceAcked ?? null, broker: sent?.broker ?? null, latency_ms: latencyMs });
+
+      return [200, { result: "acknowledged", device_acked: sent?.deviceAcked ?? null, latency_ms: latencyMs }];
     } catch (err) {
       log("warn", "command outcome unknown", { command_id: commandId, error: err?.message });
 

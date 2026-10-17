@@ -12,7 +12,9 @@
     "test": "node --test",
     "poc:readonly": "node --env-file=.env src/poc-readonly.mjs",
     "poc:lock": "node --env-file=.env src/poc-command.mjs lock",
-    "poc:unlock": "node --env-file=.env src/poc-command.mjs unlock"
+    "poc:unlock": "node --env-file=.env src/poc-command.mjs unlock",
+    "diag:brokers": "node --env-file=.env src/diag-brokers.mjs",
+    "diag:listen": "node --env-file=.env src/diag-listen.mjs"
   },
   "dependencies": {
     "@mega-yfue/eufy-sdk": "0.4.0"

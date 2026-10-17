@@ -28,6 +28,10 @@ use Throwable;
  *  - An expired request is never sent.
  *  - The job runs once ($tries = 1). A command whose outcome is unclear becomes UNKNOWN_RESULT and
  *    is never retried automatically, because it may already have reached the lock.
+ *  - Before sending, a fresh read must show the lock in the opposite state. If it already shows the
+ *    requested state, nothing is sent (ALREADY_IN_STATE), because a later confirmation could not
+ *    tell a working command from a door that was already there. If the state cannot be read, or is
+ *    unknown or jammed, nothing is sent (FAILED).
  *  - Success is recorded only when the lock reports the expected state after submission.
  */
 class SubmitLockCommand implements ShouldQueue
@@ -36,6 +40,8 @@ class SubmitLockCommand implements ShouldQueue
 
     public int $tries = 1;
 
+    public int $timeout;
+
     public function __construct(public readonly int $accessRequestId)
     {
         $this->timeout = (int) config('lockguard.locks.confirm_timeout_seconds') + 60;
@@ -43,7 +49,21 @@ class SubmitLockCommand implements ShouldQueue
 
     public function handle(LockDriver $driver, LockStateRecorder $recorder, AuditLogger $audit): void
     {
-        $request = $this->claim($audit);
+        $queued = AccessRequest::query()->with('lock')->find($this->accessRequestId);
+        if ($queued === null || $queued->status !== AccessRequestStatus::Queued) {
+            return;
+        }
+
+        try {
+            $recorder->record($queued->lock, $driver->readState($queued->lock), LockStateEvent::SOURCE_POLL);
+            // The recorded state, not the raw read: a push moments ago outranks a trailing cloud read.
+            $before = $queued->lock->last_reported_state;
+        } catch (IntegrationUnavailable $exception) {
+            $recorder->recordError($queued->lock, $exception->getMessage());
+            $before = null;
+        }
+
+        $request = $this->claim($audit, $before);
         if ($request === null) {
             return;
         }
@@ -118,11 +138,14 @@ class SubmitLockCommand implements ShouldQueue
     }
 
     /**
-     * Move the request from QUEUED to SUBMITTED, or expire it. Returns null when there is nothing to send.
+     * Move the request from QUEUED to SUBMITTED, or close it without sending. Returns null when
+     * there is nothing to send.
+     *
+     * @param  ReportedLockState|null  $before  The lock's state after the fresh pre-send read, or null when the read failed.
      */
-    private function claim(AuditLogger $audit): ?AccessRequest
+    private function claim(AuditLogger $audit, ?ReportedLockState $before): ?AccessRequest
     {
-        return DB::transaction(function () use ($audit): ?AccessRequest {
+        return DB::transaction(function () use ($audit, $before): ?AccessRequest {
             $request = AccessRequest::query()->whereKey($this->accessRequestId)->lockForUpdate()->first();
             if ($request === null || $request->status !== AccessRequestStatus::Queued) {
                 return null;
@@ -130,6 +153,28 @@ class SubmitLockCommand implements ShouldQueue
 
             if (now()->gte($request->expires_at)) {
                 $this->finish($request, AccessRequestStatus::Expired, $audit, 'lock.command_expired', AuditOutcome::Failure, 'The request expired before it was sent. Nothing was sent to the lock.');
+
+                return null;
+            }
+
+            if ($before === null) {
+                $this->finish($request, AccessRequestStatus::Failed, $audit, 'lock.command_failed', AuditOutcome::Failure, 'The lock\'s current state could not be read before sending. Nothing was sent to the lock.');
+
+                return null;
+            }
+
+            if ($before === $request->action->expectedState()) {
+                $this->finish($request, AccessRequestStatus::AlreadyInState, $audit, 'lock.command_not_needed', AuditOutcome::Success, 'The lock already reported the requested state. Nothing was sent to the lock.', [
+                    'reported_state' => $before->value,
+                ]);
+
+                return null;
+            }
+
+            if ($before !== $request->action->oppositeState()) {
+                $this->finish($request, AccessRequestStatus::Failed, $audit, 'lock.command_failed', AuditOutcome::Failure, "The lock reports its state as {$before->value}. Nothing was sent to the lock.", [
+                    'reported_state' => $before->value,
+                ]);
 
                 return null;
             }

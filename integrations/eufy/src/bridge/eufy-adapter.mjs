@@ -17,7 +17,7 @@ const OFFLINE_EVENT = 516;
 const ONLINE_EVENT = 771;
 
 export class EufyAdapter extends EventEmitter {
-  constructor({ email, password, countryCode, dataDir, log = () => {} }) {
+  constructor({ email, password, countryCode, brokerIp = null, dataDir, log = () => {} }) {
     super();
     this.log = log;
     this.status = "starting";
@@ -30,11 +30,43 @@ export class EufyAdapter extends EventEmitter {
       countryCode: countryCode || "US",
       store: new FileSessionStore(join(dataDir, "session.json")),
       pushStore: new FileFcmStore(join(dataDir, "push.json")),
+      logger: this.sdkLogger(),
     });
     this.eufy.on("error", (err) => this.noteError(err));
     this.eufy.on("connect", () => this.log("info", "realtime connected"));
     this.eufy.on("disconnect", () => this.log("warn", "realtime disconnected"));
     this.eufy.on("event", (e) => this.onVendorEvent(e));
+    if (brokerIp) this.pinCommandBroker(brokerIp);
+  }
+
+  /**
+   * Sends lock commands through one broker instance. Several instances behind the Eufy broker
+   * hostname accept a subscription for a lock, but only the one holding the lock's own session
+   * delivers to it, and the SDK takes the first one DNS returns. Commands through the others are
+   * accepted and silently dropped. Find the right instance with `npm run diag:listen` while
+   * operating the lock from the Eufy app.
+   *
+   * The SDK's own discovery and connection are kept; only the chosen instance is replaced. This
+   * reaches into SDK internals (MqttCommandRouter.ensureSecurityMqttFor, SecureMqtt options), so
+   * re-check it after any eufy-sdk upgrade.
+   */
+  pinCommandBroker(brokerIp) {
+    const router = this.eufy.mqtt;
+    const discover = router?.ensureSecurityMqttFor?.bind(router);
+    if (!discover) {
+      this.log("error", "cannot pin the command broker: the SDK internals changed");
+      return;
+    }
+    router.ensureSecurityMqttFor = async (dev) => {
+      const chosen = await discover(dev);
+      if (chosen.instanceIp === brokerIp) return chosen;
+      await chosen.mqtt.disconnect();
+      chosen.mqtt.o.instanceIp = brokerIp;
+      await chosen.mqtt.connect();
+      this.log("info", "command broker pinned", { discovered: chosen.instanceIp, used: brokerIp });
+
+      return { mqtt: chosen.mqtt, instanceIp: brokerIp };
+    };
   }
 
   /**
@@ -101,9 +133,38 @@ export class EufyAdapter extends EventEmitter {
     };
   }
 
+  /**
+   * Sends the command. lock()/unlock() resolve even when the lock never replies, so the lock's own
+   * reply comes from the SDK's `commandAck` event: deviceAcked is true or false, or null when no
+   * ack event arrived at all.
+   */
   async send(sn, action) {
-    const lock = (await this.eufy.getDevice(sn)).lock();
-    await (action === "lock" ? lock.lock() : lock.unlock());
+    let ack = null;
+    const onAck = (info) => {
+      if (info?.sn === sn && info?.kind === "ff09-actuate") ack = info;
+    };
+    this.eufy.on("commandAck", onAck);
+    try {
+      const lock = (await this.eufy.getDevice(sn)).lock();
+      await (action === "lock" ? lock.lock() : lock.unlock());
+    } finally {
+      this.eufy.off("commandAck", onAck);
+    }
+
+    return { deviceAcked: ack === null ? null : ack.acked === true, broker: ack?.instanceIp ?? null };
+  }
+
+  /**
+   * Passes on only the SDK's command-delivery lines (broker choice, missing replies). The rest of its
+   * debug output is too noisy for the bridge log.
+   */
+  sdkLogger() {
+    const relevant = /dispatchFf09|broker|instance/i;
+    const pass = (level) => (message) => {
+      if (relevant.test(String(message))) this.log(level, `sdk: ${String(message).slice(0, 300)}`);
+    };
+
+    return { debug: pass("info"), info: pass("info"), warn: pass("warn"), error: pass("error") };
   }
 
   noteError(err) {

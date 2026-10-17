@@ -49,8 +49,7 @@ class LockStateRecorder
                 'connection_status' => LockConnectionStatus::Connected,
             ];
 
-            // Only a newer observation replaces the cached state, so a late push cannot overwrite a fresher read.
-            if ($locked->last_state_observed_at === null || $reported->observedAt->gte($locked->last_state_observed_at)) {
+            if ($this->replacesCachedState($locked, $reported, $source)) {
                 $updates += [
                     'last_reported_state' => $reported->state,
                     'last_state_observed_at' => $reported->observedAt,
@@ -66,6 +65,30 @@ class LockStateRecorder
 
             return $event;
         });
+    }
+
+    /**
+     * Only a newer observation replaces the cached state, so a late push cannot overwrite a fresher
+     * read. The exception is a poll within the lag window of a push, in either arrival order: the
+     * cloud copy a poll reads trails the lock, so it can still show the state from before the change
+     * the push reported. Within that window the push wins.
+     */
+    private function replacesCachedState(Lock $lock, ReportedState $reported, string $source): bool
+    {
+        $cachedAt = $lock->last_state_observed_at;
+        if ($cachedAt === null) {
+            return true;
+        }
+
+        $lag = (int) config('lockguard.locks.poll_lag_seconds');
+        if ($source === LockStateEvent::SOURCE_PUSH && $lock->last_state_source === LockStateEvent::SOURCE_POLL) {
+            return $reported->observedAt->gte($cachedAt->copy()->subSeconds($lag));
+        }
+        if ($source === LockStateEvent::SOURCE_POLL && $lock->last_state_source === LockStateEvent::SOURCE_PUSH) {
+            return $reported->observedAt->gte($cachedAt->copy()->addSeconds($lag));
+        }
+
+        return $reported->observedAt->gte($cachedAt);
     }
 
     /**

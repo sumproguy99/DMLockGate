@@ -37,6 +37,9 @@ return [
     |
     | state_stale_seconds: a reported state older than this is shown as stale.
     |
+    | poll_lag_seconds: Eufy's cloud copy of a lock's state trails the lock by a few seconds, so a
+    | poll this soon after a push event from the lock does not override what the push reported.
+    |
     | remote_unlock_policy: 'standard', 'step_up' (re-confirm identity first), 'location_required'
     | (rejected until location-aware access exists) or 'disabled'.
     |
@@ -48,6 +51,7 @@ return [
         'confirm_timeout_seconds' => (int) env('LOCKGUARD_CONFIRM_TIMEOUT_SECONDS', 45),
         'confirm_poll_seconds' => (int) env('LOCKGUARD_CONFIRM_POLL_SECONDS', 5),
         'state_stale_seconds' => (int) env('LOCKGUARD_STATE_STALE_SECONDS', 900),
+        'poll_lag_seconds' => (int) env('LOCKGUARD_POLL_LAG_SECONDS', 15),
         'remote_unlock_policy' => env('LOCKGUARD_REMOTE_UNLOCK_POLICY', 'step_up'),
 
         /*

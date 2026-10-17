@@ -32,5 +32,8 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="LOCKGUARD_LOCK_DRIVER" value="unconfigured"/>
+        <env name="LOCKGUARD_BRIDGE_URL" value="http://bridge.invalid"/>
+        <env name="LOCKGUARD_BRIDGE_SECRET" value=""/>
     </php>
 </phpunit>

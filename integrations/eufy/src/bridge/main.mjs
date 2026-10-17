@@ -32,6 +32,7 @@ const adapter = new EufyAdapter({
   email: requireEnv("EUFY_USERNAME"),
   password: requireEnv("EUFY_PASSWORD"),
   countryCode: process.env.EUFY_COUNTRY,
+  brokerIp: process.env.EUFY_MQTT_BROKER_IP || null,
   dataDir,
   log,
 });

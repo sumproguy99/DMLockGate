@@ -31,6 +31,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Sleep;
 use Illuminate\Testing\TestResponse;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -131,6 +132,7 @@ class LockCommandServiceTest extends TestCase
         $this->assertSame([], $this->driver->sent);
         $this->assertDatabaseHas('audit_logs', ['action' => 'lock.command_denied', 'outcome' => 'denied']);
 
+        $this->driver->setState($this->lock, ReportedLockState::Locked);
         $this->command($resident, 'unlock', stepUp: true)
             ->assertAccepted();
         $this->assertSame(ReportedLockState::Unlocked, $this->lock->fresh()->last_reported_state);
@@ -226,6 +228,73 @@ class LockCommandServiceTest extends TestCase
         $this->assertCount(1, $this->driver->sent);
         $this->assertSame(ReportedLockState::Unlocked, $this->lock->fresh()->last_reported_state);
         $this->assertDatabaseHas('audit_logs', ['action' => 'lock.command_unconfirmed']);
+    }
+
+    public function test_a_lock_already_in_the_requested_state_is_not_sent_a_command(): void
+    {
+        // The live-test case: the door had been locked by hand before the lock command.
+        $this->driver->setState($this->lock, ReportedLockState::Locked);
+        $resident = $this->userWithRole(RoleTemplate::Resident);
+
+        $id = $this->command($resident, 'lock')->assertAccepted()->json('data.id');
+
+        $request = AccessRequest::query()->where('public_id', $id)->sole();
+        $this->assertSame(AccessRequestStatus::AlreadyInState, $request->status);
+        $this->assertNull($request->command->submitted_at);
+        $this->assertSame([], $this->driver->sent);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'lock.command_not_needed']);
+    }
+
+    public function test_a_trailing_cloud_read_does_not_hide_a_lock_operated_moments_ago(): void
+    {
+        // Locked by hand two seconds ago; the cloud copy the pre-send read sees still says unlocked.
+        $this->lock->forceFill(['last_state_observed_at' => now()->subMinute()])->save();
+        app(LockStateRecorder::class)->record($this->lock, new ReportedState(ReportedLockState::Locked, CarbonImmutable::now()->subSeconds(2)), LockStateEvent::SOURCE_PUSH);
+        $this->driver->setState($this->lock, ReportedLockState::Unlocked);
+        $resident = $this->userWithRole(RoleTemplate::Resident);
+
+        $id = $this->command($resident, 'lock')->assertAccepted()->json('data.id');
+
+        $request = AccessRequest::query()->where('public_id', $id)->sole();
+        $this->assertSame(AccessRequestStatus::AlreadyInState, $request->status);
+        $this->assertSame([], $this->driver->sent);
+    }
+
+    /**
+     * @return array<string, array{ReportedLockState|null}>
+     */
+    public static function unusablePreSendStates(): array
+    {
+        return [
+            'state cannot be read' => [null],
+            'state unknown' => [ReportedLockState::Unknown],
+            'lock jammed' => [ReportedLockState::Jammed],
+        ];
+    }
+
+    #[DataProvider('unusablePreSendStates')]
+    public function test_nothing_is_sent_without_a_usable_pre_send_state(?ReportedLockState $state): void
+    {
+        $driver = new class($state) extends FakeLockDriver
+        {
+            public function __construct(private readonly ?ReportedLockState $preSend) {}
+
+            public function readState(Lock $lock): ReportedState
+            {
+                return $this->preSend === null
+                    ? throw new IntegrationUnavailable('Bridge refused the connection.')
+                    : new ReportedState($this->preSend, CarbonImmutable::now());
+            }
+        };
+        $this->app->instance(LockDriver::class, $driver);
+        $resident = $this->userWithRole(RoleTemplate::Resident);
+
+        $id = $this->command($resident, 'lock')->assertAccepted()->json('data.id');
+
+        $request = AccessRequest::query()->where('public_id', $id)->sole();
+        $this->assertSame(AccessRequestStatus::Failed, $request->status);
+        $this->assertNull($request->command->submitted_at);
+        $this->assertSame([], $driver->sent);
     }
 
     public function test_a_push_observed_after_submission_confirms_the_command(): void
