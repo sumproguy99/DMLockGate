@@ -7,8 +7,9 @@
  * Contrast (WCAG 2.2, measured against bg, panel, panel-2 and elevated):
  * - Filled buttons use primary-strong / danger-strong: white text is 4.8:1 and 4.8:1. The spec's
  *   #087FFF and #FF4057 give only 3.8:1 and 3.4:1 with white text, so they stay for accents.
- * - Colored text uses primary-text / danger-text: at least 5.1:1 on every panel.
- * - unknown (#8E9DAF, 5.4:1 or better) replaces the spec's #78889A (4.1:1 on elevated) for meaningful
+ * - Colored text uses primary-text / danger-text: at least 4.5:1 on every panel and on its own 12%
+ *   tint (badges, banners). src/styles/contrast.test.ts checks every pair the components use.
+ * - unknown (#93A2B4, 5.7:1 or better) replaces the spec's #78889A (4.1:1 on elevated) for meaningful
  *   "unknown" and "stale" labels; disabled keeps #78889A because disabled controls are exempt.
  * - border-strong outlines form fields: at least 3:1 on bg, panel and panel-2. border is decorative only.
  */
@@ -23,7 +24,7 @@
   /* Text */
   --color-text: #f4f7fc;
   --color-text-muted: #a8b7c9;
-  --color-unknown: #8e9daf;
+  --color-unknown: #93a2b4;
   --color-disabled: #78889a;
 
   /* Borders */
@@ -33,7 +34,7 @@
   /* Brand blue: actions, navigation selection, focus, active elements */
   --color-primary: #087fff;
   --color-primary-strong: #0a6fe0;
-  --color-primary-text: #4a97ff;
+  --color-primary-text: #559dff;
   --color-highlight: #20b8ff;
 
   /* Status: always paired with a text label and an icon, never color alone */

@@ -333,3 +333,15 @@ What needs to be done.
 UI CHECKPOINT 2: shared components (buttons, fields, cards, badges, dialogs, toasts, tables, status indicators) with a test setup (Vitest + Testing Library) and accessibility checks. Then checkpoint 3 shell (needs Sanctum SPA auth from the Vite origin).
 What is important or stands out that needs attention or needs to be address.
 Missing assets: no transparent or SVG logo (blend mode covers dark UI). Mockup-only features (camera, weather, user map, proximity unlock, keypad codes, lockdown) will show as unavailable, not faked. On the darkest bg token a faint square shows at the logo's top-right; place the logo on panel or lighter.
+
+---
+Timestamp: 2026-10-17 ET
+Percent complete: 63%
+Description of what you are working on.
+UI CHECKPOINT 2: shared components (project.md section 34.14).
+What you have done so far:
+Committed 1eca5bb (frontend scaffold, branding, tokens). Added Vitest 5, Testing Library, jsdom and axe-core. Components in frontend/src/components/ui: Button/IconButton (loading, disabled, 44 px targets), TextField/SelectField/CheckboxField/SearchField (label, hint and error wired, aria-invalid), Card/Metric, StatusBadge, Banner, Dialog (focus trap, Escape, focus return, page behind inert), ConfirmDialog (consequence, Cancel first, busy, error, optional typed phrase), toasts (failures assertive and sticky), DataTable, Tabs, Menu, Pagination, Tooltip, EmptyState, LoadingState. LockGuard status components in components/status: lock state from the reported state and the backend's state_freshness (stale shown gray, unknown never guessed), CommandProgress on the real AccessRequestStatus lifecycle with the six 34.9 stages (submitted is never success, unknown_result distinct from failed), device connection and battery, activity entries, security alerts. Gallery page replaces the checkpoint 1 preview, labelled as example values. 115 tests pass: behaviour, axe on each component and the whole gallery, and a contrast test computed from tokens.css. The contrast test found blue and gray badge text on the elevated surface under 4.5:1; primary-text (#559DFF) and unknown (#93A2B4) lightened. Build and lint clean; desktop and 390 px screenshots checked. docs/UI_DESIGN.md updated. Not committed.
+What needs to be done.
+Commit when Dustin asks. UI CHECKPOINT 3: desktop shell (sidebar, header, responsive layout, authorized navigation) with Sanctum SPA login from the Vite origin.
+What is important or stands out that needs attention or needs to be address.
+axe cannot measure contrast in jsdom, so contrast relies on the token test; component-specific colors outside the tokens would bypass it. Headless Edge cannot render narrower than about 500 px, so phone widths are checked through a 390 px iframe.
