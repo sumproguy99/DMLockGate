@@ -321,3 +321,15 @@ What needs to be done.
 Commit when Dustin asks. Then admin dashboard and UI checkpoints (project.md section 34), starting with branding assets and design tokens.
 What is important or stands out that needs attention or needs to be address.
 The health watch, like the broker pin, relies on eufy-sdk internals (EufyMega.mega, MqttCommandRouter.ensureSecurityMqttFor); re-check both after any SDK upgrade. Degraded state is visible on the bridge's /v1/health and as lock connection_status after sync, but there is no alerting yet.
+
+---
+Timestamp: 2026-10-17 ET
+Percent complete: 61%
+Description of what you are working on.
+UI CHECKPOINT 1: branding and assets (project.md section 34.14).
+What you have done so far:
+Committed 417e13a (bridge cloud health). Inspected the project: Logo.png (1254x1254 RGB, opaque near-black background, the only branding file), ServerGui.png and WebAppGUI.png mockups. Scaffolded frontend/ (Vite, React 19, TypeScript strict, Tailwind 4, Inter self-hosted, lucide icons; dev server proxies /api and /sanctum to 127.0.0.1:8100). Branding in frontend/public/assets/branding: unchanged logo copy, 640 px WebP, emblem crops (approved 2026-10-16) for mark, PWA, apple-touch and favicon. BrandLogo renders with mix-blend-mode lighten so the opaque background disappears on dark panels without editing the image. Design tokens in src/styles/tokens.css: spec palette plus contrast fixes measured to WCAG 2.2 (primary-strong and danger-strong for filled buttons, primary-text and danger-text for colored text, unknown lightened, border-strong for fields), type scale, radii, shadows/glows, breakpoints, motion, focus ring, reduced motion. Development preview page shows the tokens; verified by headless Edge screenshot. docs/UI_DESIGN.md records assets, missing assets, mockup exclusions and token decisions. npm run build passes.
+What needs to be done.
+UI CHECKPOINT 2: shared components (buttons, fields, cards, badges, dialogs, toasts, tables, status indicators) with a test setup (Vitest + Testing Library) and accessibility checks. Then checkpoint 3 shell (needs Sanctum SPA auth from the Vite origin).
+What is important or stands out that needs attention or needs to be address.
+Missing assets: no transparent or SVG logo (blend mode covers dark UI). Mockup-only features (camera, weather, user map, proximity unlock, keypad codes, lockdown) will show as unavailable, not faked. On the darkest bg token a faint square shows at the logo's top-right; place the logo on panel or lighter.
