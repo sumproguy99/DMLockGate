@@ -239,6 +239,17 @@ The backend leaves out (returns null for) each section the user may not see, so 
 - editable settings;
 - role editing.
 
+## Mobile web app
+
+**A separate interface** under `/m` (project.md 34.7), built on the same tokens, logo and components as the desktop application (`src/mobile/`).
+- **Header:** the logo mark, "DM LockGuard", a compact Eufy status (the same health check as the desktop header, including "Eufy degraded" when commands keep failing), and the user's initials linking to More.
+- **Bottom navigation:** Home, Activity, Devices, More, each at least 64 px tall and inside the safe area. Activity needs `lock.view_history` or `admin.incidents_view`; Devices needs `lock.view_status` or `devices.view`. Hidden tabs are also refused by address ("Not available to you"), and the backend refuses the data either way.
+- **More:** the account (name, email, roles, whether two-step verification is on), **Use the desktop view**, help, and **Sign out**, set apart at the bottom so it isn't tapped by accident. It says that location, proximity and notifications aren't available yet.
+- **Which view opens:** `/` sends a phone-width screen (under 768 px) to `/m` before the desktop shell renders. Choosing **Use the desktop view** (More) or **Mobile view** (desktop account menu) is remembered in this browser (`localStorage` key `lockguard.view`) and overrides the screen width.
+- **Install:** `manifest.webmanifest` lets a phone add LockGuard to its home screen, opening at `/m`. There's no service worker and nothing works offline: a lock's state is never shown from a cache. `viewport-fit=cover` with safe-area padding keeps the header and navigation clear of notches and the home indicator.
+- **Keyboard and screen readers:** skip link; focus moves to the content after each tab change.
+- **Not built yet (UI checkpoint 7):** Home, Activity and Devices content. They show "This screen is not built yet" and no data.
+
 ## Testing and accessibility checks
 
 `npm test` runs Vitest with Testing Library in jsdom.
@@ -248,6 +259,7 @@ The backend leaves out (returns null for) each section the user may not see, so 
 - **Phone width:** layout at 390 px is checked with headless Edge driven through the DevTools protocol, using a true 390 px viewport and checking that the page is no wider than the screen.
 - **Admin screen tests:** user list filters, suspend with a reason, revoke after the identity re-check, a cancelled re-check, own account, preview-gated saving of roles, giving and removing lock access, creating a user; lock list, registration, lock page diagnostics and settings, a resident's view, an unknown lock; properties; audit log filters, detail and export, a refused export, the permission guard; system health.
 - **Dashboard tests:** permission-filtered panels for a resident and an administrator, stale state, unreachable bridge, load failure and retry, and lock commands (stage-by-stage progress, unlock confirmation, identity re-check with a fresh key, refusal, final unknown outcome, same-key retry after no answer, disabled and hidden buttons).
+- **Mobile tests:** phone and desktop start pages, permission-filtered tabs, a refused tab by address, focus on tab change, More (account, desktop switch remembered, sign-out), the desktop menu's switch to mobile, and the mobile not-found page, with axe on the shell and More.
 - **App tests:** sign-in, MFA, session expiry, unreachable API, permission-filtered navigation, sidebar collapse, drawer, sign-out and the API client (CSRF, retry, timeout, 401) run against a mocked `fetch`.
 ## Development
 

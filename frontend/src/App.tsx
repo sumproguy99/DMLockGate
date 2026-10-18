@@ -1,8 +1,9 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router'
 import { AppShell } from './app/AppShell'
 import { NotFound, RequireAuth, RequirePermission } from './app/guards'
 import { DIAGNOSTICS_PERMISSIONS, USER_ADMIN_PERMISSIONS } from './app/navigation'
+import { prefersMobile } from './app/view-preference'
 import { useAuth } from './auth/auth-context'
 import { Banner } from './components/ui/Banner'
 import { Button } from './components/ui/Button'
@@ -12,6 +13,9 @@ import { LockDetailPage } from './pages/locks/LockDetailPage'
 import { LocksPage } from './pages/locks/LocksPage'
 import { PropertiesPage } from './pages/locks/PropertiesPage'
 import { LoginPage } from './pages/LoginPage'
+import { PendingScreen } from './pages/PendingScreen'
+import { MobileMorePage } from './mobile/MobileMorePage'
+import { MobileShell } from './mobile/MobileShell'
 import { AuditLogPage } from './pages/security/AuditLogPage'
 import { SystemHealthPage } from './pages/security/SystemHealthPage'
 import { NewUserPage } from './pages/users/NewUserPage'
@@ -21,6 +25,18 @@ import { UsersPage } from './pages/users/UsersPage'
 
 /** The component gallery, bundled only into development builds. */
 const ComponentGallery = import.meta.env.DEV ? lazy(() => import('./dev/ComponentGallery')) : null
+
+/**
+ * The desktop application. "/" opens the mobile app instead on phones, unless this browser chose
+ * the desktop view; the redirect happens before the desktop shell renders, so it never flashes.
+ */
+function DesktopShell() {
+  const { pathname } = useLocation()
+  if (pathname === '/' && prefersMobile()) {
+    return <Navigate to="/m" replace />
+  }
+  return <AppShell />
+}
 
 /** Every route. Separate from App so tests can render it inside a MemoryRouter. */
 export function AppRoutes() {
@@ -67,16 +83,46 @@ export function AppRoutes() {
         />
       )}
       <Route
+        path="/m"
         element={
           <RequireAuth>
-            <AppShell />
+            <MobileShell />
           </RequireAuth>
         }
       >
         <Route
           index
-          element={<DashboardPage />}
+          element={
+            <PendingScreen title="Home" description="Your lock, its state and the Lock and Unlock controls." checkpoint={7} />
+          }
         />
+        <Route
+          path="activity"
+          element={
+            <RequirePermission permissions={['lock.view_history', 'admin.incidents_view']}>
+              <PendingScreen title="Activity" description="Recent lock requests and their outcomes." checkpoint={7} />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="devices"
+          element={
+            <RequirePermission permissions={['lock.view_status', 'devices.view']}>
+              <PendingScreen title="Devices" description="Your locks, their connection and battery." checkpoint={7} />
+            </RequirePermission>
+          }
+        />
+        <Route path="more" element={<MobileMorePage />} />
+        <Route path="*" element={<NotFound />} />
+      </Route>
+      <Route
+        element={
+          <RequireAuth>
+            <DesktopShell />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<DashboardPage />} />
         <Route
           path="users"
           element={

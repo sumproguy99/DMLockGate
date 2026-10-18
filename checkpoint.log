@@ -379,3 +379,27 @@ What needs to be done.
 Commit when Dustin asks. UI CHECKPOINT 6: mobile application shell.
 What is important or stands out that needs attention or needs to be address.
 Not built (no backend): access codes as their own screen, location and proximity, Security Center incidents and alert acknowledgement, trusted devices, editable settings, role editing. Property listing moved out of step-up (read-only, still admin.integration_settings). The audit export metadata records the filters used.
+
+---
+Timestamp: 2026-10-17 ET
+Percent complete: 77%
+Description of what you are working on.
+Fixes found while Dustin tested the dashboard (before UI checkpoint 6 is finished).
+What you have done so far:
+Committed aea779a (admin screens). Black screen: the bridge reports last_error as {message, at}; the dashboard rendered it as text and React crashed when the health check arrived. LockGuard now always sends bridge errors as text (with last_error_at); the panels show text only; an app-level error screen replaces a blank page. Locks not responding: three commands at 21:03-21:05 were approved and sent to the bridge, and each timed out after 25 s inside the Eufy SDK (no step logs to say where). The SDK uses a one-shot broker connection per command, so no 8883 connection between commands is normal (an earlier guess that a persistent connection was down was wrong). Bridge changes: a publish guard on the SDK broker step means a command the bridge gave up on is never published later, and a timeout before publishing is reported as 504 rejected not_sent_timeout (FAILED, nothing sent) instead of ambiguous; per-command step logs with elapsed times and the SDK's smqtt and broker lines; /v1/health reports command failure counts. LockGuard reports the integration degraded (commands_failing) after 2 failures in a row and explains it in the header, dashboard and System health. Tests: bridge 28/28, PHP 240/240, frontend 177/177. The mobile shell for checkpoint 6 is in progress (routes under /m, bottom navigation, More page, view switch). Nothing committed since aea779a. No lock command was sent by me.
+What needs to be done.
+Dustin to restart the bridge to pick up the changes, check both doors, and try one Lock; the new step log in data/bridge.log will show where a slow command spends its time. Commit when he asks. Finish UI checkpoint 6.
+What is important or stands out that needs attention or needs to be address.
+Root cause of the 25 s timeouts is not yet known; the step logs are there to find it (likely candidates: broker instance probing, or the cloud lookup). The publish guard relies on SDK internals (ensureSecurityMqttFor, SecureMqtt.publish); re-check after any eufy-sdk upgrade.
+
+---
+Timestamp: 2026-10-17 ET
+Percent complete: 79%
+Description of what you are working on.
+UI checkpoint 6: the mobile web app shell (project.md 34.7).
+What you have done so far:
+Mobile shell under /m: compact header with logo, compact Eufy status (shows "Eufy degraded" when commands keep failing) and initials linking to More; bottom navigation Home, Activity, Devices, More filtered by permission, 64 px targets, safe-area padding; focus moves to the content on tab change. More page: account, two-step status, "Use the desktop view", help, sign-out set apart. "/" redirects phone-width screens to /m before the desktop shell renders; the choice of view is remembered per browser and can be switched both ways (More, and "Mobile view" in the desktop account menu). manifest.webmanifest (start_url /m, no service worker, no offline state) and viewport-fit=cover. Tests: 8 mobile tests; frontend 185/185, build and lint clean. Screenshots at 390 px with made-up data: no horizontal scroll. docs/UI_DESIGN.md has a Mobile web app section. Nothing committed since aea779a; the bridge fixes, black-screen fix and this checkpoint are all uncommitted. No lock command sent by me.
+What needs to be done.
+Dustin to restart the bridge and try one Lock (the bridge log has no new step lines yet, so the new code isn't running). Commit when he asks. UI checkpoint 7: the mobile Home, Activity and Devices screens with Lock and Unlock.
+What is important or stands out that needs attention or needs to be address.
+Home, Activity and Devices on mobile are placeholders until checkpoint 7. The Vite dev server on 5173 was not running when checked; screenshots used a temporary server on 5181, now stopped. The cause of the 25 s command timeouts is still unknown.

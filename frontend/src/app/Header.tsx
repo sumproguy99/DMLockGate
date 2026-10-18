@@ -1,12 +1,13 @@
-import { ChevronDown, ChevronRight, LogOut, Menu as MenuIcon } from 'lucide-react'
+import { ChevronDown, ChevronRight, LogOut, Menu as MenuIcon, Smartphone } from 'lucide-react'
 import { useState } from 'react'
-import { useLocation } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { useAuth, useCurrentUser } from '../auth/auth-context'
 import { IconButton } from '../components/ui/Button'
 import { Menu } from '../components/ui/Menu'
 import { useToast } from '../components/ui/toast-context'
 import { IntegrationIndicator } from './IntegrationIndicator'
 import { findNavItem } from './navigation'
+import { saveViewPreference } from './view-preference'
 
 function initials(name: string): string {
   return name
@@ -23,6 +24,7 @@ export function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
   const { signOut } = useAuth()
   const toast = useToast()
   const location = useLocation()
+  const navigate = useNavigate()
   const [signingOut, setSigningOut] = useState(false)
   const here = findNavItem(location.pathname)
   const role = user.roles.map((r) => r.name).join(', ') || 'No role'
@@ -67,7 +69,17 @@ export function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
           label={signingOut ? 'Signing out…' : `Account menu for ${user.name}`}
           icon={ChevronDown}
           iconOnly
-          items={[{ label: 'Sign out', icon: LogOut, onSelect: handleSignOut, disabled: signingOut }]}
+          items={[
+            {
+              label: 'Mobile view',
+              icon: Smartphone,
+              onSelect: () => {
+                saveViewPreference('mobile')
+                navigate('/m')
+              },
+            },
+            { label: 'Sign out', icon: LogOut, onSelect: handleSignOut, disabled: signingOut },
+          ]}
         />
       </div>
     </header>
