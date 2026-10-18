@@ -8,6 +8,11 @@ import { Card } from '../ui/Card'
 import { LoadingState } from '../ui/Spinner'
 import { StatusBadge } from '../ui/StatusBadge'
 
+/** Diagnostics come from the bridge; only text is ever shown, whatever shape it sends. */
+function asText(value: unknown): string | null {
+  return typeof value === 'string' && value !== '' ? value : null
+}
+
 export function DetailRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 border-b border-border py-2 last:border-b-0">
@@ -37,7 +42,7 @@ export function IntegrationPanel({ health, failed }: { health: SystemHealth | nu
   }
 
   const { integration } = health
-  const { tone, label, icon, explanation } = describeIntegration(integration.status)
+  const { tone, label, icon, explanation } = describeIntegration(integration.status, integration.degraded_reason)
   const details = integration.details
 
   return (
@@ -55,10 +60,14 @@ export function IntegrationPanel({ health, failed }: { health: SystemHealth | nu
         </DetailRow>
         {details && (
           <>
-            {details.error && <DetailRow label="Bridge error">{details.error}</DetailRow>}
+            {asText(details.error) && <DetailRow label="Bridge error">{asText(details.error)}</DetailRow>}
             {details.degraded_reason && (
               <DetailRow label="Degraded because">
-                {details.degraded_reason === 'cloud_silent' ? 'Eufy cloud stopped answering' : 'Repeated Eufy cloud errors'}
+                {details.degraded_reason === 'cloud_silent'
+                  ? 'Eufy cloud stopped answering'
+                  : details.degraded_reason === 'commands_failing'
+                    ? 'Lock commands are not reaching the locks'
+                    : 'Repeated Eufy cloud errors'}
               </DetailRow>
             )}
             {details.cloud_ok_at !== undefined && (
@@ -67,9 +76,36 @@ export function IntegrationPanel({ health, failed }: { health: SystemHealth | nu
               </DetailRow>
             )}
             {details.cloud_failures != null && <DetailRow label="Cloud failures in a row">{details.cloud_failures}</DetailRow>}
-            {details.cloud_last_error && <DetailRow label="Last cloud error">{details.cloud_last_error}</DetailRow>}
-            {details.last_error && <DetailRow label="Last bridge error">{details.last_error}</DetailRow>}
+            {asText(details.cloud_last_error) && <DetailRow label="Last cloud error">{asText(details.cloud_last_error)}</DetailRow>}
+            {asText(details.last_error) && (
+              <DetailRow label="Last bridge error">
+                {asText(details.last_error)}
+                {details.last_error_at && (
+                  <>
+                    {' '}
+                    (<Timestamp iso={details.last_error_at} />)
+                  </>
+                )}
+              </DetailRow>
+            )}
             {details.locks_visible != null && <DetailRow label="Locks the bridge can see">{details.locks_visible}</DetailRow>}
+            {details.command_failures != null && <DetailRow label="Failed commands in a row">{details.command_failures}</DetailRow>}
+            {asText(details.last_command_failure) && (
+              <DetailRow label="Last command failure">
+                {asText(details.last_command_failure)}
+                {details.last_command_failure_at && (
+                  <>
+                    {' '}
+                    (<Timestamp iso={details.last_command_failure_at} />)
+                  </>
+                )}
+              </DetailRow>
+            )}
+            {details.last_command_success_at !== undefined && (
+              <DetailRow label="Last command that reached a lock">
+                <MaybeTime iso={details.last_command_success_at} missing="None since the bridge started" />
+              </DetailRow>
+            )}
           </>
         )}
       </dl>

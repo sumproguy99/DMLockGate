@@ -6,6 +6,9 @@
 // - The response says whether the command was certainly NOT delivered ("rejected") or might have been
 //   ("ambiguous"). "acknowledged" means the vendor accepted delivery, never that the bolt moved.
 // - Nothing here retries a command.
+// - When a command takes too long the bridge gives up and the adapter's publish guard stops it from
+//   being published later. If it had not been published yet the reply is "rejected" (certainly not
+//   sent); otherwise "ambiguous".
 
 import { createServer } from "node:http";
 import { verify } from "./auth.mjs";
@@ -28,6 +31,13 @@ export function createBridgeServer({ adapter, secret, commandTimeoutMs = 25_000,
   const seenSignatures = new Map();
   const acceptedCommandIds = new Map();
   const inFlight = new Set();
+  /** Recent command outcomes, reported in /v1/health so a failing command path is visible. */
+  const commands = { consecutiveFailures: 0, lastFailure: null, lastFailureAt: null, lastSuccessAt: null };
+  const noteFailure = (reason) => {
+    commands.consecutiveFailures += 1;
+    commands.lastFailure = String(reason).slice(0, 200);
+    commands.lastFailureAt = new Date().toISOString();
+  };
 
   async function sendCommand(sn, body) {
     const { action, command_id: commandId } = body ?? {};
@@ -57,28 +67,53 @@ export function createBridgeServer({ adapter, secret, commandTimeoutMs = 25_000,
     const startedAt = Date.now();
     log("info", "command sending", { lock: mask(sn), action, command_id: commandId });
 
+    const deadline = new AbortController();
+    const control = { signal: deadline.signal, published: false };
     let timer;
+    let timedOut = false;
     try {
       const sent = await Promise.race([
-        adapter.send(sn, action),
+        adapter.send(sn, action, control),
         new Promise((_, reject) => {
-          timer = setTimeout(() => reject(new Error(`no acknowledgement within ${commandTimeoutMs} ms`)), commandTimeoutMs);
+          timer = setTimeout(() => {
+            // Abort first: from here on the adapter's guard refuses to publish, so control.published
+            // can no longer change.
+            timedOut = true;
+            deadline.abort();
+            reject(new Error(`no acknowledgement within ${commandTimeoutMs} ms`));
+          }, commandTimeoutMs);
         }),
       ]);
       const latencyMs = Date.now() - startedAt;
       if (sent?.deviceAcked === false) {
         // The broker took the message but the lock never replied. It may still have acted.
         log("warn", "lock did not acknowledge", { command_id: commandId, broker: sent.broker, latency_ms: latencyMs });
+        noteFailure("The lock did not acknowledge the command.");
 
         return [502, { result: "ambiguous", error: "no_device_ack", latency_ms: latencyMs }];
       }
       log("info", "command acknowledged", { command_id: commandId, device_acked: sent?.deviceAcked ?? null, broker: sent?.broker ?? null, latency_ms: latencyMs });
+      commands.consecutiveFailures = 0;
+      commands.lastSuccessAt = new Date().toISOString();
 
       return [200, { result: "acknowledged", device_acked: sent?.deviceAcked ?? null, latency_ms: latencyMs }];
     } catch (err) {
-      log("warn", "command outcome unknown", { command_id: commandId, error: err?.message });
+      const latencyMs = Date.now() - startedAt;
+      // Unsent is claimed only on proof: the guard refused it, or it timed out while still in a
+      // stage the guard covers and had not started publishing.
+      const guardedStage = control.stage === "lookup" || control.stage === "broker";
+      const notSent =
+        err?.name === "CommandNotSentError" || (timedOut && adapter.publishGuarded === true && guardedStage && !control.published);
+      if (notSent) {
+        log("warn", "command not sent", { command_id: commandId, error: err?.message, latency_ms: latencyMs });
+        noteFailure(`Not sent: ${err?.message}`);
 
-      return [502, { result: "ambiguous", error: String(err?.message ?? err).slice(0, 200), latency_ms: Date.now() - startedAt }];
+        return [504, { result: "rejected", error: timedOut ? "not_sent_timeout" : "not_sent", latency_ms: latencyMs }];
+      }
+      log("warn", "command outcome unknown", { command_id: commandId, error: err?.message, stage: control.stage ?? null, published: control.published });
+      noteFailure(err?.message ?? err);
+
+      return [502, { result: "ambiguous", error: String(err?.message ?? err).slice(0, 200), latency_ms: latencyMs }];
     } finally {
       clearTimeout(timer);
       inFlight.delete(sn);
@@ -87,7 +122,15 @@ export function createBridgeServer({ adapter, secret, commandTimeoutMs = 25_000,
 
   async function route(method, path, body) {
     if (method === "GET" && path === "/v1/health") {
-      return [200, adapter.health()];
+      return [200, {
+        ...adapter.health(),
+        commands: {
+          consecutive_failures: commands.consecutiveFailures,
+          last_failure: commands.lastFailure,
+          last_failure_at: commands.lastFailureAt,
+          last_success_at: commands.lastSuccessAt,
+        },
+      }];
     }
     if (method === "GET" && path === "/v1/locks") {
       if (!adapter.ready()) return [503, { error: "eufy_not_connected" }];

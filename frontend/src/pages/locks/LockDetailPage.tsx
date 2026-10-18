@@ -120,12 +120,13 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 function DiagnosticsCard({ lock }: { lock: LockSummary }) {
   const health = useSystemHealth()
   const integration = health.data?.integration.status
+  const reason = health.data?.integration.degraded_reason
 
   return (
     <Card title="Integration diagnostics" description="How LockGuard last heard from this lock.">
       <dl>
         <Row label="Eufy integration">
-          {integration ? <StatusBadge tone={describeIntegration(integration).tone} label={describeIntegration(integration).label} /> : 'Checking…'}
+          {integration ? <StatusBadge tone={describeIntegration(integration, reason).tone} label={describeIntegration(integration, reason).label} /> : 'Checking…'}
         </Row>
         <Row label="Reported state">
           <LockStateBadge state={lock.reported_state} freshness={lock.state_freshness} />

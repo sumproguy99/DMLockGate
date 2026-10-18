@@ -23,7 +23,7 @@ class FakeAdapter extends EventEmitter {
   async hasLock(sn) { return sn === SN; }
   async listLocks() { return [{ external_id: SN, name: "Front Door", model: "T85D0", firmware_version: null }]; }
   async readState(sn) { return { external_id: sn, state: "locked", battery_level: 80, observed_at: new Date().toISOString() }; }
-  async send(sn, action) { this.sent.push({ sn, action }); return this.sendImpl(); }
+  async send(sn, action, control) { this.sent.push({ sn, action }); return this.sendImpl(control); }
 }
 
 async function withServer(adapter, fn, options = {}) {
@@ -194,4 +194,71 @@ test("forwarder signs events and retries server errors only", async () => {
 
   const refused = createForwarder({ url: "http://lockguard.test/x", secret: SECRET, delay: async () => {}, fetchImpl: async () => ({ ok: false, status: 401 }) });
   assert.equal(await refused({}), false);
+});
+
+test("a command given up on before it was published is reported as not sent", async () => {
+  const adapter = new FakeAdapter();
+  adapter.publishGuarded = true;
+  adapter.sendImpl = (control) => {
+    control.stage = "broker";
+    return new Promise(() => {});
+  };
+  await withServer(adapter, async (call) => {
+    const res = await call("POST", `/v1/locks/${SN}/commands`, { action: "unlock", command_id: "cmd-0000020" });
+    assert.equal(res.status, 504);
+    assert.equal(res.json.result, "rejected");
+    assert.equal(res.json.error, "not_sent_timeout");
+
+    const health = await call("GET", "/v1/health");
+    assert.equal(health.json.commands.consecutive_failures, 1);
+    assert.match(health.json.commands.last_failure, /Not sent/);
+  }, { commandTimeoutMs: 50 });
+});
+
+test("a command given up on after publishing started stays ambiguous", async () => {
+  const adapter = new FakeAdapter();
+  adapter.publishGuarded = true;
+  adapter.sendImpl = (control) => {
+    control.stage = "broker";
+    control.published = true;
+    return new Promise(() => {});
+  };
+  await withServer(adapter, async (call) => {
+    const res = await call("POST", `/v1/locks/${SN}/commands`, { action: "unlock", command_id: "cmd-0000021" });
+    assert.equal(res.status, 502);
+    assert.equal(res.json.result, "ambiguous");
+  }, { commandTimeoutMs: 50 });
+});
+
+test("the deadline aborts the adapter's signal, and a success resets the failure count", async () => {
+  const adapter = new FakeAdapter();
+  adapter.publishGuarded = true;
+  let seen;
+  adapter.sendImpl = (control) => {
+    seen = control;
+    return new Promise(() => {});
+  };
+  await withServer(adapter, async (call) => {
+    await call("POST", `/v1/locks/${SN}/commands`, { action: "lock", command_id: "cmd-0000022" });
+    assert.equal(seen.signal.aborted, true);
+
+    adapter.sendImpl = async () => ({ deviceAcked: true, broker: "203.0.113.7" });
+    await call("POST", `/v1/locks/${SN}/commands`, { action: "lock", command_id: "cmd-0000023" });
+    const health = await call("GET", "/v1/health");
+    assert.equal(health.json.commands.consecutive_failures, 0);
+    assert.ok(health.json.commands.last_success_at);
+  }, { commandTimeoutMs: 50 });
+});
+
+test("a command that timed out outside the guarded path stays ambiguous", async () => {
+  const adapter = new FakeAdapter();
+  adapter.publishGuarded = true;
+  adapter.sendImpl = (control) => {
+    control.stage = "dispatching";
+    return new Promise(() => {});
+  };
+  await withServer(adapter, async (call) => {
+    const res = await call("POST", `/v1/locks/${SN}/commands`, { action: "lock", command_id: "cmd-0000024" });
+    assert.equal(res.json.result, "ambiguous");
+  }, { commandTimeoutMs: 50 });
 });

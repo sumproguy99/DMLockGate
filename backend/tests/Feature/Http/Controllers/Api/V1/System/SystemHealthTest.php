@@ -146,6 +146,46 @@ class SystemHealthTest extends TestCase
         $this->assertSame('warning', $this->subsystems($response)['eufy']['status']);
     }
 
+    public function test_bridge_errors_reported_as_objects_reach_clients_as_text(): void
+    {
+        Http::fake(['bridge.test/*' => Http::response([
+            ...self::BRIDGE_REPLY,
+            'last_error' => ['message' => 'read ECONNRESET', 'at' => '2026-10-17T12:41:23.193Z'],
+            'cloud_last_error' => ['unexpected' => true],
+        ])]);
+
+        $this->health()
+            ->assertJsonPath('data.integration.details.last_error', 'read ECONNRESET')
+            ->assertJsonPath('data.integration.details.last_error_at', '2026-10-17T12:41:23.193Z')
+            ->assertJsonPath('data.integration.details.cloud_last_error', 'Unrecognized error report from the bridge.');
+    }
+
+    public function test_repeated_command_failures_mark_a_connected_bridge_degraded(): void
+    {
+        Http::fake(['bridge.test/*' => Http::response([
+            ...self::BRIDGE_REPLY,
+            'commands' => ['consecutive_failures' => 3, 'last_failure' => 'Not sent: no acknowledgement within 25000 ms', 'last_failure_at' => '2026-10-17T21:05:47.137Z', 'last_success_at' => null],
+        ])]);
+
+        $response = $this->health();
+
+        $response->assertJsonPath('data.integration.status', 'degraded')
+            ->assertJsonPath('data.integration.degraded_reason', 'commands_failing')
+            ->assertJsonPath('data.integration.details.command_failures', 3)
+            ->assertJsonPath('data.integration.details.last_command_failure', 'Not sent: no acknowledgement within 25000 ms');
+        $this->assertSame('warning', $this->subsystems($response)['eufy']['status']);
+        $this->assertStringContainsString('did not reach the locks', $this->subsystems($response)['eufy']['summary']);
+    }
+
+    public function test_one_command_failure_is_not_yet_degraded(): void
+    {
+        Http::fake(['bridge.test/*' => Http::response([...self::BRIDGE_REPLY, 'commands' => ['consecutive_failures' => 1]])]);
+
+        $this->health(RoleTemplate::Resident)
+            ->assertJsonPath('data.integration.status', 'connected')
+            ->assertJsonPath('data.integration.degraded_reason', null);
+    }
+
     public function test_an_unrecognized_bridge_status_is_unknown(): void
     {
         Http::fake(['bridge.test/*' => Http::response([...self::BRIDGE_REPLY, 'status' => 'party_mode'])]);

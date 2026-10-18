@@ -17,6 +17,6 @@ export function IntegrationIndicator() {
     return <StatusBadge tone="unknown" label="Eufy status unavailable" icon={ShieldQuestionMark} />
   }
 
-  const { tone, label, icon } = describeIntegration(data.integration.status)
+  const { tone, label, icon } = describeIntegration(data.integration.status, data.integration.degraded_reason)
   return <StatusBadge tone={tone} label={label} icon={icon} />
 }

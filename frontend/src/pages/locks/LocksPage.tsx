@@ -37,6 +37,7 @@ export function LocksPage() {
   const [registering, setRegistering] = useState(false)
   const canManage = hasAnyPermission(me, ['admin.integration_settings'])
   const integration = health.data?.integration.status
+  const reason = health.data?.integration.degraded_reason
 
   const columns: Column<LockSummary>[] = [
     {
@@ -111,8 +112,8 @@ export function LocksPage() {
       />
 
       {integration && integration !== 'connected' && (
-        <Banner tone={describeIntegration(integration).tone} title={describeIntegration(integration).label} className="mb-4" live="none">
-          {describeIntegration(integration).explanation}
+        <Banner tone={describeIntegration(integration, reason).tone} title={describeIntegration(integration, reason).label} className="mb-4" live="none">
+          {describeIntegration(integration, reason).explanation}
         </Banner>
       )}
 

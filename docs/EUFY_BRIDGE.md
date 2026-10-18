@@ -36,6 +36,7 @@ Each command reply says whether the command could have reached the lock:
 |---|---|---|
 | `200 acknowledged` | The lock replied that it received the command (`device_acked: true`). This does not prove the bolt moved. | Waits for confirmation. |
 | `401/404/422/423/503 rejected` | Not sent. Causes: bad signature, unknown lock, invalid request, a command already in flight for this lock, Eufy not connected, or the Eufy cloud degraded (`eufy_degraded`, see below). | FAILED |
+| `504 rejected not_sent_timeout` | The bridge gave up after 25 s before the command was published, and the publish guard stopped it from going out later (see below). Certainly not sent. | FAILED |
 | `409 ambiguous` | This `command_id` was already accepted. | Waits for confirmation; never sends again. |
 | `502 ambiguous` | The send failed, had no reply within 25 s, or the lock never replied (`no_device_ack`: Eufy's broker took the message but the lock did not answer). It may still have reached the lock. | Waits for confirmation, then UNKNOWN_RESULT if none comes. |
 
@@ -56,6 +57,26 @@ When eufy-sdk's live state fetch fails, `getDevice()` quietly answers from its c
 - Health also reports `cloud_ok_at`, `cloud_failures` and `cloud_last_error`.
 
 This relies on SDK internals (`EufyMega.mega.post`), so re-check it after any eufy-sdk upgrade.
+
+## Command delivery and the publish guard
+
+The SDK sends each lock command over a **one-shot** connection to Eufy's command broker:
+1. a cloud lookup;
+2. probing broker instances (up to 8 s each);
+3. connect, publish, then wait 5 s for the lock's reply;
+4. disconnect.
+
+No port-8883 connection between commands is normal.
+
+The bridge gives up after 25 s, but the SDK would carry on in the background. To keep a command the bridge has given up on from being published later, the adapter hooks the SDK's broker step (`ensureSecurityMqttFor`) and its `publish`:
+- **After the deadline:** a command is never published.
+- **The publish flag** is set in the same step publishing starts, so after the deadline the bridge knows for certain whether the command could have left.
+- **"Not sent" (`504 rejected not_sent_timeout`)** is reported only when the command was still in the cloud lookup or in the guarded broker step and had not started publishing. Anything else stays `502 ambiguous`.
+- **If the SDK internals change** and the hook cannot be installed, the bridge logs it and every timeout stays ambiguous.
+
+**Step log:** each command logs its steps with elapsed times (`command step: device looked up`, `broker found`, `publishing`, `finished`), plus the SDK's broker and connection lines (`smqtt`, `ensureSecurityMqtt`), so a slow step is visible in `data/bridge.log`.
+
+**Health:** `GET /v1/health` includes `commands`: `consecutive_failures`, `last_failure`, `last_failure_at` and `last_success_at`. The cloud can answer state reads while commands fail; LockGuard therefore reports the integration as `degraded` (`commands_failing`) after 2 failures in a row, and the header and dashboard say so. Commands are still allowed in that case (a success clears it), and every one still waits for the lock to confirm.
 
 ## Command broker (`EUFY_MQTT_BROKER_IP`)
 

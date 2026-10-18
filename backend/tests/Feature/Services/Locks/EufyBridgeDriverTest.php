@@ -63,6 +63,15 @@ class EufyBridgeDriverTest extends TestCase
         $this->driver->send($this->lock, LockAction::Lock, 'req-0002-abcd');
     }
 
+    public function test_a_command_the_bridge_gave_up_on_before_publishing_means_not_delivered(): void
+    {
+        Http::fake(['bridge.test/*' => Http::response(['result' => 'rejected', 'error' => 'not_sent_timeout', 'latency_ms' => 25000], 504)]);
+
+        $this->expectException(IntegrationUnavailable::class);
+        $this->expectExceptionMessage('not_sent_timeout');
+        $this->driver->send($this->lock, LockAction::Unlock, 'req-0009-abcd');
+    }
+
     public function test_a_degraded_eufy_cloud_means_not_delivered(): void
     {
         Http::fake(['bridge.test/*' => Http::response(['result' => 'rejected', 'error' => 'eufy_degraded'], 503)]);

@@ -18,6 +18,8 @@ export type SubsystemStatus = 'ok' | 'warning' | 'down' | 'unknown' | 'not_imple
 export type SystemHealth = {
   integration: {
     status: IntegrationStatus
+    /** Why it is degraded: cloud_errors, cloud_silent, or commands_failing (commands not reaching locks). */
+    degraded_reason?: string | null
     checked_at: string
     /** The newest lock state LockGuard's scheduled sync recorded. */
     last_sync_at: string | null
@@ -30,6 +32,11 @@ export type SystemHealth = {
       cloud_failures?: number | null
       cloud_last_error?: string | null
       last_error?: string | null
+      last_error_at?: string | null
+      command_failures?: number | null
+      last_command_failure?: string | null
+      last_command_failure_at?: string | null
+      last_command_success_at?: string | null
     }
   }
   subsystems?: Array<{ key: string; status: SubsystemStatus; summary: string }>

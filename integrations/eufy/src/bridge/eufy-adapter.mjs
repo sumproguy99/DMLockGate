@@ -31,6 +31,11 @@ export class StaleStateError extends Error {
   name = "StaleStateError";
 }
 
+/** The bridge gave up on a command before it was published, and the publish guard stopped it. */
+export class CommandNotSentError extends Error {
+  name = "CommandNotSentError";
+}
+
 export class EufyAdapter extends EventEmitter {
   /**
    * @param {object} [options.eufy] An EufyMega-shaped client, for tests. Defaults to the real SDK.
@@ -57,37 +62,67 @@ export class EufyAdapter extends EventEmitter {
     this.eufy.on("connect", () => this.log("info", "realtime connected"));
     this.eufy.on("disconnect", () => this.log("warn", "realtime disconnected"));
     this.eufy.on("event", (e) => this.onVendorEvent(e));
-    if (brokerIp) this.pinCommandBroker(brokerIp);
+    /** Commands in progress, by lock serial: { signal, published, log }. */
+    this.commands = new Map();
+    this.publishGuarded = this.guardCommandBroker(brokerIp);
   }
 
   /**
-   * Sends lock commands through one broker instance. Several instances behind the Eufy broker
-   * hostname accept a subscription for a lock, but only the one holding the lock's own session
-   * delivers to it, and the SDK takes the first one DNS returns. Commands through the others are
-   * accepted and silently dropped. Find the right instance with `npm run diag:listen` while
-   * operating the lock from the Eufy app.
+   * Hooks the SDK's per-command broker connection (MqttCommandRouter.ensureSecurityMqttFor). The SDK
+   * opens one fresh connection per command and closes it afterwards.
    *
-   * The SDK's own discovery and connection are kept; only the chosen instance is replaced. This
-   * reaches into SDK internals (MqttCommandRouter.ensureSecurityMqttFor, SecureMqtt options), so
-   * re-check it after any eufy-sdk upgrade.
+   * The hook does two things:
+   * - It guards publishing. A command whose deadline has passed is never published, and a command
+   *   records the moment it is published. That is what lets the bridge say "not sent" with certainty
+   *   instead of "unknown" when it gives up early (see send()).
+   * - With EUFY_MQTT_BROKER_IP it pins the broker instance. Several instances behind the Eufy broker
+   *   hostname accept a subscription for a lock, but only the one holding the lock's own session
+   *   delivers to it. Find the right one with `npm run diag:listen` while using the Eufy app.
+   *
+   * This reaches into SDK internals (ensureSecurityMqttFor, SecureMqtt options and publish), so
+   * re-check it after any eufy-sdk upgrade. Returns false when they are missing: commands then still
+   * work, but a timeout is always reported as "unknown".
    */
-  pinCommandBroker(brokerIp) {
+  guardCommandBroker(brokerIp) {
     const router = this.eufy.mqtt;
     const discover = router?.ensureSecurityMqttFor?.bind(router);
     if (!discover) {
-      this.log("error", "cannot pin the command broker: the SDK internals changed");
-      return;
+      this.log("error", "cannot guard command publishing: the SDK internals changed");
+      return false;
     }
     router.ensureSecurityMqttFor = async (dev) => {
-      const chosen = await discover(dev);
-      if (chosen.instanceIp === brokerIp) return chosen;
-      await chosen.mqtt.disconnect();
-      chosen.mqtt.o.instanceIp = brokerIp;
-      await chosen.mqtt.connect();
-      this.log("info", "command broker pinned", { discovered: chosen.instanceIp, used: brokerIp });
+      const command = this.commands.get(dev?.sn);
+      if (command) command.stage = "broker";
+      let chosen = await discover(dev);
+      command?.log("broker found", { instance: chosen.instanceIp });
+      if (brokerIp && chosen.instanceIp !== brokerIp) {
+        await chosen.mqtt.disconnect();
+        chosen.mqtt.o.instanceIp = brokerIp;
+        await chosen.mqtt.connect();
+        this.log("info", "command broker pinned", { discovered: chosen.instanceIp, used: brokerIp });
+        chosen = { mqtt: chosen.mqtt, instanceIp: brokerIp };
+      }
+      if (command?.signal.aborted) {
+        await chosen.mqtt.disconnect().catch(() => {});
+        throw new CommandNotSentError("The bridge gave up before the command was published.");
+      }
 
-      return { mqtt: chosen.mqtt, instanceIp: brokerIp };
+      const publish = chosen.mqtt.publish.bind(chosen.mqtt);
+      chosen.mqtt.publish = async (topic, body, opts) => {
+        // Checked and recorded in the same synchronous step as the publish starts, so a deadline that
+        // passes after this point is reported as "may have been sent".
+        if (command?.signal.aborted) {
+          throw new CommandNotSentError("The bridge gave up before the command was published.");
+        }
+        if (command) command.published = true;
+        command?.log("publishing");
+        return publish(topic, body, opts);
+      };
+
+      return chosen;
     };
+
+    return true;
   }
 
   /**
@@ -221,18 +256,49 @@ export class EufyAdapter extends EventEmitter {
    * Sends the command. lock()/unlock() resolve even when the lock never replies, so the lock's own
    * reply comes from the SDK's `commandAck` event: deviceAcked is true or false, or null when no
    * ack event arrived at all.
+   *
+   * `control` lets the caller give up: once `control.signal` is aborted the command is never
+   * published. `control.published` turns true the moment publishing starts, so after aborting the
+   * caller knows for certain whether the command could have left (see guardCommandBroker()).
+   * `control.stage` says how far it got: "lookup", "dispatching" (inside the SDK, before the guarded
+   * broker step), "broker" (inside the guarded step). Only "lookup" and "broker" prove the command
+   * was on the guarded path.
+   * Each step is logged with its elapsed time.
    */
-  async send(sn, action) {
+  async send(sn, action, control = { signal: new AbortController().signal, published: false }) {
+    const startedAt = this.now();
+    control.stage = "lookup";
+    const command = {
+      signal: control.signal,
+      set stage(value) {
+        control.stage = value;
+      },
+      get published() {
+        return control.published;
+      },
+      set published(value) {
+        control.published = value;
+      },
+      log: (step, extra = {}) => this.log("info", `command step: ${step}`, { lock: maskSn(sn), elapsed_ms: this.now() - startedAt, ...extra }),
+    };
     let ack = null;
     const onAck = (info) => {
       if (info?.sn === sn && info?.kind === "ff09-actuate") ack = info;
     };
+    this.commands.set(sn, command);
     this.eufy.on("commandAck", onAck);
     try {
       const lock = (await this.eufy.getDevice(sn)).lock();
+      command.log("device looked up");
+      if (control.signal.aborted) {
+        throw new CommandNotSentError("The bridge gave up before the command was published.");
+      }
+      control.stage = "dispatching";
       await (action === "lock" ? lock.lock() : lock.unlock());
+      command.log("finished", { device_acked: ack === null ? null : ack.acked === true });
     } finally {
       this.eufy.off("commandAck", onAck);
+      if (this.commands.get(sn) === command) this.commands.delete(sn);
     }
 
     return { deviceAcked: ack === null ? null : ack.acked === true, broker: ack?.instanceIp ?? null };
@@ -243,7 +309,7 @@ export class EufyAdapter extends EventEmitter {
    * debug output is too noisy for the bridge log.
    */
   sdkLogger() {
-    const relevant = /dispatchFf09|broker|instance/i;
+    const relevant = /dispatchFf09|broker|instance|smqtt|ensureSecurityMqtt/i;
     const pass = (level) => (message) => {
       if (relevant.test(String(message))) this.log(level, `sdk: ${String(message).slice(0, 300)}`);
     };
@@ -285,4 +351,9 @@ export class EufyAdapter extends EventEmitter {
       actor: typeof e.nick_name === "string" ? e.nick_name.slice(0, 120) : null,
     });
   }
+}
+
+/** "T85D0K1024460592" → "T85D0…592", as the bridge log masks serials elsewhere. */
+function maskSn(sn) {
+  return typeof sn === "string" && sn.length > 8 ? `${sn.slice(0, 5)}…${sn.slice(-3)}` : "?";
 }

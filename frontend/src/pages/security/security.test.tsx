@@ -125,6 +125,60 @@ describe('the audit log', () => {
 })
 
 describe('system health', () => {
+  it('explains commands that keep failing while the cloud still answers', async () => {
+    mockFetch({
+      ...signedIn(auditor),
+      'GET /api/v1/system/health': () =>
+        json(200, {
+          data: {
+            integration: {
+              status: 'degraded',
+              degraded_reason: 'commands_failing',
+              checked_at: new Date().toISOString(),
+              last_sync_at: null,
+              details: {
+                degraded_reason: 'commands_failing',
+                command_failures: 3,
+                last_command_failure: 'Not sent: no acknowledgement within 25000 ms',
+                last_command_failure_at: new Date().toISOString(),
+                last_command_success_at: null,
+              },
+            },
+            subsystems: [],
+          },
+        }),
+    })
+    renderAt('/system')
+
+    expect(await screen.findByText(/Recent lock commands did not reach the locks/)).toBeInTheDocument()
+    expect(screen.getByText('Lock commands are not reaching the locks')).toBeInTheDocument()
+    expect(screen.getByText(/Not sent: no acknowledgement within 25000 ms/)).toBeInTheDocument()
+    expect(screen.getByText('None since the bridge started')).toBeInTheDocument()
+  })
+
+  it('never renders a bridge error that is not text, so an odd reply cannot blank the screen', async () => {
+    mockFetch({
+      ...signedIn(auditor),
+      'GET /api/v1/system/health': () =>
+        json(200, {
+          data: {
+            integration: {
+              status: 'connected',
+              checked_at: new Date().toISOString(),
+              last_sync_at: null,
+              details: { last_error: { message: 'read ECONNRESET', at: '2026-10-17T12:41:23.193Z' }, cloud_last_error: 'HTTP 503' },
+            },
+            subsystems: [],
+          },
+        }),
+    })
+    renderAt('/system')
+
+    expect(await screen.findByText('HTTP 503')).toBeInTheDocument()
+    expect(screen.queryByText('Last bridge error')).not.toBeInTheDocument()
+  })
+
+
   it('shows integration diagnostics and every subsystem', async () => {
     mockFetch({
       ...signedIn(auditor),

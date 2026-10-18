@@ -26,6 +26,7 @@ class SystemHealthController extends Controller
         $data = [
             'integration' => [
                 'status' => $integration['status'],
+                'degraded_reason' => $integration['degraded_reason'] ?? null,
                 'checked_at' => $integration['checked_at'],
                 'last_sync_at' => $integration['last_sync_at'],
             ],

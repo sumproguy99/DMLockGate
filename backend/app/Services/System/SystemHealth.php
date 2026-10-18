@@ -32,6 +32,9 @@ class SystemHealth
     /** The bridge is asked at most this often, however many dashboards are open. */
     public const BRIDGE_CACHE_SECONDS = 15;
 
+    /** This many lock commands in a row that did not reach a lock marks the integration degraded. */
+    public const COMMAND_FAILURES_DEGRADED = 2;
+
     public function __construct(
         private readonly LockDriver $driver,
         private readonly AuditIntegrity $audit,
@@ -42,7 +45,7 @@ class SystemHealth
      *
      * status: connected | degraded | needs_login | starting | unreachable | not_configured | simulated | unknown
      *
-     * @return array{status: string, checked_at: string, last_sync_at: ?string, details: array<string, mixed>}
+     * @return array{status: string, degraded_reason?: ?string, checked_at: string, last_sync_at: ?string, details: array<string, mixed>}
      */
     public function integration(): array
     {
@@ -70,22 +73,49 @@ class SystemHealth
 
         $reply = $bridge['reply'];
         $status = in_array($reply['status'] ?? null, ['connected', 'degraded', 'needs_login', 'starting'], true) ? $reply['status'] : 'unknown';
+        $commands = is_array($reply['commands'] ?? null) ? $reply['commands'] : [];
+        $commandFailures = is_int($commands['consecutive_failures'] ?? null) ? $commands['consecutive_failures'] : null;
+        $degradedReason = $reply['degraded_reason'] ?? null;
 
-        return [...$base, 'status' => $status, 'checked_at' => $bridge['checked_at'], 'details' => [
-            'degraded_reason' => $reply['degraded_reason'] ?? null,
+        // The cloud can answer state reads while commands fail to reach the locks; say so.
+        if ($status === 'connected' && $commandFailures !== null && $commandFailures >= self::COMMAND_FAILURES_DEGRADED) {
+            $status = 'degraded';
+            $degradedReason = 'commands_failing';
+        }
+
+        return [...$base, 'status' => $status, 'degraded_reason' => $degradedReason, 'checked_at' => $bridge['checked_at'], 'details' => [
+            'degraded_reason' => $degradedReason,
+            'command_failures' => $commandFailures,
+            'last_command_failure' => self::errorText($commands['last_failure'] ?? null),
+            'last_command_failure_at' => is_string($commands['last_failure_at'] ?? null) ? $commands['last_failure_at'] : null,
+            'last_command_success_at' => is_string($commands['last_success_at'] ?? null) ? $commands['last_success_at'] : null,
             'locks_visible' => is_int($reply['locks'] ?? null) ? $reply['locks'] : null,
             'bridge_last_sync_at' => $reply['last_sync_at'] ?? null,
             'cloud_ok_at' => $reply['cloud_ok_at'] ?? null,
             'cloud_failures' => is_int($reply['cloud_failures'] ?? null) ? $reply['cloud_failures'] : null,
-            'cloud_last_error' => $reply['cloud_last_error'] ?? null,
-            'last_error' => $reply['last_error'] ?? null,
+            'cloud_last_error' => self::errorText($reply['cloud_last_error'] ?? null),
+            'last_error' => self::errorText($reply['last_error'] ?? null),
+            'last_error_at' => is_array($reply['last_error'] ?? null) && is_string($reply['last_error']['at'] ?? null) ? $reply['last_error']['at'] : null,
         ]];
+    }
+
+    /**
+     * The bridge reports errors either as text or as {message, at}. Clients always get text.
+     */
+    private static function errorText(mixed $error): ?string
+    {
+        return match (true) {
+            is_string($error) => mb_substr($error, 0, 200),
+            is_array($error) && is_string($error['message'] ?? null) => mb_substr($error['message'], 0, 200),
+            $error === null => null,
+            default => 'Unrecognized error report from the bridge.',
+        };
     }
 
     /**
      * Every subsystem, in display order.
      *
-     * @param  array{status: string, last_sync_at: ?string}  $integration  The result of {@see integration()}.
+     * @param  array{status: string, degraded_reason?: ?string, last_sync_at: ?string}  $integration  The result of {@see integration()}.
      * @return list<array{key: string, status: string, summary: string}>
      */
     public function subsystems(array $integration): array
@@ -95,7 +125,7 @@ class SystemHealth
             $this->database(),
             $this->queue(),
             $this->stateSync($integration),
-            $this->eufy($integration['status']),
+            $this->eufy($integration['status'], $integration['degraded_reason'] ?? null),
             $this->auditTrail(),
             ['key' => 'notifications', 'status' => 'not_implemented', 'summary' => 'Notifications are not built yet.'],
             ['key' => 'live_updates', 'status' => 'not_implemented', 'summary' => 'Live updates are not built yet. Screens refresh on a timer instead.'],
@@ -170,17 +200,20 @@ class SystemHealth
     /**
      * @return array{key: string, status: string, summary: string}
      */
-    private function eufy(string $status): array
+    private function eufy(string $status, ?string $degradedReason = null): array
     {
-        [$level, $summary] = match ($status) {
-            'connected' => ['ok', 'The Eufy bridge is signed in to Eufy.'],
-            'degraded' => ['warning', 'The Eufy cloud is failing or silent. Commands are refused until it recovers.'],
-            'needs_login' => ['down', 'The Eufy bridge needs its Eufy account signed in again.'],
-            'starting' => ['warning', 'The Eufy bridge is starting.'],
-            'unreachable' => ['down', 'The Eufy bridge is not answering.'],
-            'not_configured' => ['not_implemented', 'No lock integration is configured.'],
-            'simulated' => ['warning', 'Simulated locks: no real lock is connected.'],
-            default => ['unknown', 'The Eufy bridge gave an unrecognized status.'],
+        [$level, $summary] = match (true) {
+            $status === 'degraded' && $degradedReason === 'commands_failing' => ['warning', 'Recent lock commands did not reach the locks. Check the bridge log.'],
+            default => match ($status) {
+                'connected' => ['ok', 'The Eufy bridge is signed in to Eufy.'],
+                'degraded' => ['warning', 'The Eufy cloud is failing or silent. Commands are refused until it recovers.'],
+                'needs_login' => ['down', 'The Eufy bridge needs its Eufy account signed in again.'],
+                'starting' => ['warning', 'The Eufy bridge is starting.'],
+                'unreachable' => ['down', 'The Eufy bridge is not answering.'],
+                'not_configured' => ['not_implemented', 'No lock integration is configured.'],
+                'simulated' => ['warning', 'Simulated locks: no real lock is connected.'],
+                default => ['unknown', 'The Eufy bridge gave an unrecognized status.'],
+            },
         };
 
         return ['key' => 'eufy', 'status' => $level, 'summary' => $summary];

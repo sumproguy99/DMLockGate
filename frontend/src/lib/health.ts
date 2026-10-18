@@ -56,7 +56,18 @@ const integrations: Record<IntegrationStatus, DescribedIntegration> = {
   },
 }
 
-export function describeIntegration(status: IntegrationStatus): DescribedIntegration {
+/**
+ * The integration in words. A degraded bridge whose commands keep failing still accepts commands,
+ * so it gets its own explanation.
+ */
+export function describeIntegration(status: IntegrationStatus, degradedReason?: string | null): DescribedIntegration {
+  if (status === 'degraded' && degradedReason === 'commands_failing') {
+    return {
+      ...integrations.degraded,
+      explanation:
+        'Recent lock commands did not reach the locks. You can still try, but check the door each time. An administrator should check the Eufy bridge.',
+    }
+  }
   return integrations[status] ?? integrations.unknown
 }
 
