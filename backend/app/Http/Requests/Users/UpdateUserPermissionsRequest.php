@@ -4,6 +4,7 @@ namespace App\Http\Requests\Users;
 
 use App\Enums\PermissionEffect;
 use App\Enums\PermissionKey;
+use App\Services\Authorization\UserManagementGuard;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -12,8 +13,13 @@ use Illuminate\Validation\Rule;
  */
 class UpdateUserPermissionsRequest extends FormRequest
 {
+    /**
+     * Checked before validation; the controller checks the full rules about the target user.
+     */
     public function authorize(): bool
     {
+        app(UserManagementGuard::class)->requirePermission($this->user(), PermissionKey::UsersModifyPermissions, 'user.permissions_changed');
+
         return true;
     }
 

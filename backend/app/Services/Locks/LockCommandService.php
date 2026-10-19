@@ -182,19 +182,7 @@ class LockCommandService
             'lock_access' => fn (): ?array => $this->accessRow($user, $lock) !== null ? null
                 : ['no_lock_access', 'You have not been given access to this lock.'],
 
-            'schedule' => function () use ($user, $lock): ?array {
-                $access = $this->accessRow($user, $lock);
-                $from = $access->valid_from === null ? null : Carbon::parse($access->valid_from);
-                $until = $access->valid_until === null ? null : Carbon::parse($access->valid_until);
-                if ($from !== null && now()->lt($from)) {
-                    return ['outside_access_window', 'Your access to this lock has not started yet.'];
-                }
-                if ($until !== null && now()->gte($until)) {
-                    return ['outside_access_window', 'Your access to this lock has ended.'];
-                }
-
-                return null;
-            },
+            'schedule' => fn (): ?array => $this->windowProblem($this->accessRow($user, $lock)),
 
             'remote_unlock_policy' => fn (): ?array => match (true) {
                 ! $isRemoteUnlock => null,
@@ -247,6 +235,40 @@ class LockCommandService
         }
 
         return [$results, null];
+    }
+
+    /**
+     * Why this user may not command this lock at all, or null when their access is current. The
+     * same rule as the lock_access and schedule checks, for showing the controls; every command is
+     * still decided by request().
+     *
+     * @return array{code: string, message: string}|null
+     */
+    public function accessProblem(User $user, Lock $lock): ?array
+    {
+        $access = $this->accessRow($user, $lock);
+        [$code, $message] = $access === null
+            ? ['no_lock_access', 'You have not been given access to this lock.']
+            : ($this->windowProblem($access) ?? [null, null]);
+
+        return $code === null ? null : ['code' => $code, 'message' => $message];
+    }
+
+    /**
+     * @return array{0: string, 1: string}|null
+     */
+    private function windowProblem(object $access): ?array
+    {
+        $from = $access->valid_from === null ? null : Carbon::parse($access->valid_from);
+        $until = $access->valid_until === null ? null : Carbon::parse($access->valid_until);
+        if ($from !== null && now()->lt($from)) {
+            return ['outside_access_window', 'Your access to this lock has not started yet.'];
+        }
+        if ($until !== null && now()->gte($until)) {
+            return ['outside_access_window', 'Your access to this lock has ended.'];
+        }
+
+        return null;
     }
 
     /**

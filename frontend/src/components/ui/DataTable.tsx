@@ -40,8 +40,10 @@ export function DataTable<Row>({
 }: DataTableProps<Row>) {
   const align = (column: Column<Row>) => (column.align === 'right' ? 'text-right' : 'text-left')
 
+  // relative: screen-reader-only text in cells is absolutely positioned; without a positioned
+  // ancestor it escapes this scroll area and widens the whole page.
   return (
-    <div className={cx('overflow-x-auto rounded-md border border-border', className)}>
+    <div className={cx('relative overflow-x-auto rounded-md border border-border', className)}>
       <table className="w-full border-collapse text-support" aria-busy={loading || undefined}>
         <caption className={cx('px-4 py-3 text-left text-panel-title', captionHidden && 'sr-only')}>{caption}</caption>
         <thead className="bg-panel-2">

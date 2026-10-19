@@ -1,0 +1,210 @@
+<?php
+
+namespace Tests\Feature\Http;
+
+use App\Actions\Auth\CompleteLogin;
+use App\Enums\AccessChannel;
+use App\Enums\AccessRequestStatus;
+use App\Enums\AuditOutcome;
+use App\Enums\LockAction;
+use App\Enums\RoleTemplate;
+use App\Models\AccessRequest;
+use App\Models\AuditLog;
+use App\Models\Lock;
+use App\Models\Property;
+use App\Models\Role;
+use App\Models\User;
+use App\Services\Audit\AuditLogger;
+use Database\Seeders\PermissionCatalogSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Route;
+use Illuminate\Support\Facades\Route as Router;
+use Illuminate\Support\Str;
+use Tests\TestCase;
+
+/**
+ * Every API route against every role template: which roles get past authorization and which are
+ * refused with 403. Each role holds only its template's permissions and access to the lock under
+ * test, and has recently confirmed its identity, so the result is the permission decision alone.
+ * A new route fails this test until it is added to ACCESS with a deliberate answer.
+ */
+class RouteAccessMatrixTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private const ALL = ['super_administrator', 'security_administrator', 'property_manager', 'resident', 'temporary_guest', 'service_provider', 'read_only_auditor'];
+
+    private const USER_ADMINS = ['super_administrator', 'security_administrator', 'property_manager'];
+
+    private const HISTORY = ['super_administrator', 'security_administrator', 'property_manager', 'resident', 'read_only_auditor'];
+
+    private const AUDIT = ['super_administrator', 'security_administrator', 'read_only_auditor'];
+
+    /**
+     * Route name => the roles allowed past authorization. Routes about the caller's own account are
+     * open to everyone signed in.
+     */
+    private const ACCESS = [
+        'api.v1.auth.logout' => self::ALL,
+        'api.v1.auth.me' => self::ALL,
+        'api.v1.auth.confirm' => self::ALL,
+        'api.v1.auth.sessions.index' => self::ALL,
+        'api.v1.auth.sessions.destroy-others' => self::ALL,
+        'api.v1.auth.mfa.store' => self::ALL,
+        'api.v1.auth.mfa.confirm' => self::ALL,
+        'api.v1.auth.mfa.destroy' => self::ALL,
+        'api.v1.dashboard' => self::ALL,
+        'api.v1.system.health' => self::ALL,
+        'api.v1.audit-logs.index' => self::AUDIT,
+        'api.v1.audit-logs.export' => self::AUDIT,
+        'api.v1.audit-logs.show' => self::AUDIT,
+        'api.v1.users.index' => self::USER_ADMINS,
+        'api.v1.users.show' => self::USER_ADMINS,
+        'api.v1.users.security-history' => self::USER_ADMINS,
+        'api.v1.roles.index' => self::USER_ADMINS,
+        'api.v1.permissions.index' => self::USER_ADMINS,
+        'api.v1.permission-preview' => ['super_administrator', 'property_manager'],
+        'api.v1.users.store' => ['super_administrator', 'property_manager'],
+        'api.v1.users.update' => ['super_administrator', 'property_manager'],
+        'api.v1.users.suspend' => self::USER_ADMINS,
+        'api.v1.users.reactivate' => self::USER_ADMINS,
+        'api.v1.users.revoke' => ['super_administrator', 'security_administrator'],
+        'api.v1.users.sessions.revoke' => ['super_administrator', 'security_administrator'],
+        'api.v1.users.roles.update' => ['super_administrator'],
+        'api.v1.users.permissions.update' => ['super_administrator'],
+        'api.v1.locks.index' => self::ALL,
+        'api.v1.locks.show' => self::ALL,
+        'api.v1.locks.history' => self::HISTORY,
+        'api.v1.activity' => self::HISTORY,
+        'api.v1.locks.commands.store' => ['super_administrator', 'security_administrator', 'property_manager', 'resident', 'temporary_guest', 'service_provider'],
+        'api.v1.lock-requests.show' => self::ALL,
+        'api.v1.properties.index' => ['super_administrator'],
+        'api.v1.properties.store' => ['super_administrator'],
+        'api.v1.locks.store' => ['super_administrator'],
+        'api.v1.locks.update' => ['super_administrator'],
+        'api.v1.locks.access.update' => ['super_administrator', 'property_manager'],
+        'api.v1.locks.access.destroy' => self::USER_ADMINS,
+    ];
+
+    /**
+     * Routes whose body is checked before the permission, and why that reveals nothing.
+     */
+    private const VALIDATES_FIRST = [
+        // The decision needs the action; the only errors are its format, and every refusal is recorded.
+        'api.v1.locks.commands.store' => 'action and idempotency key format only',
+    ];
+
+    /** Signed-out routes, checked elsewhere. */
+    private const PUBLIC = ['api.v1.auth.login', 'api.v1.auth.mfa.verify'];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(PermissionCatalogSeeder::class);
+        $this->withHeader('Origin', 'http://localhost');
+    }
+
+    public function test_every_api_route_is_in_the_matrix(): void
+    {
+        $names = collect(Router::getRoutes()->getRoutes())
+            ->map(fn (Route $route): ?string => $route->getName())
+            ->filter(fn (?string $name): bool => $name !== null && str_starts_with($name, 'api.v1.') && ! in_array($name, self::PUBLIC, true))
+            ->values();
+
+        $this->assertSame([], $names->diff(array_keys(self::ACCESS))->values()->all(), 'Add these routes to RouteAccessMatrixTest::ACCESS.');
+        $this->assertSame([], collect(array_keys(self::ACCESS))->diff($names)->values()->all(), 'These routes no longer exist.');
+    }
+
+    public function test_each_role_is_allowed_or_refused_as_the_matrix_says(): void
+    {
+        $property = Property::query()->forceCreate(['name' => 'Matrix Home']);
+        $lock = Lock::factory()->create(['property_id' => $property->id, 'name' => 'Front Door', 'commands_enabled' => true]);
+        app(AuditLogger::class)->record('test.event', AuditOutcome::Info);
+        $eventId = AuditLog::query()->value('event_id');
+
+        $mismatches = [];
+        foreach (Router::getRoutes()->getRoutes() as $route) {
+            $name = $route->getName();
+            if (! array_key_exists((string) $name, self::ACCESS)) {
+                continue;
+            }
+            $method = collect($route->methods())->first(fn (string $m): bool => $m !== 'HEAD');
+
+            foreach (RoleTemplate::cases() as $template) {
+                $user = $this->userWithRole($template, $lock);
+                $target = $this->userWithRole(RoleTemplate::Resident, $lock);
+                $request = AccessRequest::query()->create([
+                    'public_id' => (string) Str::uuid(), 'user_id' => $user->id, 'lock_id' => $lock->id, 'action' => LockAction::Lock,
+                    'channel' => AccessChannel::Remote, 'idempotency_key' => Str::random(16), 'status' => AccessRequestStatus::ConfirmedSuccess,
+                    'requested_at' => now(), 'expires_at' => now()->addMinute(),
+                ]);
+                $uri = '/'.str_replace(
+                    ['{lock}', '{user}', '{accessRequest}', '{eventId}'],
+                    [$lock->id, $target->id, $request->public_id, $eventId],
+                    $route->uri(),
+                );
+
+                $status = $this->actingAs($user)
+                    ->withSession([CompleteLogin::CONFIRMED_AT_KEY => now()->getTimestamp()])
+                    ->json($method, $uri, $this->body($name, $property))
+                    ->getStatusCode();
+                $this->flushSession();
+                app('auth')->forgetGuards();
+
+                $allowed = in_array($template->value, self::ACCESS[$name], true);
+                if ($allowed ? in_array($status, [401, 403], true) : $status !== 403) {
+                    $mismatches[] = sprintf('%s %s as %s: %d, expected %s', $method, $name, $template->value, $status, $allowed ? 'allowed' : '403');
+                }
+
+                // Refused even with an empty body: validation must never answer before authorization.
+                if (! $allowed && ! array_key_exists($name, self::VALIDATES_FIRST)) {
+                    $empty = $this->actingAs($user)
+                        ->withSession([CompleteLogin::CONFIRMED_AT_KEY => now()->getTimestamp()])
+                        ->json($method, $uri, [])
+                        ->getStatusCode();
+                    $this->flushSession();
+                    app('auth')->forgetGuards();
+                    if ($empty !== 403) {
+                        $mismatches[] = sprintf('%s %s as %s with an empty body: %d, expected 403', $method, $name, $template->value, $empty);
+                    }
+                }
+            }
+        }
+
+        $this->assertSame([], $mismatches);
+    }
+
+    private function userWithRole(RoleTemplate $template, Lock $lock): User
+    {
+        $user = User::factory()->create();
+        $user->roles()->attach(Role::query()->where('key', $template->value)->value('id'));
+        $user->locks()->attach($lock->id);
+
+        return $user;
+    }
+
+    /**
+     * A valid body, so validation never answers before authorization does.
+     *
+     * @return array<string, mixed>
+     */
+    private function body(string $name, Property $property): array
+    {
+        return match ($name) {
+            'api.v1.auth.confirm' => ['password' => 'password'],
+            'api.v1.auth.mfa.confirm' => ['code' => '000000'],
+            'api.v1.users.suspend', 'api.v1.users.reactivate', 'api.v1.users.revoke', 'api.v1.users.sessions.revoke' => ['reason' => 'Access matrix test'],
+            'api.v1.users.store' => ['name' => 'New Person', 'email' => Str::random(12).'@example.test', 'password' => 'CorrectHorse123', 'password_confirmation' => 'CorrectHorse123'],
+            'api.v1.users.update' => ['name' => 'Renamed Person'],
+            'api.v1.users.roles.update' => ['roles' => ['resident']],
+            'api.v1.users.permissions.update' => ['overrides' => []],
+            'api.v1.permission-preview' => ['roles' => ['resident']],
+            'api.v1.locks.commands.store' => ['action' => 'lock', 'idempotency_key' => Str::random(24)],
+            'api.v1.properties.store' => ['name' => 'Another Home'],
+            'api.v1.locks.store' => ['property_id' => $property->id, 'name' => 'Side Door', 'external_id' => 'MATRIX'.Str::random(8)],
+            'api.v1.locks.update' => ['name' => 'Front Door'],
+            default => [],
+        };
+    }
+}

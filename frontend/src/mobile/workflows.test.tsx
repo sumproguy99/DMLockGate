@@ -56,6 +56,7 @@ function lock(overrides: Partial<LockSummary> = {}): LockSummary {
     last_communication_at: minutesAgo(1),
     last_error: null,
     last_error_at: null,
+    your_access: { granted: true, reason: null },
     ...overrides,
   }
 }
@@ -210,6 +211,17 @@ describe('mobile Home', () => {
     expect(within(card).getByRole('button', { name: 'Lock Front Door' })).toBeDisabled()
     expect(within(card).queryByRole('button', { name: 'Unlock Front Door' })).not.toBeInTheDocument()
     expect(within(card).getByText('Commands are turned off for this lock.')).toBeInTheDocument()
+  })
+
+  it('disables the controls and says why when the user has no grant for the lock', async () => {
+    const fetch = mockFetch(session(resident, { locks: [lock({ your_access: { granted: false, reason: 'You have not been given access to this lock.' } })] }))
+    renderAt('/m')
+
+    const card = await lockCard()
+    expect(within(card).getByRole('button', { name: 'Lock Front Door' })).toBeDisabled()
+    expect(within(card).getByRole('button', { name: 'Unlock Front Door' })).toBeDisabled()
+    expect(within(card).getByText('You have not been given access to this lock.')).toBeInTheDocument()
+    expect(calls(fetch, 'POST', '/api/v1/locks/1/commands')).toHaveLength(0)
   })
 
   it('shows what needs attention at the top, with a count on the bell', async () => {

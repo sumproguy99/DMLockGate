@@ -22,6 +22,8 @@ export type LockSummary = {
   last_communication_at: string | null
   last_error: string | null
   last_error_at: string | null
+  /** Whether the signed-in user's own grant lets them command this lock now, and why not. */
+  your_access: { granted: boolean; reason: string | null } | null
 }
 
 export type LockAction = 'lock' | 'unlock'

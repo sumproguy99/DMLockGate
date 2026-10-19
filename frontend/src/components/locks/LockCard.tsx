@@ -35,7 +35,9 @@ export function LockCard({ lock, lastRequest, onChanged }: LockCardProps) {
   const canLock = hasAnyPermission(user, ['lock.lock'])
   const canUnlock = hasAnyPermission(user, ['lock.unlock']) && hasAnyPermission(user, ['lock.remote_unlock'])
   const inProgress = state.phase === 'sending' || state.phase === 'tracking'
-  const unavailable = !lock.commands_enabled
+  const unavailable = lock.your_access && !lock.your_access.granted
+    ? (lock.your_access.reason ?? 'You cannot send commands to this lock.')
+    : !lock.commands_enabled
     ? 'Commands are turned off for this lock.'
     : lock.registration_status !== 'active'
       ? 'This lock is not registered for use.'

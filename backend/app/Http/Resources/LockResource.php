@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Enums\ReportedLockState;
 use App\Models\Lock;
+use App\Services\Locks\LockCommandService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -44,6 +45,24 @@ class LockResource extends JsonResource
             'last_communication_at' => $this->last_communication_at?->toIso8601ZuluString('millisecond'),
             'last_error' => $this->last_error,
             'last_error_at' => $this->last_error_at?->toIso8601ZuluString('millisecond'),
+            'your_access' => $this->yourAccess($request),
         ];
+    }
+
+    /**
+     * Whether the signed-in user's own grant lets them command this lock now, so the controls can
+     * say so before anything is sent. Permissions and every other check still apply per command.
+     *
+     * @return array{granted: bool, reason: ?string}|null
+     */
+    private function yourAccess(Request $request): ?array
+    {
+        $user = $request->user();
+        if ($user === null) {
+            return null;
+        }
+        $problem = app(LockCommandService::class)->accessProblem($user, $this->resource);
+
+        return ['granted' => $problem === null, 'reason' => $problem['message'] ?? null];
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Requests\Users;
 
 use App\Enums\PermissionEffect;
 use App\Enums\PermissionKey;
+use App\Services\Authorization\UserManagementGuard;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -12,8 +13,17 @@ use Illuminate\Validation\Rule;
  */
 class PermissionPreviewRequest extends FormRequest
 {
+    /**
+     * Checked before validation, as in the controller, so the validation errors reveal nothing.
+     */
     public function authorize(): bool
     {
+        app(UserManagementGuard::class)->requireAnyPermission($this->user(), [
+            PermissionKey::UsersCreate,
+            PermissionKey::UsersAssignRoles,
+            PermissionKey::UsersModifyPermissions,
+        ], 'user.permission_preview');
+
         return true;
     }
 

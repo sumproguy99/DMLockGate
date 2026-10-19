@@ -2,13 +2,21 @@
 
 namespace App\Http\Requests\Users;
 
+use App\Enums\PermissionKey;
+use App\Services\Authorization\UserManagementGuard;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateUserRequest extends FormRequest
 {
+    /**
+     * Checked before validation so the errors reveal nothing (such as an email already in use); the
+     * controller checks the full rules about the target user.
+     */
     public function authorize(): bool
     {
+        app(UserManagementGuard::class)->requirePermission($this->user(), PermissionKey::UsersEdit, 'user.updated');
+
         return true;
     }
 

@@ -2,16 +2,24 @@
 
 namespace App\Http\Requests\Users;
 
+use App\Enums\PermissionKey;
+use App\Services\Authorization\UserManagementGuard;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
 
 /**
- * Authorization (including anti-escalation) is done by UserManagementGuard in the controller, so it can be audited.
+ * Full authorization (including anti-escalation) is done by UserManagementGuard in the controller, so it can be audited.
  */
 class StoreUserRequest extends FormRequest
 {
+    /**
+     * The permission is checked before validation too, so someone without it learns nothing from the
+     * validation errors, such as whether an email address already has an account.
+     */
     public function authorize(): bool
     {
+        app(UserManagementGuard::class)->requirePermission($this->user(), PermissionKey::UsersCreate, 'user.created');
+
         return true;
     }
 

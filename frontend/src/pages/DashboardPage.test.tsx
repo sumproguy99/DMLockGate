@@ -58,6 +58,7 @@ function lock(overrides: Partial<LockSummary> = {}): LockSummary {
     last_communication_at: minutesAgo(1),
     last_error: null,
     last_error_at: null,
+    your_access: { granted: true, reason: null },
     ...overrides,
   }
 }

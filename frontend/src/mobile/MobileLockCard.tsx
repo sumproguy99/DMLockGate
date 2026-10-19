@@ -51,7 +51,9 @@ export function MobileLockCard({
   const inProgress = state.phase === 'sending' || state.phase === 'tracking'
   const pendingAction = state.phase === 'sending' ? state.action : state.phase === 'tracking' ? state.request.action : null
   const display = describeMobileLock(lock, pendingAction)
-  const unavailable = !lock.commands_enabled
+  const unavailable = lock.your_access && !lock.your_access.granted
+    ? (lock.your_access.reason ?? 'You cannot send commands to this lock.')
+    : !lock.commands_enabled
     ? 'Commands are turned off for this lock.'
     : lock.registration_status !== 'active'
       ? 'This lock is not registered for use.'
