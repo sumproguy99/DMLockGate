@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\Enums\AccessRequestStatus;
 use App\Enums\AuditOutcome;
-use App\Enums\LockConnectionStatus;
 use App\Enums\ReportedLockState;
 use App\Models\AccessRequest;
 use App\Models\LockCommand;
@@ -88,11 +87,12 @@ class SubmitLockCommand implements ShouldQueue
             'integration_result' => $result,
             'integration_responded_at' => now(),
             'integration_latency_ms' => intdiv(hrtime(true) - $startedAt, 1_000_000),
-            'integration_error' => $error === null ? null : mb_substr($error, 0, 255),
+            'integration_error' => $error === null ? null : mb_substr($error, 0, LockStateRecorder::ERROR_TEXT_MAX),
         ])->save();
 
         if ($result === LockCommand::RESULT_REJECTED) {
-            $recorder->recordError($lock, $error, LockConnectionStatus::Disconnected);
+            // A refused command says nothing about the lock's own connection, which state reads report.
+            $recorder->recordError($lock, $error, null);
             $this->finish($request, AccessRequestStatus::Failed, $audit, 'lock.command_failed', AuditOutcome::Failure, $error);
 
             return;

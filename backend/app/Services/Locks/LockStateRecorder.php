@@ -15,6 +15,11 @@ use Illuminate\Support\Facades\DB;
 class LockStateRecorder
 {
     /**
+     * Longest error text kept for a lock or a command; matches the bridge's own limit.
+     */
+    public const ERROR_TEXT_MAX = 1000;
+
+    /**
      * @param  string  $source  {@see LockStateEvent::SOURCE_PUSH} or {@see LockStateEvent::SOURCE_POLL}.
      * @return LockStateEvent The stored event, or the existing one when the vendor event was already recorded.
      */
@@ -105,12 +110,15 @@ class LockStateRecorder
         $lock->forceFill(['connection_status' => LockConnectionStatus::Connected, 'last_communication_at' => now()])->save();
     }
 
-    public function recordError(Lock $lock, string $message, LockConnectionStatus $status = LockConnectionStatus::Degraded): void
+    /**
+     * Records a failure for the lock. A null status leaves the lock's connection status as it is.
+     */
+    public function recordError(Lock $lock, string $message, ?LockConnectionStatus $status = LockConnectionStatus::Degraded): void
     {
         $lock->forceFill([
-            'last_error' => mb_substr($message, 0, 255),
+            'last_error' => mb_substr($message, 0, self::ERROR_TEXT_MAX),
             'last_error_at' => now(),
-            'connection_status' => $status,
+            ...($status === null ? [] : ['connection_status' => $status]),
         ])->save();
     }
 }

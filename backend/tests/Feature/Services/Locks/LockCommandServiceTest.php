@@ -342,8 +342,9 @@ class LockCommandServiceTest extends TestCase
         $this->app->instance(LockDriver::class, $this->driver);
     }
 
-    public function test_an_unreachable_integration_fails_the_command_and_marks_the_lock(): void
+    public function test_an_unreachable_integration_fails_the_command_without_marking_the_lock_disconnected(): void
     {
+        $this->lock->forceFill(['connection_status' => LockConnectionStatus::Connected])->save();
         $this->driver->failNextSendWith(new IntegrationUnavailable('Bridge refused the connection.'));
         $resident = $this->userWithRole(RoleTemplate::Resident);
 
@@ -356,8 +357,20 @@ class LockCommandServiceTest extends TestCase
             ->assertJsonPath('data.command.confirmation', null);
 
         $lock = $this->lock->fresh();
-        $this->assertSame(LockConnectionStatus::Disconnected, $lock->connection_status);
+        $this->assertSame(LockConnectionStatus::Connected, $lock->connection_status);
         $this->assertSame('Bridge refused the connection.', $lock->last_error);
+    }
+
+    public function test_a_long_integration_error_is_kept_in_full(): void
+    {
+        $reason = 'The Eufy bridge did not send the command (not_sent): '.str_repeat('192.0.2.1 Subscribe error: Unspecified error; ', 12);
+        $this->driver->failNextSendWith(new IntegrationUnavailable($reason));
+        $resident = $this->userWithRole(RoleTemplate::Resident);
+
+        $id = $this->command($resident, 'lock')->assertAccepted()->json('data.id');
+
+        $this->getJson(route('api.v1.lock-requests.show', $id))->assertJsonPath('data.command.integration_error', $reason);
+        $this->assertSame($reason, $this->lock->fresh()->last_error);
     }
 
     public function test_an_ambiguous_send_is_reconciled_against_the_reported_state(): void

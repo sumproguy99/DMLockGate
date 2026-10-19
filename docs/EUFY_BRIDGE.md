@@ -72,6 +72,7 @@ The bridge gives up after 25 s, but the SDK would carry on in the background. To
 - **After the deadline:** a command is never published.
 - **The publish flag** is set in the same step publishing starts, so after the deadline the bridge knows for certain whether the command could have left.
 - **"Not sent" (`504 rejected not_sent_timeout`)** is reported only when the command was still in the cloud lookup or in the guarded broker step and had not started publishing. Anything else stays `502 ambiguous`.
+- **Why it was not sent:** a `rejected` reply for `not_sent` or `not_sent_timeout` carries `detail`, the bridge's reason in full (up to 1,000 characters; for `not_sent`, every broker instance's answer). LockGuard stores it with the command and the lock's last error. A refused command does not change the lock's connection status, which only the lock's own state reports set.
 - **If the SDK internals change** and the hook cannot be installed, the bridge logs it and every timeout stays ambiguous.
 
 **Broker order:** the SDK probes broker instances one at a time, 8 s each: DNS answers first, then its built-in list. On 2026-10-18 three built-in addresses never answered from this network, which used up the whole 25 s deadline before a working instance was tried. The bridge now runs its own discovery with the same SDK pieces (`findBroker` in `eufy-adapter.mjs`):

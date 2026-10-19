@@ -418,3 +418,15 @@ findBroker relies on SDK internals (router.deps.mega, KNOWN_AIOT_BROKER_IPS); re
 Correction (2026-10-18): port 8787 belongs to PlayLite (D:\aiprod\00-PlayLite), not the bridge, so the bridge was not running and LockGuard's bridge URL pointed at PlayLite. The bridge now uses 8788: BRIDGE_PORT in integrations/eufy/.env and .env.example, the main.mjs default, LOCKGUARD_BRIDGE_URL in backend/.env and .env.example, and the config/lockguard.php default.
 Root cause found (2026-10-18 ET, evening): EufyAdapter.watchCloud() wrapped mega.post() with three parameters and dropped the fourth, the {"app-name": "eufy_security"} header that getUserMqttInfo("eufy_security") sends. The bridge therefore got the general eufy_mega MQTT credential, and every broker refused it for lock topics ("Subscribe error: Unspecified error"). That is why every bridge command failed, including the 25 s timeouts on 2026-10-17 (the SDK probed every instance and was refused). The phone app and standalone diag scripts were unaffected. Fix: the wrapper passes every argument through, plus one new test (bridge 35/35). A dry run of findBroker (command connection stubbed, nothing published) now gets a grant from 3.139.229.186 in 194 ms. Commands 30 (lock) and 31 (unlock) at 23:14 and 23:21 UTC were refused as not_sent and nothing reached the lock. Dustin needs to restart the bridge (PID 37068 runs the old code) and try again. Uncommitted.
 Verified 2026-10-18 20:41 ET: first end-to-end command through LockGuard. Command 32, Front Door unlock: bridge acknowledged in 4.1 s and the lock confirmed it by push at 00:41:05 UTC. Dustin sent it. Back Door reported jammed (event 519) at 20:38:59 ET from an app or manual action, then worked normally 30 s later.
+
+---
+Timestamp: 2026-10-18 ET
+Percent complete: 81%
+Description of what you are working on.
+Two small fixes after the first working command.
+What you have done so far:
+Committed 12b6870 (credential header fix, bridge broker discovery, bridge port 8788). A refused command no longer marks the lock Disconnected; it records the error and leaves the connection status to the lock's own state reports. Error text is no longer cut at 200 characters. The bridge keeps up to 1,000 (ERROR_TEXT_MAX) and sends the reason as `detail` on a not_sent reply, and LockGuard stores it in full. A migration widened lock_commands.integration_error and locks.last_error to text; it has been applied to the live database. Tests: bridge 36/36, PHP 243/243.
+What needs to be done.
+Dustin to restart the bridge to pick up the detail field (LockGuard works with either version). UI checkpoint 7: mobile Home, Activity and Devices with Lock and Unlock.
+What is important or stands out that needs attention or needs to be address.
+project.md (about 1,067 added lines) and Logo.png, ServerGui.png, WebAppGUI.png stay uncommitted until Dustin says what to do with them.

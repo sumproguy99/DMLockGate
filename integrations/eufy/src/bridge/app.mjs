@@ -12,6 +12,7 @@
 
 import { createServer } from "node:http";
 import { verify } from "./auth.mjs";
+import { ERROR_TEXT_MAX } from "./eufy-adapter.mjs";
 
 const COMMAND_ID = /^[A-Za-z0-9-]{8,64}$/;
 const MAX_BODY_BYTES = 16 * 1024;
@@ -35,7 +36,7 @@ export function createBridgeServer({ adapter, secret, commandTimeoutMs = 25_000,
   const commands = { consecutiveFailures: 0, lastFailure: null, lastFailureAt: null, lastSuccessAt: null };
   const noteFailure = (reason) => {
     commands.consecutiveFailures += 1;
-    commands.lastFailure = String(reason).slice(0, 200);
+    commands.lastFailure = String(reason).slice(0, ERROR_TEXT_MAX);
     commands.lastFailureAt = new Date().toISOString();
   };
 
@@ -108,12 +109,15 @@ export function createBridgeServer({ adapter, secret, commandTimeoutMs = 25_000,
         log("warn", "command not sent", { command_id: commandId, error: err?.message, latency_ms: latencyMs });
         noteFailure(`Not sent: ${err?.message}`);
 
-        return [504, { result: "rejected", error: timedOut ? "not_sent_timeout" : "not_sent", latency_ms: latencyMs }];
+        // detail says why, for LockGuard's diagnostics: for "not_sent", every broker's answer.
+        const detail = err?.message ? String(err.message).slice(0, ERROR_TEXT_MAX) : null;
+
+        return [504, { result: "rejected", error: timedOut ? "not_sent_timeout" : "not_sent", detail, latency_ms: latencyMs }];
       }
       log("warn", "command outcome unknown", { command_id: commandId, error: err?.message, stage: control.stage ?? null, published: control.published });
       noteFailure(err?.message ?? err);
 
-      return [502, { result: "ambiguous", error: String(err?.message ?? err).slice(0, 200), latency_ms: latencyMs }];
+      return [502, { result: "ambiguous", error: String(err?.message ?? err).slice(0, ERROR_TEXT_MAX), latency_ms: latencyMs }];
     } finally {
       clearTimeout(timer);
       inFlight.delete(sn);

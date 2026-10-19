@@ -5,6 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { createBridgeServer } from "../src/bridge/app.mjs";
+import { CommandNotSentError } from "../src/bridge/eufy-adapter.mjs";
 import { signedHeaders, sign, verify } from "../src/bridge/auth.mjs";
 import { createForwarder } from "../src/bridge/forwarder.mjs";
 
@@ -194,6 +195,23 @@ test("forwarder signs events and retries server errors only", async () => {
 
   const refused = createForwarder({ url: "http://lockguard.test/x", secret: SECRET, delay: async () => {}, fetchImpl: async () => ({ ok: false, status: 401 }) });
   assert.equal(await refused({}), false);
+});
+
+test("a command no broker would carry is not sent, with every broker's answer in full", async () => {
+  const adapter = new FakeAdapter();
+  const answers = Array.from({ length: 8 }, (_, i) => `192.0.2.${i + 1} Subscribe error: Unspecified error`).join("; ");
+  adapter.sendImpl = async () => {
+    throw new CommandNotSentError(`No Eufy command server would accept this lock (${answers}).`);
+  };
+  await withServer(adapter, async (call) => {
+    const res = await call("POST", `/v1/locks/${SN}/commands`, { action: "lock", command_id: "cmd-0000030" });
+    assert.equal(res.status, 504);
+    assert.equal(res.json.error, "not_sent");
+    assert.match(res.json.detail, /192\.0\.2\.8 Subscribe error/);
+
+    const health = await call("GET", "/v1/health");
+    assert.match(health.json.commands.last_failure, /192\.0\.2\.8 Subscribe error/);
+  });
 });
 
 test("a command given up on before it was published is reported as not sent", async () => {

@@ -72,6 +72,16 @@ class EufyBridgeDriverTest extends TestCase
         $this->driver->send($this->lock, LockAction::Unlock, 'req-0009-abcd');
     }
 
+    public function test_a_not_sent_rejection_carries_the_bridges_full_reason(): void
+    {
+        $answers = implode('; ', array_map(fn (int $i): string => "192.0.2.{$i} Subscribe error: Unspecified error", range(1, 8)));
+        Http::fake(['bridge.test/*' => Http::response(['result' => 'rejected', 'error' => 'not_sent', 'detail' => "No Eufy command server would accept this lock ({$answers})."], 504)]);
+
+        $this->expectException(IntegrationUnavailable::class);
+        $this->expectExceptionMessageMatches('/\(not_sent\): No Eufy command server would accept this lock \(192\.0\.2\.1 .*192\.0\.2\.8 Subscribe error: Unspecified error\)\.$/');
+        $this->driver->send($this->lock, LockAction::Lock, 'req-0010-abcd');
+    }
+
     public function test_a_degraded_eufy_cloud_means_not_delivered(): void
     {
         Http::fake(['bridge.test/*' => Http::response(['result' => 'rejected', 'error' => 'eufy_degraded'], 503)]);

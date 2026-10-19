@@ -39,6 +39,8 @@ export const DEGRADED_AFTER_FAILURES = 2;
 export const DEGRADED_AFTER_SILENT_MS = 15 * 60 * 1000;
 // How long one broker instance may take to grant a SUBSCRIBE during discovery (the SDK allows 8 s).
 export const BROKER_PROBE_MS = 5_000;
+// Longest error text the bridge keeps or reports. Long enough for every broker's answer in one failure.
+export const ERROR_TEXT_MAX = 1000;
 
 /** The SDK's MQTT pieces the bridge's own broker discovery uses; replaced in tests. */
 const SDK_MQTT = { SecureMqtt, buildAppShapedClientId, mqttUuidFrom, probeBrokerInstance, resolveBrokerIps, secureTopic };
@@ -148,8 +150,8 @@ export class EufyAdapter extends EventEmitter {
       } catch (err) {
         if (err instanceof CommandNotSentError) throw err;
         // Discovery only subscribes; it never publishes, so a failure here means nothing was sent.
-        command?.log("broker not found", { error: String(err?.message ?? err).slice(0, 200) });
-        throw new CommandNotSentError(`No Eufy command server would carry this command: ${String(err?.message ?? err).slice(0, 200)}`);
+        command?.log("broker not found", { error: String(err?.message ?? err).slice(0, ERROR_TEXT_MAX) });
+        throw new CommandNotSentError(`No Eufy command server would carry this command: ${String(err?.message ?? err).slice(0, ERROR_TEXT_MAX)}`);
       }
       command?.log("broker found", { instance: chosen.instanceIp });
       if (!ownDiscovery && brokerIp && chosen.instanceIp !== brokerIp) {
@@ -291,7 +293,7 @@ export class EufyAdapter extends EventEmitter {
         } else {
           this.cloud.failedAt = this.now();
           this.cloud.failures += 1;
-          this.cloud.error = String(err?.message ?? err).slice(0, 200);
+          this.cloud.error = String(err?.message ?? err).slice(0, ERROR_TEXT_MAX);
         }
         throw err;
       }
@@ -455,7 +457,7 @@ export class EufyAdapter extends EventEmitter {
   }
 
   noteError(err) {
-    this.lastError = { message: String(err?.message ?? err).slice(0, 200), at: new Date().toISOString() };
+    this.lastError = { message: String(err?.message ?? err).slice(0, ERROR_TEXT_MAX), at: new Date().toISOString() };
     this.log("error", this.lastError.message);
   }
 

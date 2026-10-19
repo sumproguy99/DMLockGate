@@ -71,7 +71,10 @@ class EufyBridgeDriver implements LockDriver
 
         $error = (string) ($response->json('error') ?? 'http_'.$response->status());
         if ($result === 'rejected') {
-            throw new IntegrationUnavailable("The Eufy bridge did not send the command ({$error}).");
+            $detail = $response->json('detail');
+            $reason = is_string($detail) && $detail !== '' ? ': '.$detail : '.';
+
+            throw new IntegrationUnavailable("The Eufy bridge did not send the command ({$error}){$reason}");
         }
 
         throw new IntegrationOutcomeUnknown("The Eufy bridge could not confirm delivery ({$error}).");

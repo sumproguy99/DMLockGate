@@ -9,6 +9,7 @@ use App\Services\Locks\Integration\EufyBridgeDriver;
 use App\Services\Locks\Integration\FakeLockDriver;
 use App\Services\Locks\Integration\IntegrationUnavailable;
 use App\Services\Locks\Integration\LockDriver;
+use App\Services\Locks\LockStateRecorder;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -105,8 +106,8 @@ class SystemHealth
     private static function errorText(mixed $error): ?string
     {
         return match (true) {
-            is_string($error) => mb_substr($error, 0, 200),
-            is_array($error) && is_string($error['message'] ?? null) => mb_substr($error['message'], 0, 200),
+            is_string($error) => mb_substr($error, 0, LockStateRecorder::ERROR_TEXT_MAX),
+            is_array($error) && is_string($error['message'] ?? null) => mb_substr($error['message'], 0, LockStateRecorder::ERROR_TEXT_MAX),
             $error === null => null,
             default => 'Unrecognized error report from the bridge.',
         };
