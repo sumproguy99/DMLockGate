@@ -13,7 +13,7 @@ export type MobileNavItem = {
 /** The bottom navigation (project.md 34.7): Home, Activity, Devices, More. */
 export const mobileNavigation: readonly MobileNavItem[] = [
   { label: 'Home', path: '/m', icon: House, permissions: [] },
-  { label: 'Activity', path: '/m/activity', icon: Activity, permissions: ['lock.view_history', 'admin.incidents_view'] },
+  { label: 'Activity', path: '/m/activity', icon: Activity, permissions: ['lock.view_history'] },
   { label: 'Devices', path: '/m/devices', icon: KeyRound, permissions: ['lock.view_status', 'devices.view'] },
   { label: 'More', path: '/m/more', icon: Ellipsis, permissions: [] },
 ]

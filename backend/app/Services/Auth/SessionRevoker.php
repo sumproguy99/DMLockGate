@@ -29,4 +29,24 @@ class SessionRevoker
 
         return ['browser_logins' => $sessions, 'api_clients' => $tokens];
     }
+
+    /**
+     * Ends every session and API token of a user except the browser session they are using now.
+     *
+     * @return array{browser_logins: int, api_clients: int}
+     */
+    public function revokeOthers(User $user, string $currentSessionId): array
+    {
+        $sessions = config('session.driver') === 'database'
+            ? DB::connection(config('session.connection'))
+                ->table(config('session.table', 'sessions'))
+                ->where('user_id', $user->getKey())
+                ->where('id', '!=', $currentSessionId)
+                ->delete()
+            : 0;
+
+        $tokens = $user->tokens()->delete();
+
+        return ['browser_logins' => $sessions, 'api_clients' => $tokens];
+    }
 }

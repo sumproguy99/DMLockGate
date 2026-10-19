@@ -1,6 +1,6 @@
-import { LifeBuoy, LogOut, Monitor, ShieldCheck } from 'lucide-react'
+import { Bell, ChevronRight, LifeBuoy, LogOut, MapPin, Monitor, ShieldCheck, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { saveViewPreference } from '../app/view-preference'
 import { useAuth, useCurrentUser } from '../auth/auth-context'
 import { Button } from '../components/ui/Button'
@@ -9,9 +9,16 @@ import { PageHeader } from '../components/ui/PageHeader'
 import { StatusBadge } from '../components/ui/StatusBadge'
 import { useToast } from '../components/ui/toast-context'
 
+const links: Array<{ to: string; label: string; description: string; icon: LucideIcon }> = [
+  { to: '/m/notifications', label: 'Notifications', description: 'What needs attention now', icon: Bell },
+  { to: '/m/account', label: 'Account security', description: 'Two-step verification and where you are signed in', icon: ShieldCheck },
+  { to: '/m/location', label: 'Location and proximity', description: 'Why automatic unlocking is not available', icon: MapPin },
+  { to: '/m/help', label: 'Help and troubleshooting', description: 'Common problems and what to do', icon: LifeBuoy },
+]
+
 /**
- * More (project.md 34.7): the account, switching to the desktop view, help, and signing out, kept
- * apart from everything else so it is not tapped by accident.
+ * More (project.md 34.7): the account, the other mobile screens, switching to the desktop view,
+ * and signing out, kept apart from everything else so it is not tapped by accident.
  */
 export function MobileMorePage() {
   const user = useCurrentUser()
@@ -45,6 +52,23 @@ export function MobileMorePage() {
           </div>
         </Card>
 
+        <nav aria-label="More" className="rounded-lg border border-border bg-panel">
+          <ul className="divide-y divide-border">
+            {links.map(({ to, label, description, icon: Icon }) => (
+              <li key={to}>
+                <Link to={to} className="flex min-h-16 items-center gap-3 px-4 py-3 active:bg-elevated">
+                  <Icon className="size-5 shrink-0 text-text-muted" aria-hidden />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-support font-semibold">{label}</span>
+                    <span className="block text-caption text-text-muted">{description}</span>
+                  </span>
+                  <ChevronRight className="size-4 shrink-0 text-text-muted" aria-hidden />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
         <Card title="Desktop view" headingLevel={2}>
           <p className="text-support text-text-muted">
             The full application, with administration, audit and system health. It works on a phone but is easier on a
@@ -62,25 +86,6 @@ export function MobileMorePage() {
           >
             Use the desktop view
           </Button>
-        </Card>
-
-        <Card title="Help" headingLevel={2}>
-          <ul className="flex flex-col gap-2 text-support text-text-muted">
-            <li className="flex gap-2">
-              <LifeBuoy className="mt-0.5 size-4 shrink-0" aria-hidden />
-              <span>
-                If a lock does not respond, check the Eufy status at the top of the screen. When the outcome of a command is
-                unknown, check the door before trying again.
-              </span>
-            </li>
-            <li className="flex gap-2">
-              <LifeBuoy className="mt-0.5 size-4 shrink-0" aria-hidden />
-              <span>Forgot your password or lost your authenticator? Ask your LockGuard administrator.</span>
-            </li>
-          </ul>
-          <p className="mt-3 text-caption text-text-muted">
-            Location, proximity and notifications are not available yet.
-          </p>
         </Card>
 
         <div className="mt-6 border-t border-border pt-6">

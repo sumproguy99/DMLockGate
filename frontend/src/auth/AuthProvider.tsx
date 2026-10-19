@@ -73,19 +73,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ status: 'signed_out' })
   }, [])
 
+  const reloadUser = useCallback(async () => {
+    const user = await authApi.fetchCurrentUser()
+    setState((current) => (current.status === 'signed_in' ? { status: 'signed_in', user } : current))
+  }, [])
+
   const auth = useMemo<Auth>(
     () => ({
       state,
       signIn,
       verifyMfa,
       signOut,
+      reloadUser,
       retry: () => {
         setState({ status: 'loading' })
         setAttempt((n) => n + 1)
       },
       restart: () => setState({ status: 'signed_out' }),
     }),
-    [state, signIn, verifyMfa, signOut],
+    [state, signIn, verifyMfa, signOut, reloadUser],
   )
 
   return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>

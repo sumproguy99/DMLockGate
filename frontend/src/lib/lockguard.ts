@@ -112,3 +112,8 @@ export function describeCommandStatus(status: AccessRequestStatus, integrationRe
       return { tone: 'unknown', label: 'Cancelled, not sent', stage: null, pending: false }
   }
 }
+
+/** A lock's serial with all but the last four characters hidden. */
+export function maskSerial(serial: string): string {
+  return serial.length <= 4 ? serial : `••••${serial.slice(-4)}`
+}

@@ -430,3 +430,15 @@ What needs to be done.
 Dustin to restart the bridge to pick up the detail field (LockGuard works with either version). UI checkpoint 7: mobile Home, Activity and Devices with Lock and Unlock.
 What is important or stands out that needs attention or needs to be address.
 project.md (about 1,067 added lines) and Logo.png, ServerGui.png, WebAppGUI.png stay uncommitted until Dustin says what to do with them.
+
+---
+Timestamp: 2026-10-18 ET
+Percent complete: 84%
+Description of what you are working on.
+UI CHECKPOINT 7: mobile lock workflows (project.md 34.8 B to I).
+What you have done so far:
+Committed f36dc05 (refused commands keep the lock's status; full bridge errors). Backend: GET /api/v1/activity, the lock requests and reported state changes on the caller's locks. It needs lock.view_history, withholds other users' names, drops repeated sync reports with LAG(), filters by type and outcome, and pages 30 at a time with `before`. GET /api/v1/auth/sessions lists the user's own sessions without their ids. DELETE /api/v1/auth/sessions/others signs out every other session and token, is audited as auth.other_sessions_signed_out, is throttled at 6 a minute, and needs no step-up. 10 new tests, PHP 253/253. Frontend under /m: Home (greeting, Needs attention, a lock card per lock with a large state including Locking/Unlocking, State unknown, State stale and Device unavailable, full-width Lock and Unlock with Unlock set apart and confirmed, Connection card, Refresh), lock controls /m/locks/:id (device details, masked serial, last problem, recent requests), Activity (filters, load older), Devices (locks, trusted phones not available), Notifications (alerts derived from locks and integration health), Account security (account, two-step setup with an otpauth link and recovery codes, removal, sessions, sign out everywhere else), Location and proximity (browser permission only; nothing collected), Help, and More linking to them. A notification bell with the alert count is in the header. One lock list is shared through MobileLocksProvider. Auth gained reloadUser. maskSerial moved to lib/lockguard. The placeholder PendingScreen was removed. Frontend 209/209, type-check and lint clean. Screenshots at 390 px with made-up data, every API call intercepted: no horizontal overflow on any screen. docs/UI_DESIGN.md updated. Nothing committed for this checkpoint yet. No lock command sent by me.
+What needs to be done.
+Commit when Dustin asks. Dustin to try the mobile screens on his phone. UI checkpoint 8: integration and testing.
+What is important or stands out that needs attention or needs to be address.
+Not built for lack of a backend: trusted-device enrollment and revocation, location and proximity, stored notifications with read status and push. The screens say so. There is no QR code for two-step setup because adding a library needs approval; the otpauth link opens the authenticator app on a phone. The activity feed's `before` paging can skip items that share the exact millisecond at a page boundary.

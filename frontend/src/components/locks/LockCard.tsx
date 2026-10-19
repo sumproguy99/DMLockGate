@@ -128,7 +128,7 @@ export function LockCard({ lock, lastRequest, onChanged }: LockCardProps) {
   )
 }
 
-function LastCommand({ request }: { request: LockRequest | null }) {
+export function LastCommand({ request }: { request: LockRequest | null }) {
   if (!request) {
     return <p className="text-caption text-text-muted">No lock or unlock requests yet.</p>
   }
@@ -149,7 +149,7 @@ type CommandOutcomeProps = {
   onDismiss: () => void
 }
 
-function CommandOutcome({ state, onRetry, onDismiss }: CommandOutcomeProps) {
+export function CommandOutcome({ state, onRetry, onDismiss }: CommandOutcomeProps) {
   switch (state.phase) {
     case 'idle':
     case 'step_up':

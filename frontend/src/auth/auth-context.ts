@@ -16,6 +16,8 @@ export type Auth = {
   signIn: (email: string, password: string) => Promise<LoginResult>
   verifyMfa: (input: { code: string } | { recovery_code: string }) => Promise<void>
   signOut: () => Promise<void>
+  /** Reads the signed-in user again, after a change to their own account such as two-step verification. */
+  reloadUser: () => Promise<void>
   /** Re-runs the session check, after "unreachable". */
   retry: () => void
   /** Back to the email and password step from the MFA step. */

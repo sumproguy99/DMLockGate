@@ -27,6 +27,7 @@ const auditTitles: Record<string, Partial<Record<AuditOutcome, string>> & { defa
   'user.reactivated': { default: 'User reactivated' },
   'user.revoked': { default: 'User revoked' },
   'user.sessions_revoked': { default: 'Signed out everywhere by an administrator' },
+  'auth.other_sessions_signed_out': { default: 'Signed out of other sessions' },
 }
 
 const outcomeTone: Record<AuditOutcome, Tone> = {

@@ -24,16 +24,12 @@ import { StatusBadge } from '../../components/ui/StatusBadge'
 import { Tabs } from '../../components/ui/Tabs'
 import { useToast } from '../../components/ui/toast-context'
 import { describeIntegration } from '../../lib/health'
-import { describeCommandStatus } from '../../lib/lockguard'
+import { describeCommandStatus, maskSerial } from '../../lib/lockguard'
 import { usePolled } from '../../lib/usePolled'
 import { useLoaded, type Loaded } from '../../lib/useLoaded'
 import { describeUserStatus } from '../../lib/users'
 
 /** "T85D0ABC1234" → "••••1234": enough to match the Eufy app, not the whole serial. */
-function maskSerial(serial: string): string {
-  return serial.length <= 4 ? serial : `••••${serial.slice(-4)}`
-}
-
 /** LockStateEvent sources: a re-read from the Eufy cloud, or an event the lock pushed. */
 const sourceLabel: Record<string, string> = {
   poll: 'Read from Eufy',

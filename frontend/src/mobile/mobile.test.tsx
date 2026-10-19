@@ -51,7 +51,7 @@ describe('the mobile web app', () => {
     const nav = await screen.findByRole('navigation', { name: 'Main' })
     expect(within(nav).getAllByRole('link').map((l) => l.textContent)).toEqual(['Home', 'Devices', 'More'])
     expect(within(nav).getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
-    expect(await screen.findByText('Eufy connected')).toBeInTheDocument()
+    expect(await within(screen.getByRole('banner')).findByText('Eufy connected')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Account and more for Riley Resident' })).toHaveAttribute('href', '/m/more')
     await expectNoAxeViolations(container)
   })

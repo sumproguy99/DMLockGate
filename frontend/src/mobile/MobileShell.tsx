@@ -1,3 +1,4 @@
+import { Bell } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { HealthProvider } from '../app/HealthProvider'
@@ -6,8 +7,11 @@ import { StepUpProvider } from '../app/StepUpProvider'
 import { useCurrentUser } from '../auth/auth-context'
 import { BrandLogo } from '../components/brand/BrandLogo'
 import { toneText } from '../components/ui/tones'
+import { deriveAlerts } from '../lib/alerts'
 import { cx } from '../lib/cx'
 import { describeIntegration } from '../lib/health'
+import { useMobileLocks } from './locks-context'
+import { MobileLocksProvider } from './MobileLocksProvider'
 import { visibleMobileNavigation } from './mobile-navigation'
 
 /** The Eufy status as a short icon and word, sized for a phone header. */
@@ -23,6 +27,36 @@ function CompactIntegrationStatus() {
       <Icon className="size-3.5" aria-hidden />
       {label}
     </span>
+  )
+}
+
+/** The notification bell, with how many alerts need attention now. */
+function NotificationIndicator() {
+  const locks = useMobileLocks()
+  const health = useSystemHealth()
+  const alerts = locks.data ? deriveAlerts(locks.data.locks, health.data) : []
+  const critical = alerts.some((a) => a.severity === 'critical')
+  const label = alerts.length === 0 ? 'Notifications, nothing needs attention' : `Notifications, ${alerts.length} need${alerts.length === 1 ? 's' : ''} attention`
+
+  return (
+    <Link
+      to="/m/notifications"
+      aria-label={label}
+      className="relative flex size-11 items-center justify-center rounded-full text-text-muted active:bg-elevated"
+    >
+      <Bell className="size-5" aria-hidden />
+      {alerts.length > 0 && (
+        <span
+          aria-hidden
+          className={cx(
+            'absolute top-1 right-1 flex min-w-5 items-center justify-center rounded-full px-1 text-caption font-semibold',
+            critical ? 'bg-danger-strong text-white' : 'bg-warning text-bg',
+          )}
+        >
+          {alerts.length}
+        </span>
+      )}
+    </Link>
   )
 }
 
@@ -55,6 +89,7 @@ export function MobileShell() {
 
   return (
     <HealthProvider>
+      <MobileLocksProvider>
       <StepUpProvider>
         <div className="flex min-h-dvh flex-col">
           <a
@@ -70,6 +105,7 @@ export function MobileShell() {
               <p className="text-support font-semibold">DM LockGuard</p>
               <CompactIntegrationStatus />
             </div>
+            <NotificationIndicator />
             <Link
               to="/m/more"
               aria-label={`Account and more for ${user.name}`}
@@ -115,6 +151,7 @@ export function MobileShell() {
           </nav>
         </div>
       </StepUpProvider>
+      </MobileLocksProvider>
     </HealthProvider>
   )
 }

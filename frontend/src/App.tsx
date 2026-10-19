@@ -13,8 +13,15 @@ import { LockDetailPage } from './pages/locks/LockDetailPage'
 import { LocksPage } from './pages/locks/LocksPage'
 import { PropertiesPage } from './pages/locks/PropertiesPage'
 import { LoginPage } from './pages/LoginPage'
-import { PendingScreen } from './pages/PendingScreen'
+import { MobileAccountPage } from './mobile/MobileAccountPage'
+import { MobileActivityPage } from './mobile/MobileActivityPage'
+import { MobileDevicesPage } from './mobile/MobileDevicesPage'
+import { MobileHelpPage } from './mobile/MobileHelpPage'
+import { MobileHomePage } from './mobile/MobileHomePage'
+import { MobileLocationPage } from './mobile/MobileLocationPage'
+import { MobileLockPage } from './mobile/MobileLockPage'
 import { MobileMorePage } from './mobile/MobileMorePage'
+import { MobileNotificationsPage } from './mobile/MobileNotificationsPage'
 import { MobileShell } from './mobile/MobileShell'
 import { AuditLogPage } from './pages/security/AuditLogPage'
 import { SystemHealthPage } from './pages/security/SystemHealthPage'
@@ -90,17 +97,13 @@ export function AppRoutes() {
           </RequireAuth>
         }
       >
-        <Route
-          index
-          element={
-            <PendingScreen title="Home" description="Your lock, its state and the Lock and Unlock controls." checkpoint={7} />
-          }
-        />
+        <Route index element={<MobileHomePage />} />
+        <Route path="locks/:lockId" element={<MobileLockPage />} />
         <Route
           path="activity"
           element={
-            <RequirePermission permissions={['lock.view_history', 'admin.incidents_view']}>
-              <PendingScreen title="Activity" description="Recent lock requests and their outcomes." checkpoint={7} />
+            <RequirePermission permissions={['lock.view_history']}>
+              <MobileActivityPage />
             </RequirePermission>
           }
         />
@@ -108,10 +111,14 @@ export function AppRoutes() {
           path="devices"
           element={
             <RequirePermission permissions={['lock.view_status', 'devices.view']}>
-              <PendingScreen title="Devices" description="Your locks, their connection and battery." checkpoint={7} />
+              <MobileDevicesPage />
             </RequirePermission>
           }
         />
+        <Route path="notifications" element={<MobileNotificationsPage />} />
+        <Route path="account" element={<MobileAccountPage />} />
+        <Route path="location" element={<MobileLocationPage />} />
+        <Route path="help" element={<MobileHelpPage />} />
         <Route path="more" element={<MobileMorePage />} />
         <Route path="*" element={<NotFound />} />
       </Route>

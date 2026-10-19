@@ -6,7 +6,9 @@ use App\Http\Controllers\Api\V1\Auth\ConfirmIdentityController;
 use App\Http\Controllers\Api\V1\Auth\CurrentUserController;
 use App\Http\Controllers\Api\V1\Auth\MfaChallengeController;
 use App\Http\Controllers\Api\V1\Auth\MfaController;
+use App\Http\Controllers\Api\V1\Auth\OwnSessionController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
+use App\Http\Controllers\Api\V1\Locks\ActivityController;
 use App\Http\Controllers\Api\V1\Locks\LockAccessController;
 use App\Http\Controllers\Api\V1\Locks\LockCommandController;
 use App\Http\Controllers\Api\V1\Locks\LockController;
@@ -30,6 +32,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('auth/logout', [SessionController::class, 'destroy'])->name('auth.logout');
         Route::get('auth/me', CurrentUserController::class)->name('auth.me');
         Route::post('auth/confirm', ConfirmIdentityController::class)->name('auth.confirm');
+
+        // The user's own sign-ins. Signing out the others protects the account, so it needs no step-up.
+        Route::get('auth/sessions', [OwnSessionController::class, 'index'])->name('auth.sessions.index');
+        Route::delete('auth/sessions/others', [OwnSessionController::class, 'destroyOthers'])->middleware('throttle:6,1')->name('auth.sessions.destroy-others');
 
         // Dashboard and health. Read-only; each section is filtered by the caller's permissions.
         Route::get('dashboard', DashboardController::class)->name('dashboard');
@@ -71,6 +77,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('locks', [LockController::class, 'index'])->name('locks.index');
         Route::get('locks/{lock}', [LockController::class, 'show'])->name('locks.show');
         Route::get('locks/{lock}/history', [LockController::class, 'history'])->name('locks.history');
+        Route::get('activity', ActivityController::class)->name('activity');
         Route::post('locks/{lock}/commands', [LockCommandController::class, 'store'])->middleware('throttle:lock-commands')->name('locks.commands.store');
         Route::get('lock-requests/{accessRequest}', [LockCommandController::class, 'show'])->name('lock-requests.show');
         Route::get('properties', [PropertyController::class, 'index'])->name('properties.index');

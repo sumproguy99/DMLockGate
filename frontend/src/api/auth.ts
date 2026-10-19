@@ -46,3 +46,39 @@ export async function confirmIdentity(input: { password: string; code?: string }
 export async function logout(): Promise<void> {
   await api<void>('/auth/logout', { method: 'POST' })
 }
+
+/** One place the signed-in user is signed in. The session id itself is never sent. */
+export type OwnSession = {
+  current: boolean
+  /** "Chrome on Android", or null when the browser is not recognized. */
+  device: string | null
+  ip_address: string | null
+  last_active_at: string
+}
+
+/** listed is false when the server keeps sessions where it cannot list them. */
+export type OwnSessions = { listed: boolean; sessions: OwnSession[]; api_clients: number }
+
+export async function fetchOwnSessions(signal?: AbortSignal): Promise<OwnSessions> {
+  return (await api<{ data: OwnSessions }>('/auth/sessions', { signal })).data
+}
+
+/** Signs out every other browser and API client. This one stays signed in. */
+export async function signOutOtherSessions(): Promise<{ browser_logins: number; api_clients: number }> {
+  return (await api<{ data: { signed_out: { browser_logins: number; api_clients: number } } }>('/auth/sessions/others', { method: 'DELETE' }))
+    .data.signed_out
+}
+
+/** Starts authenticator setup. Needs a recent identity check (step-up). */
+export async function startMfaSetup(): Promise<{ secret: string; otpauth_uri: string }> {
+  return (await api<{ data: { secret: string; otpauth_uri: string } }>('/auth/mfa', { method: 'POST' })).data
+}
+
+/** Finishes setup with a code from the app. The recovery codes are shown only now. */
+export async function confirmMfaSetup(code: string): Promise<{ recovery_codes: string[] }> {
+  return (await api<{ data: { mfa_enabled: boolean; recovery_codes: string[] } }>('/auth/mfa/confirm', { method: 'POST', body: { code } })).data
+}
+
+export async function removeMfa(): Promise<void> {
+  await api<void>('/auth/mfa', { method: 'DELETE' })
+}
