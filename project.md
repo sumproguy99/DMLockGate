@@ -1667,6 +1667,1073 @@ At completion, provide a concise report containing:
 
 Do not claim production readiness merely because the application builds or its dashboard loads.
 
+# 34. MANDATORY UI DESIGN SYSTEM, BRANDING, AND APPLICATION MOCKUP REFERENCE
+
+## 34.1 Objective
+
+Design and implement a polished, professional, security-focused user interface for DM LockGuard.
+
+The application must include two distinct user experiences that share the same visual identity and design system:
+
+1. **DM LockGuard Server UI:** A full-featured desktop administration and security control center.
+2. **DM LockGuard Mobile Web App:** A mobile-first interface for authorized users to control their assigned locks, manage their trusted devices, review permitted activity, and access security settings.
+
+Both interfaces must look like parts of the same professionally designed product.
+
+The objective is to deliver an application with the visual quality, usability, consistency, and attention to detail expected from a premium commercial access-control platform.
+
+Do not create a generic administration template, an unstyled collection of forms, or a dashboard that merely looks impressive in a screenshot.
+
+The actual implemented application must follow the design specification.
+
+---
+
+## 34.2 Existing Logo File: Mandatory Inspection
+
+A DM Lock logo asset already exists and must be located and evaluated before creating any new logo.
+
+Before implementing the frontend:
+
+1. Inspect the existing project directory.
+2. Search the project and relevant asset directories for existing DM Lock, DM LockGuard, and DM Networks branding files.
+3. Look for image formats including PNG, SVG, WebP, JPG, and other suitable formats.
+4. Check existing project assets and any logo file explicitly supplied by the operator.
+5. Identify the best available logo file and record its actual path.
+6. Preserve the original logo file.
+7. Copy or optimize the logo into the application's asset directory when appropriate.
+8. Use the same approved logo throughout the desktop application, mobile web app, login screen, loading screen, and supported PWA installation assets.
+
+**Do not assume a logo file exists at a particular path without verifying it.**
+
+If the original logo is available, use it rather than inventing a replacement.
+
+If multiple versions exist, inspect them and select the version that best matches the approved DM Lock branding.
+
+Prefer a transparent-background logo for placement on dark interfaces. Preserve the original aspect ratio, proportions, colors, and metallic effects.
+
+Do not stretch, distort, crop, recolor, or recreate the logo using ordinary text.
+
+If the logo is not found, document that fact and request or identify the missing asset. A temporary text-based brand placeholder may be used during development, but it must not be presented as the approved logo.
+
+### Recommended asset organization
+
+Use an appropriate structure such as:
+
+```text
+frontend/
+└── public/
+    └── assets/
+        ├── branding/
+        │   ├── dm-lock-logo.png
+        │   ├── dm-lock-logo.svg
+        │   ├── dm-lock-icon.png
+        │   └── dm-lock-favicon.png
+        └── images/
+```
+
+These filenames are suggestions, not assumptions about existing files. Use the actual available format and preserve the original asset.
+
+Only create alternative logo variants when necessary for specific display requirements, such as a compact application icon.
+
+---
+
+## 34.3 Official Visual Identity
+
+Use the existing DM Lock logo as the primary branding reference.
+
+### Core design characteristics
+
+The interface should communicate:
+
+* Security.
+* Control.
+* Reliability.
+* Technical sophistication.
+* Precision.
+* Professionalism.
+* Modern smart-home technology.
+
+The visual style should combine a dark metallic appearance with luminous blue interface elements and controlled red security accents.
+
+The result should feel bold, modern, and purpose-built for security management.
+
+Avoid cartoonish graphics, excessive decoration, oversized gradients, excessive glass effects, and distracting animations.
+
+### Recommended color palette
+
+Establish these colors as centralized design tokens.
+
+| Purpose                     | Color           | Suggested Hex |
+| --------------------------- | --------------- | ------------- |
+| Main application background | Near-black navy | `#050B14`     |
+| Primary panel               | Deep navy       | `#091523`     |
+| Secondary panel             | Dark slate      | `#101D2C`     |
+| Elevated panel              | Steel slate     | `#17283A`     |
+| Primary electric blue       | Electric blue   | `#087FFF`     |
+| Bright blue highlight       | Cyan blue       | `#20B8FF`     |
+| Primary text                | Cool white      | `#F4F7FC`     |
+| Secondary text              | Muted blue-gray | `#A8B7C9`     |
+| Subtle borders              | Steel blue-gray | `#243B52`     |
+| Confirmed success           | Green           | `#20D990`     |
+| Warning                     | Amber           | `#FFB547`     |
+| Critical alert              | Vivid red       | `#FF4057`     |
+| Disabled or unknown         | Neutral gray    | `#78889A`     |
+
+These are initial design tokens. Adjust them slightly if necessary to achieve better contrast or consistency with the existing logo.
+
+Do not use every accent color everywhere.
+
+Use blue for primary actions, navigation selection, focus indicators, and active interface elements.
+
+Use green for confirmed healthy states and verified successful operations.
+
+Use amber for warnings, degraded conditions, and actions requiring attention.
+
+Use red for critical security alerts, dangerous operations, failed authorization, and emergency indicators.
+
+Use gray for unavailable, disabled, stale, or unknown states.
+
+Never rely on color alone to communicate a status. Pair colors with text labels and appropriate icons.
+
+### Typography
+
+Use a modern, readable typeface such as Inter.
+
+Establish a consistent typography system for:
+
+* Page titles.
+* Section headings.
+* Panel headings.
+* Body text.
+* Supporting descriptions.
+* Status labels.
+* Tables.
+* Form labels.
+* Buttons.
+* Timestamps.
+* Technical diagnostic information.
+
+Use clear size and weight differences to establish hierarchy.
+
+Do not make ordinary text unnecessarily small to fit more information onto the screen.
+
+### Components
+
+Create reusable components for:
+
+* Buttons.
+* Icon buttons.
+* Navigation items.
+* Status badges.
+* Information cards.
+* Confirmation dialogs.
+* Warning banners.
+* Form fields.
+* Search controls.
+* Dropdown menus.
+* Tables.
+* Empty states.
+* Loading indicators.
+* Tooltips.
+* Toast notifications.
+* Pagination.
+* Tabs.
+* Activity entries.
+* Security alerts.
+* Lock status displays.
+* Device status indicators.
+
+Components must behave consistently across the application.
+
+---
+
+## 34.4 Desktop Server UI Design
+
+The desktop Server UI is the primary administrative control center.
+
+It must be optimized for desktop browsers and larger screens while remaining usable on tablets.
+
+Use a persistent navigation sidebar, a professional application header, and a flexible content area.
+
+### Desktop application shell
+
+The standard desktop layout should contain:
+
+**1. Left navigation sidebar**
+
+Include the approved DM Lock logo near the top.
+
+Organize navigation into clearly labeled functional groups.
+
+Recommended navigation:
+
+**OVERVIEW**
+
+* Dashboard.
+
+**ACCESS MANAGEMENT**
+
+* Users.
+* Roles and Permissions.
+* Properties.
+* Locks.
+* Access Codes.
+* Access Grants.
+* Access Schedules.
+* Trusted Devices.
+
+**LOCATION AND SECURITY**
+
+* Location and Proximity.
+* Security Center.
+* Alerts.
+* Incidents.
+* Audit Logs.
+
+**SYSTEM**
+
+* Eufy Integration.
+* Device Health.
+* Notifications.
+* System Health.
+* Settings.
+* Help and Documentation.
+
+Use recognizable icons, readable labels, active-page highlighting, and tooltips when appropriate.
+
+Allow the sidebar to collapse to an icon-only mode without losing navigation functionality.
+
+Do not show navigation items that a user is not authorized to access.
+
+**2. Application header**
+
+Include:
+
+* Current page or contextual navigation.
+* Global search where appropriate.
+* Integration health indicator.
+* Notification center.
+* Current user identity.
+* User role.
+* Account menu.
+* Settings shortcut.
+
+Display connection health accurately.
+
+A green indicator must not imply that every integration is healthy when one or more required services are unavailable.
+
+**3. Main content area**
+
+Use a responsive grid system with consistent spacing.
+
+Pages should have clear headings, concise descriptions, and relevant actions.
+
+Avoid overcrowding the dashboard with unnecessary cards.
+
+**4. Contextual information**
+
+Use side panels, expandable sections, tooltips, and detail drawers where they improve usability.
+
+Prefer opening additional detail without forcing users to leave their current workflow.
+
+---
+
+## 34.5 Desktop Dashboard
+
+Create a premium security operations dashboard.
+
+The dashboard must provide a useful overview of the system without pretending unsupported integrations or telemetry exist.
+
+### Primary dashboard elements
+
+**Lock Status Panel**
+
+Display:
+
+* Lock name.
+* Device model.
+* Current reported lock state.
+* Connection status.
+* Last state confirmation.
+* Last successful communication.
+* Battery level, if supported.
+* Last command outcome.
+* State freshness.
+
+Provide authorized lock and unlock actions.
+
+Sensitive actions must require the configured authorization checks and confirmation behavior.
+
+Do not assume that a successful command submission means the physical lock reached the requested state.
+
+**Eufy Integration Health Panel**
+
+Display:
+
+* Integration connection status.
+* Authentication status.
+* Last successful synchronization.
+* Last communication error.
+* Reconnection status.
+* Supported device information.
+
+Provide an administrative diagnostic view.
+
+**Users and Access Panel**
+
+Display appropriate summary information such as:
+
+* Active users.
+* Suspended users.
+* Temporary access grants.
+* Expiring access.
+* Revoked devices.
+
+**Security Alerts Panel**
+
+Display:
+
+* Active alerts.
+* Severity.
+* Timestamp.
+* Affected user or device, when appropriate.
+* Acknowledgment status.
+
+Provide a shortcut to the Security Center.
+
+**Recent Activity Panel**
+
+Display recent security-relevant events, including:
+
+* User authentication.
+* Lock and unlock requests.
+* Authorization decisions.
+* Confirmed lock-state changes.
+* Device enrollment or revocation.
+* Integration failures.
+* Security incidents.
+
+Distinguish requested actions, denied actions, submitted commands, and confirmed physical outcomes.
+
+**System Health Panel**
+
+Display the health of the actual implemented subsystems, such as:
+
+* Application backend.
+* Database.
+* Background workers.
+* Eufy integration.
+* Notification service.
+* Live-update service.
+* Audit subsystem.
+
+Show unknown or unavailable states honestly.
+
+### Dashboard customization
+
+Where practical, allow administrators to configure dashboard widgets and their order.
+
+Persist preferences appropriately.
+
+Do not make essential security alerts removable from the views in which administrators are required to see them.
+
+---
+
+## 34.6 Desktop Screen Specifications
+
+Design the following screens with consistent navigation and reusable components.
+
+### A. Login and Authentication
+
+Include:
+
+* Approved DM Lock branding.
+* Username or email field.
+* Password field.
+* Password visibility control.
+* Sign-in button.
+* MFA verification when required.
+* Clear authentication errors.
+* Account recovery options where implemented.
+
+Avoid exposing technical stack traces or sensitive authentication details.
+
+### B. User Management
+
+Provide:
+
+* Searchable user table.
+* Status filters.
+* Role filters.
+* Property and lock filters.
+* User creation.
+* User editing.
+* Role assignment.
+* Permission overrides.
+* Account suspension.
+* Session revocation.
+* Trusted-device management.
+* Account expiration.
+* User security history.
+
+Use clear confirmation dialogs for suspension, revocation, and other consequential actions.
+
+### C. Roles and Permissions
+
+Create a readable permission-management interface.
+
+Group permissions by functional area.
+
+Display the effective permissions of each role or user.
+
+Include a permission preview before saving changes.
+
+Explain inherited permissions and individual overrides.
+
+Do not make administrators navigate an enormous, unstructured list of checkboxes.
+
+### D. Lock Management
+
+Display registered locks in a table or card layout.
+
+Include:
+
+* Lock name.
+* Model.
+* Reported state.
+* Connection status.
+* State freshness.
+* Battery level when supported.
+* Integration health.
+* Last communication.
+* Last command outcome.
+
+Opening a lock must reveal its details, activity, access assignments, and integration diagnostics.
+
+### E. Access Codes and Temporary Access
+
+Provide:
+
+* Access-code records.
+* Associated user.
+* Associated lock.
+* Validity period.
+* Expiration.
+* Revocation status.
+* Synchronization status.
+* Operation support status.
+
+Clearly distinguish application-level access records from physical keypad codes stored on the lock.
+
+Never indicate that a physical code has been changed or revoked without confirmation from a supported integration mechanism.
+
+Mask sensitive code values.
+
+### F. Location and Proximity
+
+Provide:
+
+* Property location configuration.
+* Geofence configuration.
+* Location freshness settings.
+* Accuracy thresholds.
+* Proximity mode.
+* Near-door detection status.
+* Location permission status.
+* Relevant security events.
+
+The default proximity mode must remain ARRIVAL_NOTIFICATION.
+
+Automatic proximity unlocking must remain disabled unless all required capabilities and security conditions have been validated.
+
+Clearly display when location information is unavailable or insufficient.
+
+### G. Security Center
+
+Provide:
+
+* Security event feed.
+* Severity filters.
+* Event search.
+* Failed authentication attempts.
+* Denied unlock requests.
+* Device revocation events.
+* Integration failures.
+* Location validation failures.
+* Incident creation and tracking.
+
+### H. Audit Logs
+
+Provide:
+
+* Search.
+* Date filters.
+* Actor filters.
+* Target-device filters.
+* Event categories.
+* Outcome filters.
+* Paginated results.
+* Authorized exports.
+* Detailed event inspection.
+
+Protect sensitive data and enforce audit-log access permissions.
+
+### I. Settings and Integration Diagnostics
+
+Provide GUI-based configuration for supported application settings.
+
+Organize settings by category.
+
+Explain each setting's purpose and consequences.
+
+Show configuration changes, validation errors, and previous values where appropriate.
+
+Protect integration credentials and other secrets.
+
+Never display secret values unnecessarily.
+
+---
+
+## 34.7 Mobile Web App Design
+
+The mobile web app must be designed as a separate, mobile-first user experience.
+
+Do not simply shrink the desktop dashboard to fit a phone.
+
+Prioritize the actions that authorized residents and guests need most often.
+
+Use the same colors, typography, logo, icons, and visual language as the desktop application.
+
+The mobile interface must be optimized for one-handed operation and common smartphone screen sizes.
+
+### Mobile layout
+
+Use:
+
+* A compact application header.
+* The approved logo or a verified compact logo variant.
+* Clear lock-state information.
+* Large touch-friendly controls.
+* Readable typography.
+* Adequate spacing between interactive elements.
+* A persistent bottom navigation bar where appropriate.
+* Scrollable content with clear section boundaries.
+* Accessible dialogs and forms.
+
+Do not make important controls too small or place destructive actions next to frequently used controls without sufficient separation.
+
+### Mobile navigation
+
+Recommended primary navigation:
+
+1. Home.
+2. Activity.
+3. Devices.
+4. More.
+
+The More section may contain:
+
+* Location and Proximity.
+* Notifications.
+* Account Security.
+* Help and Support.
+* Sign Out.
+
+Only show features and actions the authenticated user is authorized to access.
+
+The backend must independently enforce every permission.
+
+---
+
+## 34.8 Mobile Screen Specifications
+
+### A. Mobile Login
+
+Include:
+
+* DM LockGuard branding.
+* Username or email.
+* Password.
+* Password visibility toggle.
+* Sign-in action.
+* MFA verification when required.
+* Password recovery where implemented.
+* Clear, user-friendly error messages.
+
+The login screen should look polished without excessive visual effects.
+
+### B. Mobile Home
+
+The home screen is the most important mobile screen.
+
+At the top, show:
+
+* Compact branding.
+* User greeting or account identity.
+* Notification indicator.
+* Relevant security alerts.
+
+The main lock card must show:
+
+* Lock name.
+* Device model where useful.
+* Current reported state.
+* Connection status.
+* Last confirmation timestamp.
+* State freshness.
+
+Use a prominent lock-state indicator.
+
+Provide clearly differentiated Lock and Unlock controls when the user is authorized to use them.
+
+The interface must distinguish:
+
+* Locked.
+* Unlocked.
+* Locking.
+* Unlocking.
+* State Unknown.
+* State Stale.
+* Device Unavailable.
+
+Show a pending state while a command is processing.
+
+Only display confirmed success after the appropriate device-state confirmation has been received.
+
+If the operation times out, show that the outcome is unknown and provide safe, actionable guidance.
+
+Do not automatically repeat an ambiguous unlock request.
+
+Below the main lock card, include compact status cards for:
+
+* Connection health.
+* Location status.
+* Proximity status.
+* Relevant notifications.
+
+Only show actual supported information.
+
+### C. Mobile Lock Controls
+
+Create a focused lock-control screen.
+
+Include:
+
+* Large lock-state display.
+* Lock and unlock actions.
+* Last confirmed state.
+* Connection health.
+* Last command outcome.
+* Device details.
+* Relevant errors.
+
+Use a confirmation step for remote unlocking when required by the active security policy.
+
+Do not use animations that imply an operation succeeded before confirmation.
+
+### D. Mobile Activity
+
+Display a chronological activity list.
+
+Each event should include:
+
+* Time.
+* Action.
+* Result.
+* Relevant lock.
+* Relevant user or system actor, subject to permissions.
+
+Use recognizable icons and readable status labels.
+
+Provide filters for event type and outcome where practical.
+
+Do not expose other users' private information to unauthorized users.
+
+### E. Mobile Devices
+
+Display the user's trusted devices.
+
+Include:
+
+* Device name.
+* Enrollment status.
+* Last activity when available.
+* Trust status.
+* Revocation status.
+
+Allow permitted device-management actions.
+
+Explain the consequences of revoking a device.
+
+### F. Mobile Location and Proximity
+
+Display:
+
+* Location permission status.
+* Most recent accepted location timestamp.
+* Location freshness.
+* Current proximity mode.
+* Geofence status when available.
+* Near-door detection availability.
+* Relevant warnings.
+
+Explain why automatic proximity unlocking is unavailable if a required capability has not been implemented or verified.
+
+Do not suggest that the server can track a phone indefinitely when the browser is closed or location permission has been withdrawn.
+
+### G. Mobile Notifications
+
+Provide a list of alerts and notifications.
+
+Include:
+
+* Severity.
+* Timestamp.
+* Description.
+* Read status.
+* Relevant event details when authorized.
+
+Mandatory security notifications must not be silently disabled by user preferences.
+
+### H. Mobile Account Security
+
+Include:
+
+* Account details.
+* Role information.
+* MFA settings where implemented.
+* Active sessions.
+* Trusted devices.
+* Session revocation.
+* Password or authentication management where implemented.
+
+Avoid displaying administrative functions to ordinary users.
+
+### I. Mobile Help and Troubleshooting
+
+Provide clear explanations for common problems:
+
+* Lock unavailable.
+* Integration disconnected.
+* State unknown.
+* Request denied.
+* Location permission denied.
+* Location too old.
+* Proximity detection unavailable.
+* Session expired.
+
+Offer specific recovery steps where possible.
+
+---
+
+## 34.9 Interaction and Feedback Standards
+
+Every interactive element must have a defined behavior.
+
+Do not create decorative buttons that do nothing.
+
+### Required interface feedback
+
+Provide:
+
+* Loading indicators.
+* Disabled states.
+* Success messages.
+* Warning messages.
+* Error messages.
+* Empty states.
+* Network-error states.
+* Integration-unavailable states.
+* Confirmation dialogs.
+* Form validation.
+* Keyboard focus indicators.
+
+For long-running actions, show progress and the current operation status.
+
+For asynchronous lock commands, use the actual backend command lifecycle.
+
+Distinguish between:
+
+1. Request received.
+2. Authorization completed.
+3. Command submitted.
+4. Integration response received.
+5. Physical state confirmed.
+6. Operation failed or outcome unknown.
+
+Use the terminology consistently throughout desktop and mobile interfaces.
+
+### Confirmation requirements
+
+Require appropriate confirmation for sensitive actions, including:
+
+* Remote unlock when configured.
+* User suspension or revocation.
+* Trusted-device revocation.
+* Access-grant revocation.
+* Critical permission changes.
+* Lockdown activation or deactivation.
+* High-impact configuration changes.
+
+Confirmation dialogs must clearly explain the action and its consequences.
+
+Do not use confirmation dialogs for every ordinary interaction.
+
+---
+
+## 34.10 Responsive Design and Accessibility
+
+Implement a consistent responsive design system.
+
+### Desktop
+
+Optimize the full administrative interface for larger displays.
+
+Use tables and multi-column layouts where they improve administrative efficiency.
+
+Ensure that important controls remain accessible at common desktop resolutions.
+
+### Tablet
+
+Adapt navigation, cards, tables, and forms to narrower viewports.
+
+Allow horizontal table scrolling only where necessary.
+
+### Mobile
+
+Use single-column layouts for most primary workflows.
+
+Stack cards vertically.
+
+Use full-width primary actions when appropriate.
+
+Prevent horizontal overflow.
+
+Ensure that forms, dialogs, and navigation work with touch input.
+
+### Accessibility
+
+Target WCAG 2.2 AA where practical.
+
+Implement:
+
+* Sufficient text contrast.
+* Keyboard navigation.
+* Visible focus states.
+* Semantic HTML.
+* Accessible labels.
+* Screen-reader announcements for relevant status changes.
+* Proper dialog focus management.
+* Reduced-motion support.
+* Appropriate touch target sizes.
+
+Do not communicate security state through color or animation alone.
+
+---
+
+## 34.11 Animation and Visual Effects
+
+Use restrained, purposeful motion.
+
+Acceptable examples include:
+
+* Smooth navigation transitions.
+* Subtle card hover effects on desktop.
+* Button interaction feedback.
+* Loading indicators.
+* Gentle status transitions.
+* Expandable detail panels.
+
+Avoid:
+
+* Constantly pulsing interface elements.
+* Flashing effects outside deliberate critical-alert handling.
+* Excessive glowing borders.
+* Large animated backgrounds.
+* Unnecessary 3D effects on operational controls.
+* Animations that delay access to essential information.
+
+Respect the user's reduced-motion preference.
+
+The application must remain responsive on ordinary computers and smartphones.
+
+---
+
+## 34.12 Desktop and Mobile Design References
+
+Use the following reference images if they are available in the project, attached files, or another location explicitly supplied by the operator:
+
+* DM LockGuard desktop dashboard mockup.
+* DM LockGuard mobile web application mockup.
+* Approved DM Lock logo.
+
+Search for these assets before recreating them.
+
+The mockups are visual references for layout, color, hierarchy, branding, and component styling.
+
+They are not permission to fabricate functionality.
+
+Do not copy inaccurate sample data from a mockup into production behavior.
+
+Do not reproduce visual elements that conflict with the actual project requirements.
+
+The existing `project.md` specification remains authoritative for functionality and security.
+
+The approved logo remains authoritative for branding.
+
+If a mockup depicts a camera feed, vehicle integration, or other feature not included in the implemented requirements, do not introduce that feature merely because it appears in an image.
+
+Do not invent additional integrations or imply support for unsupported hardware.
+
+---
+
+## 34.13 Implementation Requirements
+
+Implement the design as reusable frontend components.
+
+Use the project's React, TypeScript, Vite, and Tailwind CSS stack unless a documented technical constraint requires an alternative.
+
+Create centralized design tokens for:
+
+* Colors.
+* Typography.
+* Spacing.
+* Border radii.
+* Shadows.
+* Focus states.
+* Breakpoints.
+* Animation timing.
+* Status colors.
+
+Use reusable layouts for desktop and mobile.
+
+Share appropriate components while preserving the different interaction patterns required by each interface.
+
+Separate presentation components from API communication, authorization decisions, and business logic.
+
+Retrieve application data from the backend.
+
+Do not hardcode dashboard statistics, lock status, user locations, integration health, or activity records as permanent production data.
+
+Use clearly identified demonstration fixtures only in development or designated demonstration mode.
+
+Never present simulated information as live physical-device telemetry.
+
+Ensure that the application handles empty databases, unavailable integrations, expired sessions, API errors, and stale information gracefully.
+
+---
+
+## 34.14 Required UI Development Checkpoints
+
+Update `checkpoint.log` at the end of each meaningful UI development milestone.
+
+Each entry must follow the project's established checkpoint format and include:
+
+* Timestamp.
+* Percent complete.
+* Current task.
+* Work completed.
+* Remaining work.
+* Important issues or decisions requiring attention.
+
+Use the following UI development sequence:
+
+**UI CHECKPOINT 1: BRANDING AND ASSETS**
+
+* Locate and inspect the existing logo.
+* Identify available mockup references.
+* Establish design tokens.
+* Document missing assets.
+
+**UI CHECKPOINT 2: SHARED COMPONENTS**
+
+* Implement typography.
+* Implement buttons, forms, cards, badges, dialogs, and status indicators.
+* Verify contrast and accessibility.
+
+**UI CHECKPOINT 3: DESKTOP APPLICATION SHELL**
+
+* Implement the navigation sidebar.
+* Implement the application header.
+* Implement the responsive content layout.
+* Implement authorized navigation.
+
+**UI CHECKPOINT 4: DESKTOP DASHBOARD**
+
+* Connect dashboard components to actual backend data.
+* Implement lock status, integration health, activity, alerts, and system health.
+* Handle unavailable and stale information.
+
+**UI CHECKPOINT 5: ADMINISTRATIVE SCREENS**
+
+* Implement users.
+* Implement roles and permissions.
+* Implement lock management.
+* Implement access management.
+* Implement security and audit interfaces.
+* Implement configuration screens.
+
+**UI CHECKPOINT 6: MOBILE APPLICATION SHELL**
+
+* Implement mobile navigation.
+* Implement responsive layouts.
+* Verify touch interactions.
+* Verify the login and session experience.
+
+**UI CHECKPOINT 7: MOBILE LOCK WORKFLOWS**
+
+* Implement mobile home.
+* Implement lock controls.
+* Implement activity.
+* Implement trusted devices.
+* Implement location and proximity.
+* Implement notifications and account security.
+
+**UI CHECKPOINT 8: INTEGRATION AND TESTING**
+
+* Connect screens to real API endpoints.
+* Test authorized and unauthorized access.
+* Test pending, success, failure, unknown, stale, and offline states.
+* Test responsive behavior.
+* Resolve visual and functional defects.
+
+**UI CHECKPOINT 9: FINAL REVIEW**
+
+* Verify logo usage.
+* Verify visual consistency.
+* Verify accessibility.
+* Verify all navigation and actions.
+* Remove accidental placeholders.
+* Document remaining limitations.
+
+Do not mark a checkpoint complete merely because a page renders.
+
+---
+
+## 34.15 Definition of Done for the UI
+
+The desktop and mobile interfaces are complete only when:
+
+1. The approved DM Lock logo has been located and correctly integrated, or its absence has been explicitly documented.
+2. Both interfaces use the same coherent visual identity.
+3. The desktop application provides a complete, navigable administrative experience.
+4. The mobile application provides a complete, mobile-first user experience.
+5. Responsive layouts work at common screen sizes.
+6. All interactive elements have meaningful behavior.
+7. Live data comes from the appropriate backend endpoints.
+8. Simulated data is clearly identified and isolated.
+9. Permissions are enforced by the backend.
+10. Lock-state information distinguishes command submission from confirmed physical state.
+11. Unknown, stale, offline, and unavailable states are displayed accurately.
+12. Forms provide appropriate validation and error messages.
+13. Sensitive operations use the required confirmation and authentication controls.
+14. The interface meets the project's accessibility requirements.
+15. No unsupported integration is presented as operational.
+16. UI tests and relevant integration tests pass.
+17. The final implementation and remaining limitations are documented.
+
+**Final instruction:** Build DM LockGuard as a unified, professional security product. Use the supplied branding, follow the desktop and mobile specifications, connect the interfaces to the real backend, and prioritize accurate security information over decorative effects.
+
 ---
 
 # START HERE
