@@ -8,8 +8,20 @@
 // - lastSeenMs is broken and is never used.
 
 import { EventEmitter } from "node:events";
+import net from "node:net";
 import { join } from "node:path";
-import { EufyMega, FileSessionStore, FileFcmStore, LoginStatus } from "@mega-yfue/eufy-sdk";
+import {
+  EufyMega,
+  FileSessionStore,
+  FileFcmStore,
+  LoginStatus,
+  SecureMqtt,
+  buildAppShapedClientId,
+  mqttUuidFrom,
+  probeBrokerInstance,
+  resolveBrokerIps,
+  secureTopic,
+} from "@mega-yfue/eufy-sdk";
 
 const TARGET_MODEL = /^T85D0/i;
 // LockPushEvent MECHANICAL_ANOMALY (517) and LOCK_MECHANICAL_ANOMALY (519).
@@ -25,10 +37,32 @@ const LIST_REUSE_MS = 5_000;
 const OWNER_ONLY_CODE = 20004;
 export const DEGRADED_AFTER_FAILURES = 2;
 export const DEGRADED_AFTER_SILENT_MS = 15 * 60 * 1000;
+// How long one broker instance may take to grant a SUBSCRIBE during discovery (the SDK allows 8 s).
+export const BROKER_PROBE_MS = 5_000;
+
+/** The SDK's MQTT pieces the bridge's own broker discovery uses; replaced in tests. */
+const SDK_MQTT = { SecureMqtt, buildAppShapedClientId, mqttUuidFrom, probeBrokerInstance, resolveBrokerIps, secureTopic };
 
 /** The Eufy cloud did not return fresh state, so any value would be a cached guess. */
 export class StaleStateError extends Error {
   name = "StaleStateError";
+}
+
+/**
+ * Whether a TCP connection to a broker instance opens within timeoutMs. Only opens and closes a
+ * socket: nothing is sent, so it cannot affect a lock.
+ */
+export function tcpReachable(ip, port = 8883, timeoutMs = 1500) {
+  return new Promise((resolve) => {
+    const socket = net.connect({ host: ip, port });
+    const done = (open) => {
+      socket.destroy();
+      resolve(open);
+    };
+    socket.setTimeout(timeoutMs, () => done(false));
+    socket.once("connect", () => done(true));
+    socket.once("error", () => done(false));
+  });
 }
 
 /** The bridge gave up on a command before it was published, and the publish guard stopped it. */
@@ -39,9 +73,15 @@ export class CommandNotSentError extends Error {
 export class EufyAdapter extends EventEmitter {
   /**
    * @param {object} [options.eufy] An EufyMega-shaped client, for tests. Defaults to the real SDK.
+   * @param {(ip: string) => Promise<boolean>} [options.reachable] Broker reachability check, for tests.
+   * @param {object} [options.mqttTools] The SDK's MQTT helpers (SDK_MQTT), for tests.
    */
-  constructor({ email, password, countryCode, brokerIp = null, dataDir, log = () => {}, eufy = null, now = Date.now }) {
+  constructor({ email, password, countryCode, brokerIp = null, dataDir, log = () => {}, eufy = null, now = Date.now, reachable = tcpReachable, mqttTools = SDK_MQTT }) {
     super();
+    this.reachable = reachable;
+    this.mqttTools = mqttTools;
+    /** The broker instance the last command was sent through; tried first next time. */
+    this.lastBrokerIp = null;
     this.log = log;
     this.now = now;
     this.status = "starting";
@@ -75,6 +115,10 @@ export class EufyAdapter extends EventEmitter {
    * - It guards publishing. A command whose deadline has passed is never published, and a command
    *   records the moment it is published. That is what lets the bridge say "not sent" with certainty
    *   instead of "unknown" when it gives up early (see send()).
+   * - It orders the broker candidates before the SDK probes them. The SDK tries them one at a time
+   *   with 8 s each, so a few instances that never answer used up the whole command deadline
+   *   (2026-10-18: three of the eight built-in addresses time out from this network). The configured
+   *   and last successful instances go first, and instances that do not accept a connection go last.
    * - With EUFY_MQTT_BROKER_IP it pins the broker instance. Several instances behind the Eufy broker
    *   hostname accept a subscription for a lock, but only the one holding the lock's own session
    *   delivers to it. Find the right one with `npm run diag:listen` while using the Eufy app.
@@ -93,15 +137,29 @@ export class EufyAdapter extends EventEmitter {
     router.ensureSecurityMqttFor = async (dev) => {
       const command = this.commands.get(dev?.sn);
       if (command) command.stage = "broker";
-      let chosen = await discover(dev);
+      const ownDiscovery = typeof router.deps?.mega?.getUserMqttInfo === "function";
+      if (!ownDiscovery) {
+        const order = await this.orderBrokerCandidates(router, brokerIp);
+        if (order) command?.log("broker candidates ordered", order);
+      }
+      let chosen;
+      try {
+        chosen = ownDiscovery ? await this.findBroker(router, dev, brokerIp, command) : await discover(dev);
+      } catch (err) {
+        if (err instanceof CommandNotSentError) throw err;
+        // Discovery only subscribes; it never publishes, so a failure here means nothing was sent.
+        command?.log("broker not found", { error: String(err?.message ?? err).slice(0, 200) });
+        throw new CommandNotSentError(`No Eufy command server would carry this command: ${String(err?.message ?? err).slice(0, 200)}`);
+      }
       command?.log("broker found", { instance: chosen.instanceIp });
-      if (brokerIp && chosen.instanceIp !== brokerIp) {
+      if (!ownDiscovery && brokerIp && chosen.instanceIp !== brokerIp) {
         await chosen.mqtt.disconnect();
         chosen.mqtt.o.instanceIp = brokerIp;
         await chosen.mqtt.connect();
         this.log("info", "command broker pinned", { discovered: chosen.instanceIp, used: brokerIp });
         chosen = { mqtt: chosen.mqtt, instanceIp: brokerIp };
       }
+      this.lastBrokerIp = chosen.instanceIp;
       if (command?.signal.aborted) {
         await chosen.mqtt.disconnect().catch(() => {});
         throw new CommandNotSentError("The bridge gave up before the command was published.");
@@ -126,8 +184,87 @@ export class EufyAdapter extends EventEmitter {
   }
 
   /**
+   * The bridge's own version of the SDK's ensureSecurityMqttFor(), with the same SDK pieces: probe
+   * broker instances with a SUBSCRIBE (never a publish) and open one connection pinned to the first
+   * that grants it. Unlike the SDK it tries EUFY_MQTT_BROKER_IP and the last working instance first,
+   * skips instances that do not accept a TCP connection, allows BROKER_PROBE_MS per instance instead
+   * of 8 s, stops when the command's deadline passes, and logs every instance's answer.
+   * SDK internals (router.deps, router.constructor.KNOWN_AIOT_BROKER_IPS); re-check after an upgrade.
+   */
+  async findBroker(router, dev, brokerIp, command) {
+    const tools = this.mqttTools;
+    const { mega } = router.deps;
+    const creds = await mega.getUserMqttInfo("eufy_security");
+    command?.log("command server credentials fetched");
+    const uid = creds.user_id ?? "";
+    const mqttUuid = tools.mqttUuidFrom(mega.openudid);
+    const clientId = () => tools.buildAppShapedClientId({ appName: "eufy_security", uid, mqttUuid });
+
+    const dnsIps = await tools.resolveBrokerIps(creds.endpoint_addr);
+    const seed = Array.isArray(router.constructor?.KNOWN_AIOT_BROKER_IPS) ? router.constructor.KNOWN_AIOT_BROKER_IPS : [];
+    const candidates = [...new Set([brokerIp, this.lastBrokerIp, ...dnsIps, ...seed].filter(Boolean))];
+    const open = await Promise.all(candidates.map((ip) => this.reachable(ip).catch(() => false)));
+    const reachable = candidates.filter((_, i) => open[i]);
+    command?.log("broker candidates", { order: reachable, unreachable: candidates.filter((_, i) => !open[i]) });
+
+    const probes = [];
+    for (const ip of reachable) {
+      if (command?.signal.aborted) {
+        throw new CommandNotSentError("The bridge gave up before the command was published.");
+      }
+      const result = await tools.probeBrokerInstance(
+        ip,
+        {
+          hostname: creds.endpoint_addr,
+          port: creds.endpoint_port,
+          certificate_pem: creds.certificate_pem,
+          private_key: creds.private_key,
+          aws_root_ca1_pem: creds.aws_root_ca1_pem,
+        },
+        { clientId: clientId(), topic: tools.secureTopic(dev, "res"), timeoutMs: BROKER_PROBE_MS },
+      );
+      command?.log("broker probed", { instance: ip, granted: result.granted, ms: result.ms, error: result.error ?? null });
+      probes.push(`${ip} ${result.granted ? "granted" : result.error ?? "denied"}`);
+      if (result.granted) {
+        const mqtt = new tools.SecureMqtt({
+          credentials: creds,
+          clientId: clientId(),
+          instanceIp: ip,
+          // One-shot, as in the SDK: never leave a client retrying in the background.
+          reconnectPeriod: 0,
+          logger: router.deps.logger,
+        });
+        mqtt.on("error", (e) => router.deps.onError?.(e));
+        await mqtt.connect();
+        return { mqtt, instanceIp: ip };
+      }
+    }
+    throw new CommandNotSentError(`No Eufy command server would accept this lock (${probes.join("; ") || "none reachable"}).`);
+  }
+
+  /**
+   * Reorders the SDK's built-in broker list (MqttCommandRouter.KNOWN_AIOT_BROKER_IPS, read on every
+   * discovery): preferred instances first, then the rest that accept a TCP connection, then those that
+   * do not. Nothing is removed, so discovery can still reach every instance. Returns what it did for
+   * the step log, or null when the SDK has no such list.
+   */
+  async orderBrokerCandidates(router, brokerIp) {
+    const holder = router.constructor;
+    if (!Array.isArray(holder?.KNOWN_AIOT_BROKER_IPS)) return null;
+    this.brokerSeed ??= [...holder.KNOWN_AIOT_BROKER_IPS];
+    const candidates = [...new Set([brokerIp, this.lastBrokerIp, ...this.brokerSeed].filter(Boolean))];
+    const open = await Promise.all(candidates.map((ip) => this.reachable(ip).catch(() => false)));
+    const unreachable = candidates.filter((_, i) => !open[i]);
+    holder.KNOWN_AIOT_BROKER_IPS = [...candidates.filter((_, i) => open[i]), ...unreachable];
+    return { first: holder.KNOWN_AIOT_BROKER_IPS[0], unreachable };
+  }
+
+  /**
    * Every Eufy cloud call goes through mega.post(). Watching it is the only reliable way to know
    * whether the cloud is answering, because the SDK swallows failed state fetches (see the header).
+   * Every argument is passed through: getUserMqttInfo("eufy_security") sends its app-name header as
+   * the fourth one, and without it Eufy hands back a credential that every broker refuses for a lock
+   * (the cause of every failed command until 2026-10-18).
    * SDK internal (EufyMega.mega); re-check after any eufy-sdk upgrade.
    */
   watchCloud() {
@@ -137,9 +274,9 @@ export class EufyAdapter extends EventEmitter {
       return;
     }
     const post = mega.post.bind(mega);
-    mega.post = async (service, path, body) => {
+    mega.post = async (service, path, body, ...rest) => {
       try {
-        const result = await post(service, path, body);
+        const result = await post(service, path, body, ...rest);
         this.cloud.okAt = this.now();
         this.cloud.failures = 0;
         if (path === DEVICE_LIST_PATH) this.cloud.listFetchedAt = this.now();

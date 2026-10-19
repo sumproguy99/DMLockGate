@@ -114,6 +114,19 @@ test("a device list the SDK reuses from moments ago counts as fresh, an older on
   await assert.rejects(adapter.readState(BACK), StaleStateError);
 });
 
+test("watching cloud calls passes every argument through, including the app-name header", async () => {
+  const eufy = new FakeEufy();
+  const calls = [];
+  eufy.mega.post = async (...args) => {
+    calls.push(args);
+    return {};
+  };
+  adapterWith(eufy, { ms: 1_000_000 });
+
+  await eufy.mega.post("devicemanage", "/app/devicemanage/get_user_mqtt_info", {}, { "app-name": "eufy_security" });
+  assert.deepEqual(calls[0][3], { "app-name": "eufy_security" });
+});
+
 /**
  * The SDK's command path for a T85D0: lock()/unlock() find the broker instance through the router
  * (ensureSecurityMqttFor), then publish on that one-shot connection.
@@ -210,4 +223,140 @@ test("the command broker is pinned when configured", async () => {
 test("without the SDK hook, commands still send but cannot be proved unsent", async () => {
   const adapter = new EufyAdapter({ eufy: new FakeEufy() });
   assert.equal(adapter.publishGuarded, false);
+});
+
+test("broker candidates are tried preferred first and unreachable last, then the last working one first", async () => {
+  const seen = [];
+  class Router {
+    static KNOWN_AIOT_BROKER_IPS = ["192.0.2.1", "192.0.2.2", "192.0.2.3", "192.0.2.4"];
+    async ensureSecurityMqttFor() {
+      const order = [...Router.KNOWN_AIOT_BROKER_IPS];
+      seen.push(order);
+      // The instance holding the lock's session.
+      const instanceIp = "192.0.2.3";
+      const mqtt = { o: { instanceIp }, async publish() {}, async disconnect() {}, async connect() {} };
+      return { mqtt, instanceIp };
+    }
+  }
+  const eufy = new CommandEufy();
+  eufy.mqtt = new Router();
+  const lines = [];
+  const adapter = new EufyAdapter({
+    eufy,
+    reachable: async (ip) => ip !== "192.0.2.1" && ip !== "192.0.2.2",
+    log: (level, message, ctx) => lines.push({ message, ctx }),
+  });
+
+  await adapter.send(FRONT, "lock");
+  assert.deepEqual(seen[0], ["192.0.2.3", "192.0.2.4", "192.0.2.1", "192.0.2.2"]);
+  const ordered = lines.find((l) => l.message === "command step: broker candidates ordered");
+  assert.deepEqual(ordered.ctx.unreachable, ["192.0.2.1", "192.0.2.2"]);
+
+  await adapter.send(FRONT, "unlock");
+  assert.equal(seen[1][0], "192.0.2.3");
+  assert.equal(adapter.lastBrokerIp, "192.0.2.3");
+});
+
+test("the configured broker is tried first when it accepts a connection", async () => {
+  const seen = [];
+  class Router {
+    static KNOWN_AIOT_BROKER_IPS = ["192.0.2.1", "192.0.2.9"];
+    async ensureSecurityMqttFor() {
+      seen.push([...Router.KNOWN_AIOT_BROKER_IPS]);
+      const mqtt = { o: { instanceIp: "192.0.2.9" }, async publish() {}, async disconnect() {}, async connect() {} };
+      return { mqtt, instanceIp: "192.0.2.9" };
+    }
+  }
+  const eufy = new CommandEufy();
+  eufy.mqtt = new Router();
+  const adapter = new EufyAdapter({ eufy, brokerIp: "192.0.2.9", reachable: async () => true });
+
+  await adapter.send(FRONT, "lock");
+  assert.deepEqual(seen[0], ["192.0.2.9", "192.0.2.1"]);
+});
+
+test("a command no broker instance would carry is reported as not sent", async () => {
+  const eufy = new CommandEufy();
+  eufy.mqtt.ensureSecurityMqttFor = async () => {
+    throw new Error("no broker instance currently holds this device's session");
+  };
+  const adapter = new EufyAdapter({ eufy });
+
+  await assert.rejects(adapter.send(FRONT, "lock"), CommandNotSentError);
+  assert.deepEqual(eufy.published, []);
+});
+
+/** A router shaped like the SDK's MqttCommandRouter, with fake MQTT tools that record every probe. */
+function ownDiscoverySetup({ grants, reachable = () => true }) {
+  const probed = [];
+  const connected = [];
+  class Router {
+    static KNOWN_AIOT_BROKER_IPS = ["192.0.2.1", "192.0.2.2", "192.0.2.3"];
+    deps = {
+      mega: { openudid: "install", getUserMqttInfo: async () => ({ endpoint_addr: "broker.example", endpoint_port: 8883, user_id: "u1" }) },
+      onError() {},
+    };
+    async ensureSecurityMqttFor() {
+      throw new Error("the SDK's own discovery must not run");
+    }
+  }
+  class FakeSecureMqtt extends EventEmitter {
+    constructor(options) {
+      super();
+      this.options = options;
+    }
+    async connect() {
+      connected.push(this.options.instanceIp);
+    }
+    async publish() {}
+    async disconnect() {}
+  }
+  const tools = {
+    SecureMqtt: FakeSecureMqtt,
+    buildAppShapedClientId: () => "client",
+    mqttUuidFrom: () => "uuid",
+    resolveBrokerIps: async () => ["192.0.2.2"],
+    secureTopic: (dev) => `cmd/${dev.sn}/res`,
+    probeBrokerInstance: async (ip) => {
+      probed.push(ip);
+      return grants.includes(ip) ? { ip, granted: true, ms: 1 } : { ip, granted: false, ms: 1, error: "denied" };
+    },
+  };
+  const eufy = new CommandEufy();
+  eufy.mqtt = new Router();
+  return { eufy, tools, probed, connected, reachable: async (ip) => reachable(ip) };
+}
+
+test("the bridge's own discovery tries the configured broker first and connects to the first that grants", async () => {
+  const { eufy, tools, probed, connected, reachable } = ownDiscoverySetup({ grants: ["192.0.2.3"] });
+  const lines = [];
+  const adapter = new EufyAdapter({ eufy, brokerIp: "192.0.2.3", mqttTools: tools, reachable, log: (l, message, ctx) => lines.push({ message, ctx }) });
+  const control = { signal: new AbortController().signal, published: false };
+
+  await adapter.send(FRONT, "lock", control);
+
+  assert.deepEqual(probed, ["192.0.2.3"]);
+  assert.deepEqual(connected, ["192.0.2.3"]);
+  assert.equal(control.published, true);
+  assert.ok(lines.some((l) => l.message === "command step: broker probed" && l.ctx.instance === "192.0.2.3" && l.ctx.granted));
+});
+
+test("the bridge's own discovery skips unreachable brokers and moves on after a denial", async () => {
+  const { eufy, tools, probed, connected, reachable } = ownDiscoverySetup({ grants: ["192.0.2.3"], reachable: (ip) => ip !== "192.0.2.1" });
+  const adapter = new EufyAdapter({ eufy, brokerIp: "192.0.2.1", mqttTools: tools, reachable });
+
+  await adapter.send(FRONT, "lock");
+
+  assert.deepEqual(probed, ["192.0.2.2", "192.0.2.3"]);
+  assert.deepEqual(connected, ["192.0.2.3"]);
+  assert.equal(adapter.lastBrokerIp, "192.0.2.3");
+});
+
+test("when every broker denies, the command is not sent and the answers are in the error", async () => {
+  const { eufy, tools, connected, reachable } = ownDiscoverySetup({ grants: [] });
+  const adapter = new EufyAdapter({ eufy, mqttTools: tools, reachable });
+
+  await assert.rejects(adapter.send(FRONT, "lock"), (err) => err instanceof CommandNotSentError && /192\.0\.2\.1 denied/.test(err.message));
+  assert.deepEqual(connected, []);
+  assert.deepEqual(eufy.published, []);
 });

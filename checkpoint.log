@@ -403,3 +403,18 @@ What needs to be done.
 Dustin to restart the bridge and try one Lock (the bridge log has no new step lines yet, so the new code isn't running). Commit when he asks. UI checkpoint 7: the mobile Home, Activity and Devices screens with Lock and Unlock.
 What is important or stands out that needs attention or needs to be address.
 Home, Activity and Devices on mobile are placeholders until checkpoint 7. The Vite dev server on 5173 was not running when checked; screenshots used a temporary server on 5181, now stopped. The cause of the 25 s command timeouts is still unknown.
+
+---
+Timestamp: 2026-10-18 ET
+Percent complete: 80%
+Description of what you are working on.
+Cause of the 25 s command timeouts: broker instance discovery.
+What you have done so far:
+Committed ae74d73 (mobile shell). The SDK probes broker instances one at a time with 8 s each, and three built-in addresses never answer from this network, which uses up the 25 s deadline. Bridge (uncommitted): its own discovery, findBroker, using the SDK's MQTT pieces. It TCP-checks the candidates in parallel (1.5 s, nothing sent) and skips unreachable ones. It probes the rest with SUBSCRIBE only, 5 s each: EUFY_MQTT_BROKER_IP first, then the last working instance, DNS, then the built-in list. It stops at the deadline and logs each instance's answer. If no instance grants, it reports not_sent. If the SDK router shape is missing, it falls back to reordering the SDK list. docs/EUFY_BRIDGE.md is updated. Bridge tests 34/34. The bridge process on 8787 started 2026-10-18 11:32, after the change, but has written nothing to data/bridge.log since 2026-10-17. No lock command sent by me.
+What needs to be done.
+Dustin to try one Lock and check the "command step: broker probed" lines. Find where the running bridge writes its log. Commit when he asks. UI checkpoint 7.
+What is important or stands out that needs attention or needs to be address.
+findBroker relies on SDK internals (router.deps.mega, KNOWN_AIOT_BROKER_IPS); re-check after any eufy-sdk upgrade.
+Correction (2026-10-18): port 8787 belongs to PlayLite (D:\aiprod\00-PlayLite), not the bridge, so the bridge was not running and LockGuard's bridge URL pointed at PlayLite. The bridge now uses 8788: BRIDGE_PORT in integrations/eufy/.env and .env.example, the main.mjs default, LOCKGUARD_BRIDGE_URL in backend/.env and .env.example, and the config/lockguard.php default.
+Root cause found (2026-10-18 ET, evening): EufyAdapter.watchCloud() wrapped mega.post() with three parameters and dropped the fourth, the {"app-name": "eufy_security"} header that getUserMqttInfo("eufy_security") sends. The bridge therefore got the general eufy_mega MQTT credential, and every broker refused it for lock topics ("Subscribe error: Unspecified error"). That is why every bridge command failed, including the 25 s timeouts on 2026-10-17 (the SDK probed every instance and was refused). The phone app and standalone diag scripts were unaffected. Fix: the wrapper passes every argument through, plus one new test (bridge 35/35). A dry run of findBroker (command connection stubbed, nothing published) now gets a grant from 3.139.229.186 in 194 ms. Commands 30 (lock) and 31 (unlock) at 23:14 and 23:21 UTC were refused as not_sent and nothing reached the lock. Dustin needs to restart the bridge (PID 37068 runs the old code) and try again. Uncommitted.
+Verified 2026-10-18 20:41 ET: first end-to-end command through LockGuard. Command 32, Front Door unlock: bridge acknowledged in 4.1 s and the lock confirmed it by push at 00:41:05 UTC. Dustin sent it. Back Door reported jammed (event 519) at 20:38:59 ET from an app or manual action, then worked normally 30 s later.

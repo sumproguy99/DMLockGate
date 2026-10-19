@@ -26,7 +26,7 @@ mkdirSync(dataDir, { recursive: true });
 
 const secret = requireEnv("LOCKGUARD_BRIDGE_SECRET");
 const host = process.env.BRIDGE_HOST || "127.0.0.1";
-const port = Number(process.env.BRIDGE_PORT || 8787);
+const port = Number(process.env.BRIDGE_PORT || 8788);
 
 const adapter = new EufyAdapter({
   email: requireEnv("EUFY_USERNAME"),

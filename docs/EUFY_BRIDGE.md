@@ -74,6 +74,15 @@ The bridge gives up after 25 s, but the SDK would carry on in the background. To
 - **"Not sent" (`504 rejected not_sent_timeout`)** is reported only when the command was still in the cloud lookup or in the guarded broker step and had not started publishing. Anything else stays `502 ambiguous`.
 - **If the SDK internals change** and the hook cannot be installed, the bridge logs it and every timeout stays ambiguous.
 
+**Broker order:** the SDK probes broker instances one at a time, 8 s each: DNS answers first, then its built-in list. On 2026-10-18 three built-in addresses never answered from this network, which used up the whole 25 s deadline before a working instance was tried. The bridge now runs its own discovery with the same SDK pieces (`findBroker` in `eufy-adapter.mjs`):
+
+- It checks in parallel which candidates accept a TCP connection (about 1.5 s at most; nothing is sent) and skips the ones that do not.
+- It probes the rest with a SUBSCRIBE only, never a publish, allowing 5 s each. The order is `EUFY_MQTT_BROKER_IP`, then the last instance that carried a command, then DNS answers, then the built-in list.
+- It connects to the first instance that grants and stops probing once the command's deadline passes.
+- It logs every instance's answer (`command step: broker probed`).
+
+If no instance grants, nothing was published and the bridge reports `not_sent`, with each instance's answer in the error. If the SDK's router does not have the expected shape, the bridge falls back to the SDK's own discovery. In that case it only reorders the SDK's built-in list in the same way and moves unreachable addresses to the end.
+
 **Step log:** each command logs its steps with elapsed times (`command step: device looked up`, `broker found`, `publishing`, `finished`), plus the SDK's broker and connection lines (`smqtt`, `ensureSecurityMqtt`), so a slow step is visible in `data/bridge.log`.
 
 **Health:** `GET /v1/health` includes `commands`: `consecutive_failures`, `last_failure`, `last_failure_at` and `last_success_at`. The cloud can answer state reads while commands fail; LockGuard therefore reports the integration as `degraded` (`commands_failing`) after 2 failures in a row, and the header and dashboard say so. Commands are still allowed in that case (a success clears it), and every one still waits for the lock to confirm.

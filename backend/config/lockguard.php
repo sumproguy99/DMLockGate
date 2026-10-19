@@ -59,7 +59,7 @@ return [
         | the shared secret. send_timeout must exceed the bridge's own 25 s acknowledgement timeout.
         */
         'eufy_bridge' => [
-            'url' => env('LOCKGUARD_BRIDGE_URL', 'http://127.0.0.1:8787'),
+            'url' => env('LOCKGUARD_BRIDGE_URL', 'http://127.0.0.1:8788'),
             'secret' => env('LOCKGUARD_BRIDGE_SECRET'),
             'connect_timeout_seconds' => 3,
             'send_timeout_seconds' => 30,
