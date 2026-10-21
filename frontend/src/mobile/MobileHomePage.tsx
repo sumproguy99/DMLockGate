@@ -1,4 +1,5 @@
 import { Bell, ChevronRight, KeyRound } from 'lucide-react'
+import { useEffect } from 'react'
 import { Link } from 'react-router'
 import { useSystemHealth } from '../app/health-context'
 import { useCurrentUser } from '../auth/auth-context'
@@ -35,6 +36,11 @@ export function MobileHomePage() {
     locks.refresh()
     health.refresh()
   }
+
+  // Home has a greeting instead of a PageHeader, so it sets the tab title itself.
+  useEffect(() => {
+    document.title = 'Home · DM LockGuard'
+  }, [])
 
   const firstName = user.name.split(/\s+/)[0] ?? user.name
   const alerts = locks.data ? deriveAlerts(locks.data.locks, health.data) : []

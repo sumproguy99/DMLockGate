@@ -125,7 +125,7 @@ All in `frontend/src/components`. Presentation only: no component calls the API 
 
 **Session** (`src/auth/`, `src/api/client.ts`):
 - **Cookies only:** Sanctum's session cookie and its CSRF cookie. No token is stored in the browser.
-- **Start-up:** the app asks `/api/v1/auth/me`. If LockGuard can't be reached, it shows "LockGuard is unreachable" with a Try again button.
+- **Start-up:** the app asks `/api/v1/auth/me`, showing the logo and "Checking your session…" meanwhile. If LockGuard can't be reached, it shows "LockGuard is unreachable" under the logo with a Try again button. Both sit on a panel, like sign-in, so the logo's background blends in.
 - **Expiry:** any later 401 returns the user to sign-in with "Your session ended".
 - **Timeouts:** requests time out after 20 s.
 - **CSRF:** the CSRF cookie is fetched before the first state-changing request, and refreshed once on a 419.
@@ -135,7 +135,7 @@ All in `frontend/src/components`. Presentation only: no component calls the API 
 **Shell** (`src/app/`):
 - **Sidebar** (large screens): logo, grouped navigation, current page highlighted. It collapses to icons only; links keep their names, show labels on hover or focus, and the setting is remembered in this browser.
 - **Smaller screens:** the same navigation opens as a drawer from the header's menu button.
-- **Header:** where you are (group and page), the user's name and role, and the account menu (Sign out).
+- **Header:** where you are (group and page), the Eufy integration status, the user's name and role, and the account menu (Mobile view, Sign out).
 - **Keyboard and screen readers:** there's a skip link to the main content. Focus moves to the content after each navigation, and each page sets the browser tab title.
 
 **Navigation shows only screens the backend supports today, and only to users allowed to open them:**
@@ -158,6 +158,7 @@ A user who types the address of a page they can't use sees "Not available to you
 - **Navigation items from project.md 34.4 that have no backend yet:** access codes, schedules, trusted devices, location, security center, alerts, incidents, notifications, settings, help. They're added as their features are built.
 
 **Component gallery:** `/dev/components`, in development builds only.
+
 ## Dashboard
 
 The dashboard (project.md 34.5) reads `GET /api/v1/locks`, `GET /api/v1/dashboard` and `GET /api/v1/system/health`. It reloads every 30 seconds while the tab is visible, at once when the tab comes back, and on **Refresh**. If a reload fails, the last data stays on screen under a warning; if the first load fails, the page offers **Try again**.
@@ -268,11 +269,37 @@ The backend leaves out (returns null for) each section the user may not see, so 
 - **Phone width:** layout at 390 px is checked with headless Edge driven through the DevTools protocol, using a true 390 px viewport and checking that the page is no wider than the screen.
 - **Admin screen tests:** user list filters, suspend with a reason, revoke after the identity re-check, a cancelled re-check, own account, preview-gated saving of roles, giving and removing lock access, creating a user; lock list, registration, lock page diagnostics and settings, a resident's view, an unknown lock; properties; audit log filters, detail and export, a refused export, the permission guard; system health.
 - **Dashboard tests:** permission-filtered panels for a resident and an administrator, stale state, unreachable bridge, load failure and retry, and lock commands (stage-by-stage progress, unlock confirmation, identity re-check with a fresh key, refusal, final unknown outcome, same-key retry after no answer, disabled and hidden buttons).
-- **Mobile tests:** phone and desktop start pages, permission-filtered tabs, a refused tab by address, focus on tab change, More (account, links, desktop switch remembered, sign-out), the desktop menu's switch to mobile, and the mobile not-found page. Workflows: Home with lock cards, Locking until confirmed, unlock confirmation and cancel, an unknown outcome not sent again, the stale, unknown, unavailable and jammed states, hidden and disabled controls, alerts and the bell count; alert rules; lock controls and a lock that is not yours; Activity filters, paging and load failure; Devices; Notifications; signing out other sessions; two-step set-up through the identity check; Location without a location request; Help. axe runs on Home, lock controls, Activity and Account security.
+- **Mobile tests:** phone and desktop start pages, permission-filtered tabs, a refused tab by address, focus on tab change, More (account, links, desktop switch remembered, sign-out), the desktop menu's switch to mobile, and the mobile not-found page. Workflows: Home with lock cards, Locking until confirmed, unlock confirmation and cancel, an unknown outcome not sent again, the stale, unknown, unavailable and jammed states, hidden and disabled controls, alerts and the bell count; alert rules; lock controls and a lock that is not yours; Activity filters, paging and load failure; Devices; Notifications; signing out other sessions; two-step set-up through the identity check; Location without a location request; Help. axe runs on every mobile screen: Home, lock controls, Activity, Devices, Notifications, Account security, Location, Help and More.
 - **Lock access on the cards:** each lock in the API carries `your_access` (whether the signed-in user's own grant lets them command it now, and why not), worked out by the same rule as the command check. Lock and Unlock are disabled with that reason, for example for an administrator who can see every lock but has no grant. The backend still decides every command.
 - **End-to-end (UI checkpoint 8):** the real web app, real API, real queue worker and the real `EufyBridgeDriver` were run against a fake bridge that speaks the bridge's HTTP API, with a throwaway SQLite database, on separate ports (web 5182, API 8101, fake bridge 8790). Playwright drove 75 checks: Locking until confirmed, unlock with confirmation and identity check, not sent (Failed, lock stays Connected, full reason on the lock screen), ambiguous (no second send), never confirmed (Outcome unknown), stale state, bridge offline, a desktop command, guest, auditor and administrator access in the UI and by direct API calls, session expiry, and every mobile screen at 360 and 390 px and desktop screens at 768, 1024 and 1440 px without sideways scrolling. The harness is in `e2e/` (see its README). It loads a Playwright install from outside the project, because adding Playwright as a dependency needs approval.
 - **Table overflow:** screen-reader-only text inside a scrolling table is absolutely positioned; without a positioned ancestor it escaped the scroll area and widened the whole page (the audit log at 1024 px). `DataTable` and `Tabs` scroll areas are `relative` for that reason.
- sign-in, MFA, session expiry, unreachable API, permission-filtered navigation, sidebar collapse, drawer, sign-out and the API client (CSRF, retry, timeout, 401) run against a mocked `fetch`.
+- **Shell tests:** sign-in, MFA, session expiry, unreachable API, permission-filtered navigation, sidebar collapse, drawer, sign-out and the API client (CSRF, retry, timeout, 401) run against a mocked `fetch`.
+- **axe on desktop screens:** sign-in, the shell, dashboard, users, a user page, add user, roles, locks, a lock page, properties, audit log and system health.
+## Final review (UI checkpoint 9) and remaining limitations
+
+Checked on 2026-10-21 against project.md 34.14 and 34.15:
+- **Logo:** the approved logo, unaltered, on sign-in, the session check and "unreachable" screens, the desktop sidebar, the mobile header, the favicon and the PWA icons. The full logo is always on `panel` or lighter.
+- **Visual consistency:** no color outside `tokens.css` (no hex values or Tailwind palette colors in components). Every page sets its tab title, including mobile Home, which before this review kept the previous screen's title.
+- **Accessibility:** axe (WCAG 2.0–2.2 A and AA) on every screen above, token contrast pairs checked, reduced motion honoured globally, visible focus, skip links, and focus moved to the content on navigation.
+- **Navigation and actions:** every sidebar, bottom-bar, More and in-page link leads to a route that exists. The only buttons without a handler are samples in the development-only gallery. The access matrix and the checkpoint 8 end-to-end run cover each role's routes and actions.
+- **Placeholders:** no TODO, sample or made-up data in the application. Screens for features without a backend say so in plain words; they are listed below.
+
+**Not built, because the backend has no support yet** (each screen that touches one says so):
+- Access codes and access schedules as their own screens; time-limited lock access is on each user's page. The T85D0 has no keypad-code commands.
+- Trusted-device enrollment and revocation; Devices points to signing out other sessions instead.
+- Location, geofence and proximity. Nothing is collected; the mobile screen reads only the browser's permission state.
+- Security Center incidents and alert acknowledgement, stored notifications with read status, push notifications, and a desktop notification center. Mobile alerts are worked out live from lock and integration state.
+- Global search, editable settings (they live in `.env`), role editing, lockdown, and dashboard widget customization.
+- Self-service password recovery; the sign-in page says to ask an administrator.
+
+**Other limitations:**
+- No transparent or vector logo exists; the blend mode stands in (see Branding assets).
+- No QR code for two-step set-up, because a QR library needs approval; the `otpauth://` link opens the authenticator on a phone.
+- The activity feed's `before` paging can skip events that share the exact millisecond at a page boundary.
+- The end-to-end harness uses a Playwright install from outside the project, because adding Playwright as a dev dependency needs approval.
+- Lock commands validate their body before the permission check (the one exception in the access matrix); the errors only describe format.
+- One unexplained Vitest failure was seen on a cold first run during this review; the next five runs passed 210/210.
+
 ## Development
 
 ```bash

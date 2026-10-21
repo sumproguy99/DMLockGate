@@ -1,10 +1,11 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router'
 import { AppShell } from './app/AppShell'
 import { NotFound, RequireAuth, RequirePermission } from './app/guards'
 import { DIAGNOSTICS_PERMISSIONS, USER_ADMIN_PERMISSIONS } from './app/navigation'
 import { prefersMobile } from './app/view-preference'
 import { useAuth } from './auth/auth-context'
+import { BrandLogo } from './components/brand/BrandLogo'
 import { Banner } from './components/ui/Banner'
 import { Button } from './components/ui/Button'
 import { LoadingState } from './components/ui/Spinner'
@@ -45,25 +46,38 @@ function DesktopShell() {
   return <AppShell />
 }
 
+/** The logo on a panel above a start-up message, before any shell renders. */
+function BrandedScreen({ children }: { children: ReactNode }) {
+  return (
+    <main className="flex min-h-dvh items-center justify-center px-4 py-10">
+      {/* On panel, not bg: the logo's own background blends away only on panel or lighter. */}
+      <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-lg border border-border bg-panel p-6 shadow-panel">
+        <BrandLogo className="size-28" />
+        {children}
+      </div>
+    </main>
+  )
+}
+
 /** Every route. Separate from App so tests can render it inside a MemoryRouter. */
 export function AppRoutes() {
   const { state, retry } = useAuth()
 
   if (state.status === 'loading') {
     return (
-      <div className="flex min-h-dvh items-center justify-center">
+      <BrandedScreen>
         <LoadingState label="Checking your session…" />
-      </div>
+      </BrandedScreen>
     )
   }
 
   if (state.status === 'unreachable') {
     return (
-      <main className="flex min-h-dvh items-center justify-center px-4">
+      <BrandedScreen>
         <Banner
           tone="danger"
           title="LockGuard is unreachable"
-          className="w-full max-w-md"
+          className="w-full"
           action={
             <Button variant="secondary" size="sm" onClick={retry}>
               Try again
@@ -72,7 +86,7 @@ export function AppRoutes() {
         >
           {state.message}
         </Banner>
-      </main>
+      </BrandedScreen>
     )
   }
 

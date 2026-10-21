@@ -119,6 +119,7 @@ describe('mobile Home', () => {
     expect(within(card).getByRole('link', { name: 'Details for Front Door' })).toHaveAttribute('href', '/m/locks/1')
     expect(screen.getByRole('heading', { level: 2, name: 'Connection' }).closest('section')).toHaveTextContent('Eufy connected')
     expect(screen.getByRole('link', { name: 'Notifications, nothing needs attention' })).toBeInTheDocument()
+    expect(document.title).toBe('Home · DM LockGuard')
     await expectNoAxeViolations(container)
   })
 
@@ -336,21 +337,23 @@ describe('mobile Activity', () => {
 describe('mobile Devices and Notifications', () => {
   it('lists the locks with links to their controls and explains trusted phones', async () => {
     mockFetch(session(resident))
-    renderAt('/m/devices')
+    const { container } = renderAt('/m/devices')
 
     expect(await screen.findByRole('link', { name: /Front Door/ })).toHaveAttribute('href', '/m/locks/1')
     expect(screen.getByRole('heading', { level: 2, name: 'Trusted phones' }).closest('section')).toHaveTextContent(
       'does not register trusted phones yet',
     )
+    await expectNoAxeViolations(container)
   })
 
   it('lists every alert with its severity, or says nothing needs attention', async () => {
     mockFetch(session(resident, { locks: [lock({ connection_status: 'disconnected' })] }))
-    renderAt('/m/notifications')
+    const { container } = renderAt('/m/notifications')
 
     expect(await screen.findByText('Front Door is offline')).toBeInTheDocument()
     expect(screen.getByText('Critical')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Open the lock' })).toHaveAttribute('href', '/m/locks/1')
+    await expectNoAxeViolations(container)
   })
 
   it('says nothing needs attention when all is well', async () => {
@@ -435,21 +438,23 @@ describe('mobile Location, Help and More', () => {
     const getCurrentPosition = vi.fn()
     vi.stubGlobal('navigator', { ...navigator, geolocation: { getCurrentPosition, watchPosition: getCurrentPosition } })
     mockFetch(session(resident))
-    renderAt('/m/location')
+    const { container } = renderAt('/m/location')
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Location and proximity' })).toBeInTheDocument()
     expect(screen.getByText('This browser cannot say')).toBeInTheDocument()
     expect(screen.getByText('Why automatic unlocking is not available')).toBeInTheDocument()
     expect(getCurrentPosition).not.toHaveBeenCalled()
+    await expectNoAxeViolations(container)
   })
 
   it('opens help topics', async () => {
     mockFetch(session(resident))
-    renderAt('/m/help')
+    const { container } = renderAt('/m/help')
     const user = userEvent.setup()
 
     await user.click(await screen.findByText('A command says "Outcome unknown"'))
     expect(screen.getByText(/LockGuard never repeats a command by itself/)).toBeVisible()
+    await expectNoAxeViolations(container)
   })
 
   it('links to every other mobile screen from More', async () => {

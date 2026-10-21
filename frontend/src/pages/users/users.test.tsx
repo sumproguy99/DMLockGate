@@ -287,10 +287,11 @@ describe('adding a user', () => {
     const fetch = adminSession({
       'POST /api/v1/users': () => json(201, { data: managed() }),
     })
-    renderAt('/users/new')
+    const { container } = renderAt('/users/new')
     const user = userEvent.setup()
 
     await screen.findByRole('checkbox', { name: /Resident/ })
+    await expectNoAxeViolations(container)
     await user.type(screen.getByRole('textbox', { name: /Name/ }), 'Rhea Resident')
     await user.type(screen.getByRole('textbox', { name: /Email/ }), 'rhea@example.test')
     await user.type(screen.getByLabelText(/^First password/), 'correct-horse-42')

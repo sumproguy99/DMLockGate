@@ -454,3 +454,15 @@ What needs to be done.
 Commit when Dustin asks. UI checkpoint 9: final review (logo usage, visual consistency, accessibility, every navigation and action, placeholders, documented limitations).
 What is important or stands out that needs attention or needs to be address.
 The E2E harness is in e2e/ (README has the run steps). It loads a Playwright install that is not a project dependency; adding Playwright as a dev dependency needs approval. Lock commands still validate their body before the permission decision (documented in the matrix as the one exception; the errors are only about format). The sync-locks schedule failed earlier on 2026-10-18 at 13:35 in laravel.log (before this session's bridge fix); not investigated in this checkpoint.
+
+---
+Timestamp: 2026-10-21 ET
+Percent complete: 89%
+Description of what you are working on.
+UI CHECKPOINT 9: final review (project.md 34.14, 34.15).
+What you have done so far:
+Reviewed logo usage, visual consistency, accessibility, navigation and actions, and placeholders. Logo: the approved logo is used on sign-in, sidebar, mobile header, favicon and PWA icons, but the session-check and "LockGuard is unreachable" screens had none. Both now show the full logo on a panel, as sign-in does, so its background blends in. Checked by screenshot at 390 and 1280 px (temporary Vite on 5181 with a dead API, now stopped; no sideways scroll). Consistency: no colors outside tokens.css. Mobile Home never set the tab title and kept the previous screen's ("Activity · DM LockGuard"); it now sets "Home · DM LockGuard", with a test. Accessibility: axe added to mobile Devices, Notifications, Location and Help, and desktop Add user and Properties; no violations, so axe now runs on every screen. Navigation: every nav and in-page link resolves to a route; no placeholder text or sample data in the app. docs/UI_DESIGN.md: a "Final review and remaining limitations" section listing everything not built for lack of a backend, plus a broken bullet fixed and the header and start-up descriptions updated. Tests: frontend 210/210, type-check and lint clean. One cold first test run had a single failure I could not reproduce in five more runs. No lock command sent; real servers and database not touched.
+What needs to be done.
+Commit when Dustin asks. The UI checkpoints are complete; what remains is backend features the UI is waiting on (trusted devices, location and proximity, stored notifications and alerts, Security Center incidents, access codes and schedules, settings), each with its screens.
+What is important or stands out that needs attention or needs to be address.
+No transparent or SVG logo exists. Adding Playwright and a QR library still need approval. The sync-locks schedule failure of 2026-10-18 13:35 in laravel.log is still not investigated. Watch for the flaky frontend test; the failing test's name was not captured.

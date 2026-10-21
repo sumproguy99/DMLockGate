@@ -182,6 +182,7 @@ describe('signing in', () => {
     renderApp('/')
 
     expect(await screen.findByText('LockGuard is unreachable')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'DM Lock' })).toBeInTheDocument()
     up = true
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument()

@@ -210,10 +210,11 @@ describe('properties', () => {
     const fetch = session(admin, {
       'POST /api/v1/properties': () => json(201, { data: { id: 2, name: 'Cabin', address: null, timezone: 'UTC', locks_count: 0 } }),
     })
-    renderAt('/properties')
+    const { container } = renderAt('/properties')
     const user = userEvent.setup()
 
     expect(await screen.findByText('Home')).toBeInTheDocument()
+    await expectNoAxeViolations(container)
     await user.type(screen.getByRole('textbox', { name: /Name/ }), 'Cabin')
     await user.click(screen.getByRole('button', { name: 'Add property' }))
 
