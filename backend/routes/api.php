@@ -8,6 +8,10 @@ use App\Http\Controllers\Api\V1\Auth\MfaChallengeController;
 use App\Http\Controllers\Api\V1\Auth\MfaController;
 use App\Http\Controllers\Api\V1\Auth\OwnSessionController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
+use App\Http\Controllers\Api\V1\Location\LocationMapController;
+use App\Http\Controllers\Api\V1\Location\LocationRequestController;
+use App\Http\Controllers\Api\V1\Location\LockRequestLocationController;
+use App\Http\Controllers\Api\V1\Location\OwnLocationController;
 use App\Http\Controllers\Api\V1\Locks\ActivityController;
 use App\Http\Controllers\Api\V1\Locks\LockAccessController;
 use App\Http\Controllers\Api\V1\Locks\LockCommandController;
@@ -81,6 +85,16 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('locks/{lock}/commands', [LockCommandController::class, 'store'])->middleware('throttle:lock-commands')->name('locks.commands.store');
         Route::get('lock-requests/{accessRequest}', [LockCommandController::class, 'show'])->name('lock-requests.show');
         Route::get('properties', [PropertyController::class, 'index'])->name('properties.index');
+
+        // Location. Users agree at sign-in; phones send their position with lock requests and answer
+        // administrators' location requests while LockGuard is open. Map and requests need location.view_history.
+        Route::post('lock-requests/{accessRequest}/location', [LockRequestLocationController::class, 'store'])->middleware('throttle:30,1')->name('lock-requests.location.store');
+        Route::get('location/mine', OwnLocationController::class)->name('location.mine');
+        Route::get('location/map', LocationMapController::class)->name('location.map');
+        Route::get('location/requests/pending', [LocationRequestController::class, 'pending'])->name('location.requests.pending');
+        Route::get('location/requests/{locationRequest}', [LocationRequestController::class, 'show'])->whereUuid('locationRequest')->name('location.requests.show');
+        Route::post('location/requests/{locationRequest}/respond', [LocationRequestController::class, 'respond'])->whereUuid('locationRequest')->middleware('throttle:30,1')->name('location.requests.respond');
+        Route::post('location/requests', [LocationRequestController::class, 'store'])->middleware(['step-up', 'throttle:20,1'])->name('location.requests.store');
 
         Route::middleware('step-up')->group(function (): void {
             Route::post('properties', [PropertyController::class, 'store'])->name('properties.store');

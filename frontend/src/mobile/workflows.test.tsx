@@ -85,7 +85,22 @@ function session(user: CurrentUser, { locks = [lock()], health = quietHealth }: 
     ...signedIn(user),
     'GET /api/v1/locks': () => json(200, { data: locks }),
     'GET /api/v1/system/health': () => json(200, { data: health }),
+    'GET /api/v1/location/requests/pending': () => json(200, { data: [] }),
+    'GET /api/v1/location/mine': () => json(200, { data: { notice_version: '2026-10-21', retention_days: 30, shared: [] } }),
   }
+}
+
+/** The browser's Geolocation API, answering with a position or refusing as a blocked permission does. */
+function stubGeolocation(answer: 'position' | 'denied') {
+  const getCurrentPosition = vi.fn((ok: PositionCallback, fail?: PositionErrorCallback | null) => {
+    if (answer === 'position') {
+      ok({ coords: { latitude: 35.2271, longitude: -80.8431, accuracy: 12 }, timestamp: Date.now() } as GeolocationPosition)
+    } else {
+      fail?.({ code: 1, PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3, message: 'denied' } as GeolocationPositionError)
+    }
+  })
+  vi.stubGlobal('navigator', { ...navigator, geolocation: { getCurrentPosition, watchPosition: vi.fn() } })
+  return getCurrentPosition
 }
 
 const calls = (fetch: ReturnType<typeof mockFetch>, method: string, path: string) =>
@@ -434,14 +449,29 @@ describe('mobile Account security', () => {
 })
 
 describe('mobile Location, Help and More', () => {
-  it('explains that location and proximity are not available, without asking for a location', async () => {
-    const getCurrentPosition = vi.fn()
-    vi.stubGlobal('navigator', { ...navigator, geolocation: { getCurrentPosition, watchPosition: getCurrentPosition } })
-    mockFetch(session(resident))
+  it('shows what is recorded and every time the location was shared, without asking for a location', async () => {
+    const getCurrentPosition = stubGeolocation('position')
+    mockFetch({
+      ...session(resident),
+      'GET /api/v1/location/mine': () =>
+        json(200, {
+          data: {
+            notice_version: '2026-10-21',
+            retention_days: 30,
+            shared: [
+              { at: minutesAgo(5), kind: 'location_request', accuracy_meters: 18, lock: null, action: null, requested_by: 'Dana Admin' },
+              { at: minutesAgo(60), kind: 'lock_request', accuracy_meters: 9, lock: 'Front Door', action: 'unlock', requested_by: null },
+            ],
+          },
+        }),
+    })
     const { container } = renderAt('/m/location')
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Location and proximity' })).toBeInTheDocument()
     expect(screen.getByText('This browser cannot say')).toBeInTheDocument()
+    expect(screen.getByText('On, as agreed when you signed in')).toBeInTheDocument()
+    expect(await screen.findByText('Dana Admin asked for your location')).toBeInTheDocument()
+    expect(screen.getByText('Unlock request for Front Door')).toBeInTheDocument()
     expect(screen.getByText('Why automatic unlocking is not available')).toBeInTheDocument()
     expect(getCurrentPosition).not.toHaveBeenCalled()
     await expectNoAxeViolations(container)
@@ -463,5 +493,123 @@ describe('mobile Location, Help and More', () => {
 
     const nav = await screen.findByRole('navigation', { name: 'More' })
     expect(within(nav).getAllByRole('link').map((l) => l.getAttribute('href'))).toEqual(['/m/notifications', '/m/account', '/m/location', '/m/help'])
+  })
+})
+
+describe('location sharing from the phone', () => {
+  it('sends where the phone was with a lock request, after the command and without delaying it', async () => {
+    stubGeolocation('position')
+    const fetch = mockFetch({
+      ...session(resident),
+      'POST /api/v1/locks/1/commands': () => json(202, { data: lockRequest() }),
+      'GET /api/v1/lock-requests/req-1': () => json(200, { data: lockRequest({ status: 'confirmed_success', is_final: true }) }),
+      'POST /api/v1/lock-requests/req-1/location': () => json(201, { data: { recorded: true } }),
+    })
+    renderAt('/m')
+    const user = userEvent.setup()
+
+    await user.click(within(await lockCard()).getByRole('button', { name: 'Lock Front Door' }))
+
+    await waitFor(() => expect(calls(fetch, 'POST', '/api/v1/lock-requests/req-1/location')).toHaveLength(1))
+    const order = fetch.mock.calls.map((call) => String(call[0]))
+    expect(order.indexOf('/api/v1/locks/1/commands')).toBeLessThan(order.indexOf('/api/v1/lock-requests/req-1/location'))
+    expect(JSON.parse(String(calls(fetch, 'POST', '/api/v1/lock-requests/req-1/location')[0][1]?.body))).toMatchObject({
+      latitude: 35.2271,
+      longitude: -80.8431,
+      accuracy: 12,
+    })
+  })
+
+  it('pins a denied request too', async () => {
+    stubGeolocation('position')
+    const fetch = mockFetch({
+      ...session(resident),
+      'POST /api/v1/locks/1/commands': () =>
+        json(403, { error: { code: 'lock_access_expired', message: 'Your access has ended.', details: { request_id: 'req-9' } } }),
+      'POST /api/v1/lock-requests/req-9/location': () => json(201, { data: { recorded: true } }),
+    })
+    renderAt('/m')
+    const user = userEvent.setup()
+
+    await user.click(within(await lockCard()).getByRole('button', { name: 'Lock Front Door' }))
+
+    expect(await screen.findByText('Your access has ended.')).toBeInTheDocument()
+    await waitFor(() => expect(calls(fetch, 'POST', '/api/v1/lock-requests/req-9/location')).toHaveLength(1))
+  })
+
+  it('still sends the command when the browser blocks location', async () => {
+    stubGeolocation('denied')
+    const fetch = mockFetch({
+      ...session(resident),
+      'POST /api/v1/locks/1/commands': () => json(202, { data: lockRequest() }),
+      'GET /api/v1/lock-requests/req-1': () => json(200, { data: lockRequest({ status: 'confirmed_success', is_final: true }) }),
+    })
+    renderAt('/m')
+    const user = userEvent.setup()
+
+    await user.click(within(await lockCard()).getByRole('button', { name: 'Lock Front Door' }))
+
+    expect(await screen.findByText('Confirmed')).toBeInTheDocument()
+    expect(calls(fetch, 'POST', '/api/v1/locks/1/commands')).toHaveLength(1)
+    expect(fetch.mock.calls.some((call) => String(call[0]).endsWith('/location'))).toBe(false)
+  })
+
+  it("answers an administrator's location request silently while the app is open", async () => {
+    stubGeolocation('position')
+    let pending = [{ id: 'loc-1', expires_at: minutesAgo(-2) }]
+    const fetch = mockFetch({
+      ...session(resident),
+      'GET /api/v1/location/requests/pending': () => {
+        const open = pending
+        pending = []
+        return json(200, { data: open })
+      },
+      'POST /api/v1/location/requests/loc-1/respond': () => json(200, { data: { status: 'fulfilled' } }),
+    })
+    renderAt('/m')
+
+    await waitFor(() => expect(calls(fetch, 'POST', '/api/v1/location/requests/loc-1/respond')).toHaveLength(1))
+    expect(JSON.parse(String(calls(fetch, 'POST', '/api/v1/location/requests/loc-1/respond')[0][1]?.body))).toMatchObject({ latitude: 35.2271, accuracy: 12 })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  })
+
+  it('answers that it cannot share from a plain-HTTP address, and says so on the Location screen', async () => {
+    const getCurrentPosition = stubGeolocation('position')
+    vi.stubGlobal('isSecureContext', false)
+    let pending = [{ id: 'loc-3', expires_at: minutesAgo(-2) }]
+    const fetch = mockFetch({
+      ...session(resident),
+      'GET /api/v1/location/requests/pending': () => {
+        const open = pending
+        pending = []
+        return json(200, { data: open })
+      },
+      'POST /api/v1/location/requests/loc-3/respond': () => json(200, { data: { status: 'unavailable' } }),
+    })
+    renderAt('/m/location')
+
+    expect(await screen.findByText('This address cannot share your location')).toBeInTheDocument()
+    await waitFor(() => expect(calls(fetch, 'POST', '/api/v1/location/requests/loc-3/respond')).toHaveLength(1))
+    expect(JSON.parse(String(calls(fetch, 'POST', '/api/v1/location/requests/loc-3/respond')[0][1]?.body))).toEqual({ unavailable: 'unsupported' })
+    expect(getCurrentPosition).not.toHaveBeenCalled()
+  })
+
+  it('answers that it cannot when the browser blocks location', async () => {
+    stubGeolocation('denied')
+    let pending = [{ id: 'loc-2', expires_at: minutesAgo(-2) }]
+    const fetch = mockFetch({
+      ...session(resident),
+      'GET /api/v1/location/requests/pending': () => {
+        const open = pending
+        pending = []
+        return json(200, { data: open })
+      },
+      'POST /api/v1/location/requests/loc-2/respond': () => json(200, { data: { status: 'unavailable' } }),
+    })
+    renderAt('/m')
+
+    await waitFor(() => expect(calls(fetch, 'POST', '/api/v1/location/requests/loc-2/respond')).toHaveLength(1))
+    expect(JSON.parse(String(calls(fetch, 'POST', '/api/v1/location/requests/loc-2/respond')[0][1]?.body))).toEqual({ unavailable: 'permission_denied' })
   })
 })

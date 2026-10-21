@@ -142,6 +142,7 @@ All in `frontend/src/components`. Presentation only: no component calls the API 
 
 | Item | Shown with any of |
 |---|---|
+| Location map | `location.view_history` |
 | Dashboard | every signed-in user |
 | Users, Roles and permissions | `users.*` (the backend's user-management view permissions) |
 | Properties | `admin.integration_settings` |
@@ -257,7 +258,7 @@ The backend leaves out (returns null for) each section the user may not see, so 
 - **Devices:** the locks, each linking to its controls. **Trusted phones** says LockGuard does not register them yet and points to signing out other sessions instead.
 - **Notifications:** alerts worked out from the locks and the integration (`lib/alerts.ts`): integration offline, sign-in needed or degraded; a lock jammed, offline, stale or unknown; battery at 25% or less (critical at 10%). Severity, time, description and a link to the lock. There is no stored history or read status yet, and alerts cannot be turned off; the screen says both.
 - **Account security:** account details and roles; two-step verification set-up (after the identity check: an **Open in authenticator app** link with the `otpauth://` address and the key to type, a code, then the recovery codes shown once) and removal with a warning; **Where you are signed in** (`GET /auth/sessions`: browser and system, address, last activity, "This device") and **Sign out everywhere else** after confirming (`DELETE /auth/sessions/others`, audited as `auth.other_sessions_signed_out`). No QR code: a phone opens the link directly, and adding a QR library needs approval.
-- **Location and proximity:** the browser's location permission, read through the Permissions API without ever asking for a location, and a plain statement that LockGuard collects no locations, proximity is off and near-door detection does not exist, with why automatic unlocking is unavailable.
+- **Location and proximity:** the browser's location permission (read through the Permissions API without asking for a location), that sharing is on as agreed at sign-in, what LockGuard records and for how long, **When your location was shared** (`GET /location/mine`: each lock request with a position and each administrator's request, with who asked), and why automatic unlocking is unavailable. Proximity is off and near-door detection does not exist.
 - **Help and troubleshooting:** expandable answers for an unavailable lock, a degraded integration, unknown or stale state, an unknown or failed command, a denied request, location, and an ended session.
 
 ## Testing and accessibility checks
@@ -275,6 +276,25 @@ The backend leaves out (returns null for) each section the user may not see, so 
 - **Table overflow:** screen-reader-only text inside a scrolling table is absolutely positioned; without a positioned ancestor it escaped the scroll area and widened the whole page (the audit log at 1024 px). `DataTable` and `Tabs` scroll areas are `relative` for that reason.
 - **Shell tests:** sign-in, MFA, session expiry, unreachable API, permission-filtered navigation, sidebar collapse, drawer, sign-out and the API client (CSRF, retry, timeout, 401) run against a mocked `fetch`.
 - **axe on desktop screens:** sign-in, the shell, dashboard, users, a user page, add user, roles, locks, a lock page, properties, audit log and system health.
+## Location map and location requests
+
+Decided by the operator on 2026-10-21: **signing in is agreeing to share location**, and administrators' location requests are answered without prompting the person. The sign-in screen says so next to the Sign in button, and each sign-in records the notice version (`lockguard.location.notice_version`) in the audit log. Project.md section 20's "user-visible location status" is met by the person's own Location screen, which lists every time their location was shared and who asked.
+
+**What a phone sends:**
+- **With each Lock or Unlock from the mobile app:** `useLockCommand(..., { sendLocation: true })` asks the browser for its position at the moment of the press, sends the command without waiting, then posts the position to `POST /lock-requests/{id}/location`. A denied request carries its `request_id`, so it gets a pin too. If the browser blocks location or has no position, the command goes ahead with no pin. The desktop app never sends a location.
+- **When an administrator asks:** `useLocationResponder` in the mobile shell checks `GET /location/requests/pending` on start, every 10 seconds while the app is visible, and when it becomes visible again. It answers with the position, or with why there is none (`permission_denied`, `position_unavailable`, `timeout`, `unsupported`). Nothing is shown on the phone. A closed or hidden browser cannot answer, and the request expires after 2 minutes (`LOCKGUARD_LOCATION_REQUEST_TTL_SECONDS`).
+
+**HTTPS is required.** Browsers give a position only to pages opened over HTTPS (or on localhost). Opened at a plain-HTTP address such as the LAN address, the phone answers `unsupported`, lock requests get no pin, and the Location screen says the address cannot share location.
+
+**Location map** (`/location`, desktop, Security group; needs `location.view_history`, which only Super Administrator holds by default):
+- An OpenStreetMap map (Leaflet 1.9.4, loaded only with this page) with a pin per record. Pins carry a mark as well as a color: ✓ succeeded, ✕ failed, ! denied, ? outcome unknown, … in progress, ● location shared on request. Hovering over or tabbing to a pin shows who, the date and time, the result, and the accuracy. Each pin is named for screen readers, and the same records are listed in a table under the map.
+- Period: last 24 hours, 7 days or 30 days. Every view is audited (`location.history_viewed`).
+- **Request location:** choose a person (active users) and send, after the identity re-check. The page follows the request every 3 seconds and says when the location arrives (and centers on it), when the phone answered without one, or when it expired unanswered. Requests are audited (`location.requested`), and so are answers (`location.shared`).
+
+**Kept and checked by the backend:** coordinates on the globe, accuracy above 0 and at most 10 km, a capture time no more than 2 minutes old; a lock request's location only from its requester within 5 minutes; an answer only from the person asked, once, while the request is open. Positions come from the browser and are not proof of anything; they never affect a lock decision. `lockguard:prune-locations` runs daily and deletes location reports and requests older than `LOCKGUARD_LOCATION_RETENTION_DAYS` (30 by default). The lock requests themselves stay in the activity and audit logs.
+
+**Changing the notice:** edit the text in `LoginPage.tsx` and raise `notice_version` in `config/lockguard.php` together, so the audit log shows which wording each sign-in agreed to.
+
 ## Final review (UI checkpoint 9) and remaining limitations
 
 Checked on 2026-10-21 against project.md 34.14 and 34.15:
@@ -287,7 +307,7 @@ Checked on 2026-10-21 against project.md 34.14 and 34.15:
 **Not built, because the backend has no support yet** (each screen that touches one says so):
 - Access codes and access schedules as their own screens; time-limited lock access is on each user's page. The T85D0 has no keypad-code commands.
 - Trusted-device enrollment and revocation; Devices points to signing out other sessions instead.
-- Location, geofence and proximity. Nothing is collected; the mobile screen reads only the browser's permission state.
+- Geofences and proximity detection. Locations are collected only for the location map (see Location map and location requests).
 - Security Center incidents and alert acknowledgement, stored notifications with read status, push notifications, and a desktop notification center. Mobile alerts are worked out live from lock and integration state.
 - Global search, editable settings (they live in `.env`), role editing, lockdown, and dashboard widget customization.
 - Self-service password recovery; the sign-in page says to ask an administrator.

@@ -55,6 +55,14 @@ class SessionControllerTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'auth.login', 'outcome' => 'success', 'actor_user_id' => $user->id]);
     }
 
+    public function test_signing_in_records_the_location_notice_the_user_agreed_to(): void
+    {
+        $this->login($this->resident())->assertOk();
+
+        $audit = AuditLog::query()->where('action', 'auth.login')->where('outcome', 'success')->sole();
+        $this->assertSame(config('lockguard.location.notice_version'), $audit->metadata['location_notice']);
+    }
+
     public function test_wrong_password_returns_422_and_is_audited_without_the_password(): void
     {
         $user = $this->resident();

@@ -49,7 +49,9 @@ const topics: Array<{ title: string; steps: string[] }> = [
   {
     title: 'Location or proximity is unavailable',
     steps: [
-      'LockGuard does not use your location yet, so there is nothing to allow or fix. Every unlock is one you ask for.',
+      'LockGuard records where your phone is when you lock or unlock, and shares it when an administrator asks while the app is open. Your browser has to allow location for that.',
+      'If location is blocked, allow it for this site in your browser settings. Locking and unlocking work either way.',
+      'Unlocking automatically as you arrive does not exist yet. Every unlock is one you ask for.',
     ],
   },
   {

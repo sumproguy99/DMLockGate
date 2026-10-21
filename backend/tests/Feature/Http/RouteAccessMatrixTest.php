@@ -10,6 +10,7 @@ use App\Enums\LockAction;
 use App\Enums\RoleTemplate;
 use App\Models\AccessRequest;
 use App\Models\AuditLog;
+use App\Models\LocationRequest;
 use App\Models\Lock;
 use App\Models\Property;
 use App\Models\Role;
@@ -84,6 +85,15 @@ class RouteAccessMatrixTest extends TestCase
         'api.v1.locks.update' => ['super_administrator'],
         'api.v1.locks.access.update' => ['super_administrator', 'property_manager'],
         'api.v1.locks.access.destroy' => self::USER_ADMINS,
+        // A person's own location: attached to their own lock request, or answering a request addressed to them.
+        'api.v1.lock-requests.location.store' => self::ALL,
+        'api.v1.location.mine' => self::ALL,
+        'api.v1.location.requests.pending' => self::ALL,
+        'api.v1.location.requests.respond' => self::ALL,
+        // Other people's locations: location.view_history only.
+        'api.v1.location.map' => ['super_administrator'],
+        'api.v1.location.requests.show' => ['super_administrator'],
+        'api.v1.location.requests.store' => ['super_administrator'],
     ];
 
     /**
@@ -139,15 +149,17 @@ class RouteAccessMatrixTest extends TestCase
                     'channel' => AccessChannel::Remote, 'idempotency_key' => Str::random(16), 'status' => AccessRequestStatus::ConfirmedSuccess,
                     'requested_at' => now(), 'expires_at' => now()->addMinute(),
                 ]);
+                // Asked by someone else, addressed to the user under test.
+                $locationRequest = LocationRequest::factory()->create(['requested_by' => $target->id, 'target_user_id' => $user->id]);
                 $uri = '/'.str_replace(
-                    ['{lock}', '{user}', '{accessRequest}', '{eventId}'],
-                    [$lock->id, $target->id, $request->public_id, $eventId],
+                    ['{lock}', '{user}', '{accessRequest}', '{eventId}', '{locationRequest}'],
+                    [$lock->id, $target->id, $request->public_id, $eventId, $locationRequest->public_id],
                     $route->uri(),
                 );
 
                 $status = $this->actingAs($user)
                     ->withSession([CompleteLogin::CONFIRMED_AT_KEY => now()->getTimestamp()])
-                    ->json($method, $uri, $this->body($name, $property))
+                    ->json($method, $uri, $this->body($name, $property, $target))
                     ->getStatusCode();
                 $this->flushSession();
                 app('auth')->forgetGuards();
@@ -189,8 +201,10 @@ class RouteAccessMatrixTest extends TestCase
      *
      * @return array<string, mixed>
      */
-    private function body(string $name, Property $property): array
+    private function body(string $name, Property $property, User $target): array
     {
+        $fix = ['latitude' => 35.0, 'longitude' => -80.0, 'accuracy' => 12, 'captured_at' => now()->toIso8601String()];
+
         return match ($name) {
             'api.v1.auth.confirm' => ['password' => 'password'],
             'api.v1.auth.mfa.confirm' => ['code' => '000000'],
@@ -204,6 +218,8 @@ class RouteAccessMatrixTest extends TestCase
             'api.v1.properties.store' => ['name' => 'Another Home'],
             'api.v1.locks.store' => ['property_id' => $property->id, 'name' => 'Side Door', 'external_id' => 'MATRIX'.Str::random(8)],
             'api.v1.locks.update' => ['name' => 'Front Door'],
+            'api.v1.lock-requests.location.store', 'api.v1.location.requests.respond' => $fix,
+            'api.v1.location.requests.store' => ['user_id' => $target->id],
             default => [],
         };
     }

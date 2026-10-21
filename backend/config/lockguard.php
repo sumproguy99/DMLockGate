@@ -67,4 +67,31 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Location
+    |--------------------------------------------------------------------------
+    |
+    | notice_version: the location notice shown on the sign-in screen. Signing in is agreeing to it;
+    | each sign-in records this version in the audit log. Change it when the notice text changes.
+    |
+    | retention_days: location reports and requests older than this are deleted daily.
+    |
+    | request_ttl_seconds: how long an administrator's location request waits for the phone. A phone
+    | browser answers only while LockGuard is open there.
+    |
+    | max_fix_age_seconds: a reported position older than this, or this far in the future, is refused.
+    |
+    | lock_request_window_seconds: how long after a lock request its location may still be attached.
+    |
+    */
+
+    'location' => [
+        'notice_version' => '2026-10-21',
+        'retention_days' => (int) env('LOCKGUARD_LOCATION_RETENTION_DAYS', 30),
+        'request_ttl_seconds' => (int) env('LOCKGUARD_LOCATION_REQUEST_TTL_SECONDS', 120),
+        'max_fix_age_seconds' => 120,
+        'lock_request_window_seconds' => 300,
+    ],
+
 ];

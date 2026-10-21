@@ -9,13 +9,16 @@ export class ApiError extends Error {
   readonly code: string
   /** Validation messages by field, for 422 responses. */
   readonly fields: Record<string, string[]>
+  /** Extra facts about the error, such as the request_id of a denied lock request. */
+  readonly details: Record<string, unknown>
 
-  constructor(status: number, code: string, message: string, fields: Record<string, string[]> = {}) {
+  constructor(status: number, code: string, message: string, fields: Record<string, string[]> = {}, details: Record<string, unknown> = {}) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.code = code
     this.fields = fields
+    this.details = details
   }
 
   /** The first validation message for a field, if any. */
@@ -101,7 +104,7 @@ async function send(path: string, { method = 'GET', body, signal }: RequestOptio
 
 async function toError(response: Response): Promise<ApiError> {
   const payload = (await response.json().catch(() => null)) as {
-    error?: { code?: string; message?: string; fields?: Record<string, string[]> }
+    error?: { code?: string; message?: string; fields?: Record<string, string[]>; details?: Record<string, unknown> }
   } | null
 
   return new ApiError(
@@ -109,6 +112,7 @@ async function toError(response: Response): Promise<ApiError> {
     payload?.error?.code ?? 'http_error',
     payload?.error?.message ?? 'The request could not be completed.',
     payload?.error?.fields ?? {},
+    payload?.error?.details ?? {},
   )
 }
 

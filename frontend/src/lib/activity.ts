@@ -28,6 +28,10 @@ const auditTitles: Record<string, Partial<Record<AuditOutcome, string>> & { defa
   'user.revoked': { default: 'User revoked' },
   'user.sessions_revoked': { default: 'Signed out everywhere by an administrator' },
   'auth.other_sessions_signed_out': { default: 'Signed out of other sessions' },
+  'location.requested': { default: 'Location requested' },
+  'location.shared': { default: 'Location shared', failure: 'Location could not be shared' },
+  'location.history_viewed': { default: 'Location map viewed', denied: 'Location map refused' },
+  'location.pruned': { default: 'Old location records deleted' },
 }
 
 const outcomeTone: Record<AuditOutcome, Tone> = {

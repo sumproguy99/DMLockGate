@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, NETWORK_ERROR } from '../../api/client'
+import { attachLockRequestLocation, type LocationFix } from '../../api/location'
 import { fetchLockRequest, newIdempotencyKey, requestLockCommand, type LockAction, type LockRequest } from '../../api/locks'
+import { currentPosition } from '../../lib/geolocation'
 
 /** Polling cadence for a request in progress. Mutable so tests can shorten it. */
 export const commandTiming = {
@@ -23,11 +25,23 @@ export type CommandState =
   | { phase: 'no_answer'; action: LockAction; message: string }
 
 /**
+ * Attaches the phone's position to a lock request for the location map, once both are known. Getting
+ * the position runs alongside the command and never delays it; without a position there is no pin.
+ */
+function attachLocation(position: Promise<LocationFix> | null, requestId: string | null) {
+  if (position === null || requestId === null) {
+    return
+  }
+  position.then((fix) => attachLockRequestLocation(requestId, fix)).catch(() => {})
+}
+
+/**
  * One lock's command lifecycle on screen: send, follow the backend's real request status until it is
  * final, and report what actually happened. A retry after "no answer" reuses the idempotency key, so
- * it can never create a second command.
+ * it can never create a second command. With sendLocation (the mobile app), each new request also
+ * carries the phone's position, as the user agreed at sign-in.
  */
-export function useLockCommand(lockId: number, onFinished: () => void) {
+export function useLockCommand(lockId: number, onFinished: () => void, { sendLocation = false } = {}) {
   const [state, setState] = useState<CommandState>({ phase: 'idle' })
   const keyRef = useRef<string | null>(null)
   const timerRef = useRef<number | undefined>(undefined)
@@ -74,13 +88,21 @@ export function useLockCommand(lockId: number, onFinished: () => void) {
 
   const send = useCallback(
     async (action: LockAction, { reuseKey = false } = {}) => {
-      if (!reuseKey || keyRef.current === null) {
-        keyRef.current = newIdempotencyKey()
-      }
+      const isNew = !reuseKey || keyRef.current === null
+      const key = isNew || keyRef.current === null ? newIdempotencyKey() : keyRef.current
+      keyRef.current = key
+      const position = sendLocation && isNew ? currentPosition() : null
+      position?.catch(() => {})
       setState({ phase: 'sending', action })
       try {
-        track(await requestLockCommand(lockId, action, keyRef.current), Date.now())
+        const request = await requestLockCommand(lockId, action, key)
+        attachLocation(position, request.id)
+        track(request, Date.now())
       } catch (error) {
+        // A denied request exists too, and its pin shows where it was refused.
+        if (error instanceof ApiError && typeof error.details.request_id === 'string') {
+          attachLocation(position, error.details.request_id)
+        }
         if (error instanceof ApiError && error.code === 'step_up_required') {
           keyRef.current = null
           setState({ phase: 'step_up', action })
@@ -100,7 +122,7 @@ export function useLockCommand(lockId: number, onFinished: () => void) {
         }
       }
     },
-    [lockId, track],
+    [lockId, sendLocation, track],
   )
 
   const reset = useCallback(() => {

@@ -42,7 +42,7 @@ export function MobileLockCard({
   showTitle = true,
 }: MobileLockCardProps) {
   const user = useCurrentUser()
-  const { state, send, reset } = useLockCommand(lock.id, onChanged)
+  const { state, send, reset } = useLockCommand(lock.id, onChanged, { sendLocation: true })
   const [confirmingUnlock, setConfirmingUnlock] = useState(false)
   const Heading = `h${headingLevel}` as const
 

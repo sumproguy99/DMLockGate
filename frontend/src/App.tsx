@@ -25,6 +25,7 @@ import { MobileMorePage } from './mobile/MobileMorePage'
 import { MobileNotificationsPage } from './mobile/MobileNotificationsPage'
 import { MobileShell } from './mobile/MobileShell'
 import { AuditLogPage } from './pages/security/AuditLogPage'
+import { LocationMapPage } from './pages/security/LocationMapPage'
 import { SystemHealthPage } from './pages/security/SystemHealthPage'
 import { NewUserPage } from './pages/users/NewUserPage'
 import { RolesPage } from './pages/users/RolesPage'
@@ -197,6 +198,14 @@ export function AppRoutes() {
           element={
             <RequirePermission permissions={['lock.view_status', 'devices.view']}>
               <LockDetailPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="location"
+          element={
+            <RequirePermission permissions={['location.view_history']}>
+              <LocationMapPage />
             </RequirePermission>
           }
         />

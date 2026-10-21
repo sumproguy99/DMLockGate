@@ -94,9 +94,15 @@ function PasswordStep({ notice }: { notice?: string }) {
       {formError && <Banner tone="danger" title="Could not sign in">{formError}</Banner>}
       <TextField name="email" label="Email" type="email" autoComplete="username" error={fields.email} required autoFocus />
       <PasswordField name="password" label="Password" autoComplete="current-password" error={fields.password} required />
-      <Button type="submit" icon={LogIn} loading={busy} fullWidth>
+      <Button type="submit" icon={LogIn} loading={busy} fullWidth aria-describedby="location-notice">
         Sign in
       </Button>
+      {/* The location notice (config lockguard.location.notice_version); each sign-in records the agreement. */}
+      <p id="location-notice" className="text-caption text-text-muted">
+        By signing in you agree that LockGuard records your phone's location when you lock or unlock with the mobile app,
+        and that administrators can request your location, which is sent automatically while LockGuard is open on your
+        phone. Location records are deleted automatically after a set period.
+      </p>
     </form>
   )
 }

@@ -13,6 +13,7 @@ import { describeIntegration } from '../lib/health'
 import { useMobileLocks } from './locks-context'
 import { MobileLocksProvider } from './MobileLocksProvider'
 import { visibleMobileNavigation } from './mobile-navigation'
+import { useLocationResponder } from './useLocationResponder'
 
 /** The Eufy status as a short icon and word, sized for a phone header. */
 function CompactIntegrationStatus() {
@@ -70,6 +71,7 @@ export function MobileShell() {
   const mainRef = useRef<HTMLElement>(null)
   const firstRender = useRef(true)
   const items = visibleMobileNavigation(user)
+  useLocationResponder()
 
   useEffect(() => {
     if (firstRender.current) {

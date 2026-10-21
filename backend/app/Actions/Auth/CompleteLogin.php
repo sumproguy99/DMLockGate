@@ -36,7 +36,11 @@ class CompleteLogin
 
         $user->forceFill(['last_login_at' => now()])->saveQuietly();
 
-        $this->audit->record('auth.login', AuditOutcome::Success, actor: $user, targets: ['user' => $user->id], metadata: ['method' => $method]);
+        // Signing in is agreeing to the location notice on the sign-in screen; record which version.
+        $this->audit->record('auth.login', AuditOutcome::Success, actor: $user, targets: ['user' => $user->id], metadata: [
+            'method' => $method,
+            'location_notice' => config('lockguard.location.notice_version'),
+        ]);
 
         return response()->json([
             'data' => ['status' => 'authenticated', 'user' => new UserResource($user->load('roles'))],
