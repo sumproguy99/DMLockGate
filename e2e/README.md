@@ -8,7 +8,7 @@ The real web app, API, queue worker and `EufyBridgeDriver`, run against a **fake
 | LockGuard API (`php -S`, from `backend/public`) | 8101 |
 | Fake bridge (`fake-bridge.mjs`, steered through `POST /control`) | 8790 |
 
-Playwright is **not** a project dependency (adding it needs approval). `run.mjs` loads an installed copy: set `PLAYWRIGHT_MODULE` (path to `playwright/index.mjs`) and `PLAYWRIGHT_CHROMIUM` (a Chromium executable), or use the defaults for DMF-SERVER.
+`run.mjs` uses Playwright from the frontend's dev dependencies. Once per machine: `cd frontend && npm install && npx playwright install chromium`.
 
 ## Run (Git Bash, from the repository root)
 

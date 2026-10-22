@@ -2,13 +2,12 @@
 // to the fake bridge. Isolated: web 5182 -> API 8101 (throwaway SQLite) -> fake bridge 8790. No real lock exists here.
 import { execFileSync } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { dirname } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
 
-// Playwright is not a project dependency: point PLAYWRIGHT_MODULE at an installed playwright/index.mjs
-// and PLAYWRIGHT_CHROMIUM at a Chromium executable. The defaults are the ones on DMF-SERVER.
-const pw = await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE ?? 'C:/Users/scrff/AppData/Local/npm-cache/_npx/9833c18b2d85bc59/node_modules/playwright/index.mjs').href)
-const CHROMIUM = process.env.PLAYWRIGHT_CHROMIUM ?? 'C:/Users/scrff/AppData/Local/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-win64/chrome-headless-shell.exe'
+// Playwright is a frontend dev dependency (npm install in frontend/, then npx playwright install chromium).
+const pw = createRequire(new URL('../frontend/package.json', import.meta.url))('playwright')
 
 const WEB = 'http://127.0.0.1:5182'
 const BRIDGE = 'http://127.0.0.1:8790'
@@ -36,7 +35,7 @@ function artisan(command) {
   return execFileSync('bash', ['-c', `cd "${HERE}/../backend" && source "${HERE}/env.sh" && php artisan ${command}`], { encoding: 'utf8' })
 }
 
-const browser = await pw.chromium.launch({ executablePath: CHROMIUM })
+const browser = await pw.chromium.launch()
 
 async function signedIn(email, viewport) {
   const context = await browser.newContext({ viewport, deviceScaleFactor: 1, colorScheme: 'dark' })
