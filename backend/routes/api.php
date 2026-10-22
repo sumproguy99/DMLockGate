@@ -17,6 +17,9 @@ use App\Http\Controllers\Api\V1\Locks\LockAccessController;
 use App\Http\Controllers\Api\V1\Locks\LockCommandController;
 use App\Http\Controllers\Api\V1\Locks\LockController;
 use App\Http\Controllers\Api\V1\Locks\PropertyController;
+use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\Security\SecurityAlertController;
+use App\Http\Controllers\Api\V1\Security\SecurityIncidentController;
 use App\Http\Controllers\Api\V1\System\DashboardController;
 use App\Http\Controllers\Api\V1\System\SystemHealthController;
 use App\Http\Controllers\Api\V1\Users\PermissionPreviewController;
@@ -49,6 +52,23 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
         Route::get('audit-logs/export', [AuditLogController::class, 'export'])->middleware('throttle:6,1')->name('audit-logs.export');
         Route::get('audit-logs/{eventId}', [AuditLogController::class, 'show'])->whereUuid('eventId')->name('audit-logs.show');
+
+        // The caller's own in-app notifications.
+        Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::get('notifications/summary', [NotificationController::class, 'summary'])->name('notifications.summary');
+        Route::post('notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+        Route::post('notifications/{notification}/read', [NotificationController::class, 'markRead'])->whereUuid('notification')->name('notifications.read');
+
+        // Security Center: alerts and incidents. Viewing needs admin.incidents_view; acting needs
+        // admin.incidents_manage. No step-up, so an administrator can respond at once.
+        Route::get('security/alerts', [SecurityAlertController::class, 'index'])->name('security.alerts.index');
+        Route::get('security/alerts/{alert}', [SecurityAlertController::class, 'show'])->whereUuid('alert')->name('security.alerts.show');
+        Route::post('security/alerts/{alert}/acknowledge', [SecurityAlertController::class, 'acknowledge'])->whereUuid('alert')->name('security.alerts.acknowledge');
+        Route::post('security/alerts/{alert}/resolve', [SecurityAlertController::class, 'resolve'])->whereUuid('alert')->name('security.alerts.resolve');
+        Route::get('security/incidents', [SecurityIncidentController::class, 'index'])->name('security.incidents.index');
+        Route::post('security/incidents', [SecurityIncidentController::class, 'store'])->name('security.incidents.store');
+        Route::get('security/incidents/{incident}', [SecurityIncidentController::class, 'show'])->whereUuid('incident')->name('security.incidents.show');
+        Route::post('security/incidents/{incident}/status', [SecurityIncidentController::class, 'updateStatus'])->whereUuid('incident')->name('security.incidents.status');
 
         Route::middleware('step-up')->group(function (): void {
             Route::post('auth/mfa', [MfaController::class, 'store'])->name('auth.mfa.store');

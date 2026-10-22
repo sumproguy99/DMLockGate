@@ -77,5 +77,6 @@ export function signedIn(user: CurrentUser): Record<string, Handler> {
     'GET /api/v1/system/health': () => json(200, { data: quietHealth }),
     'GET /api/v1/locks': () => json(200, { data: [] }),
     'GET /api/v1/dashboard': () => json(200, { data: emptyDashboard }),
+    'GET /api/v1/notifications/summary': () => json(200, { data: { unread_count: 0 } }),
   }
 }

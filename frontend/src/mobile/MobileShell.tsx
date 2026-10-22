@@ -2,6 +2,8 @@ import { Bell } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { HealthProvider } from '../app/HealthProvider'
+import { useUnreadNotifications } from '../app/notification-count-context'
+import { NotificationCountProvider } from '../app/NotificationCountProvider'
 import { useSystemHealth } from '../app/health-context'
 import { StepUpProvider } from '../app/StepUpProvider'
 import { useCurrentUser } from '../auth/auth-context'
@@ -31,13 +33,19 @@ function CompactIntegrationStatus() {
   )
 }
 
-/** The notification bell, with how many alerts need attention now. */
+/**
+ * The notification bell: the unread notifications, or when everything is read, how many problems
+ * need attention right now. Red when any current problem is critical.
+ */
 function NotificationIndicator() {
   const locks = useMobileLocks()
   const health = useSystemHealth()
+  const unread = useUnreadNotifications().data ?? 0
   const alerts = locks.data ? deriveAlerts(locks.data.locks, health.data) : []
   const critical = alerts.some((a) => a.severity === 'critical')
-  const label = alerts.length === 0 ? 'Notifications, nothing needs attention' : `Notifications, ${alerts.length} need${alerts.length === 1 ? 's' : ''} attention`
+  const count = unread || alerts.length
+  const parts = [unread > 0 && `${unread} unread`, alerts.length > 0 && `${alerts.length} need${alerts.length === 1 ? 's' : ''} attention`].filter(Boolean)
+  const label = parts.length === 0 ? 'Notifications, nothing new' : `Notifications, ${parts.join(', ')}`
 
   return (
     <Link
@@ -46,7 +54,7 @@ function NotificationIndicator() {
       className="relative flex size-11 items-center justify-center rounded-full text-text-muted active:bg-elevated"
     >
       <Bell className="size-5" aria-hidden />
-      {alerts.length > 0 && (
+      {count > 0 && (
         <span
           aria-hidden
           className={cx(
@@ -54,7 +62,7 @@ function NotificationIndicator() {
             critical ? 'bg-danger-strong text-white' : 'bg-warning text-bg',
           )}
         >
-          {alerts.length}
+          {count}
         </span>
       )}
     </Link>
@@ -91,6 +99,7 @@ export function MobileShell() {
 
   return (
     <HealthProvider>
+      <NotificationCountProvider>
       <MobileLocksProvider>
       <StepUpProvider>
         <div className="flex min-h-dvh flex-col">
@@ -154,6 +163,7 @@ export function MobileShell() {
         </div>
       </StepUpProvider>
       </MobileLocksProvider>
+      </NotificationCountProvider>
     </HealthProvider>
   )
 }

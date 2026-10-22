@@ -195,7 +195,7 @@ describe('the signed-in shell', () => {
     renderApp('/')
 
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' })
-    expect(navLinks()).toEqual(['Dashboard', 'Locks'])
+    expect(navLinks()).toEqual(['Dashboard', 'Notifications', 'Locks'])
   })
 
   it('shows administrators every built screen', async () => {
@@ -203,7 +203,7 @@ describe('the signed-in shell', () => {
     const { container } = renderApp('/')
 
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' })
-    expect(navLinks()).toEqual(['Dashboard', 'Users', 'Roles and permissions', 'Properties', 'Locks', 'System health'])
+    expect(navLinks()).toEqual(['Dashboard', 'Notifications', 'Users', 'Roles and permissions', 'Properties', 'Locks', 'System health'])
     expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByText('Alex Admin')).toBeInTheDocument()
     expect(screen.getByText('Owner')).toBeInTheDocument()

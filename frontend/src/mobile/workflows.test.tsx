@@ -86,6 +86,7 @@ function session(user: CurrentUser, { locks = [lock()], health = quietHealth }: 
     'GET /api/v1/locks': () => json(200, { data: locks }),
     'GET /api/v1/system/health': () => json(200, { data: health }),
     'GET /api/v1/location/requests/pending': () => json(200, { data: [] }),
+    'GET /api/v1/notifications?': () => json(200, { data: [], meta: { current_page: 1, last_page: 1, per_page: 30, total: 0, unread_count: 0 } }),
     'GET /api/v1/location/mine': () => json(200, { data: { notice_version: '2026-10-21', retention_days: 30, shared: [] } }),
   }
 }
@@ -133,7 +134,7 @@ describe('mobile Home', () => {
     expect(within(card).getByRole('button', { name: 'Unlock Front Door' })).toBeEnabled()
     expect(within(card).getByRole('link', { name: 'Details for Front Door' })).toHaveAttribute('href', '/m/locks/1')
     expect(screen.getByRole('heading', { level: 2, name: 'Connection' }).closest('section')).toHaveTextContent('Eufy connected')
-    expect(screen.getByRole('link', { name: 'Notifications, nothing needs attention' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Notifications, nothing new' })).toBeInTheDocument()
     expect(document.title).toBe('Home · DM LockGuard')
     await expectNoAxeViolations(container)
   })
@@ -141,13 +142,17 @@ describe('mobile Home', () => {
   it('shows Locking while the command is on its way and only then the confirmed result', async () => {
     const polls = [lockRequest({ status: 'submitted', status_message: 'Sent. Waiting for the lock to report its new state.' })]
     let reported: LockSummary['reported_state'] = 'unlocked'
+    // The lock "reports" only once the test has seen the in-between state, however slow the run.
+    let report = () => {}
+    const reportedByLock = new Promise<void>((resolve) => (report = resolve))
     const fetch = mockFetch({
       ...session(resident),
       'GET /api/v1/locks': () => json(200, { data: [lock({ reported_state: reported })] }),
       'POST /api/v1/locks/1/commands': () => json(202, { data: lockRequest() }),
-      'GET /api/v1/lock-requests/req-1': () => {
+      'GET /api/v1/lock-requests/req-1': async () => {
         const next = polls.shift()
         if (next) return json(200, { data: next })
+        await reportedByLock
         reported = 'locked'
         return json(200, { data: lockRequest({ status: 'confirmed_success', status_message: 'Confirmed by the lock.', is_final: true }) })
       },
@@ -161,6 +166,7 @@ describe('mobile Home', () => {
 
     expect(await within(card).findByText('Locking…')).toBeInTheDocument()
     expect(within(card).getByText('Still unlocked until the lock reports its new state.')).toBeInTheDocument()
+    report()
     expect(await within(card).findByText('Confirmed')).toBeInTheDocument()
     expect(await within(card).findByText('Locked')).toBeInTheDocument()
     expect(calls(fetch, 'POST', '/api/v1/locks/1/commands')).toHaveLength(1)
@@ -375,7 +381,46 @@ describe('mobile Devices and Notifications', () => {
     mockFetch(session(resident))
     renderAt('/m/notifications')
 
-    expect(await screen.findByText('Nothing needs attention')).toBeInTheDocument()
+    expect(await screen.findByText('Your locks and the lock integration are reporting normally.')).toBeInTheDocument()
+    expect(await screen.findByText('No notifications yet')).toBeInTheDocument()
+  })
+
+  it('lists stored notifications with read status and marks one read', async () => {
+    let read = false
+    const stored = () => ({
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      type: 'security_alert',
+      category: 'battery_warning',
+      severity: 'medium',
+      title: 'Front Door: battery 20%',
+      description: 'Replace or charge the lock battery soon.',
+      alert_id: null,
+      lock_id: 1,
+      mandatory: false,
+      created_at: minutesAgo(30),
+      read_at: read ? minutesAgo(0) : null,
+    })
+    mockFetch({
+      ...session(resident),
+      'GET /api/v1/notifications/summary': () => json(200, { data: { unread_count: read ? 0 : 1 } }),
+      'GET /api/v1/notifications?': () => json(200, { data: [stored()], meta: { current_page: 1, last_page: 1, per_page: 30, total: 1, unread_count: read ? 0 : 1 } }),
+      'POST /api/v1/notifications/dddddddd-dddd-4ddd-8ddd-dddddddddddd/read': () => {
+        read = true
+        return json(200, { data: stored() })
+      },
+    })
+    const { container } = renderAt('/m/notifications')
+    const user = userEvent.setup()
+
+    expect(await screen.findByRole('link', { name: 'Notifications, 1 unread' })).toBeInTheDocument()
+    const item = (await screen.findByText('Front Door: battery 20%')).closest('li')!
+    expect(within(item).getByText('Unread')).toBeInTheDocument()
+    expect(within(item).getByRole('link', { name: 'Open the lock' })).toHaveAttribute('href', '/m/locks/1')
+    await expectNoAxeViolations(container)
+
+    await user.click(within(item).getByRole('button', { name: /Mark read/ }))
+    expect(await screen.findByRole('link', { name: 'Notifications, nothing new' })).toBeInTheDocument()
+    expect(within(screen.getByText('Front Door: battery 20%').closest('li')!).getByText('Read')).toBeInTheDocument()
   })
 })
 

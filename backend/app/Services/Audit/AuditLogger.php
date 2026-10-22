@@ -6,6 +6,7 @@ use App\Enums\AuditActorType;
 use App\Enums\AuditOutcome;
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Services\Security\AlertEngine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -22,6 +23,8 @@ use Throwable;
  *
  * A failed write throws {@see AuditWriteFailed}. Callers performing sensitive operations must let
  * it propagate (and roll back their own transaction) so the operation never succeeds unaudited.
+ *
+ * Once the caller's transaction commits, records the alert engine watches are handed to it.
  */
 class AuditLogger
 {
@@ -68,7 +71,7 @@ class AuditLogger
         ];
 
         try {
-            return Cache::lock('audit-log-chain', 10)->block(5, fn (): AuditLog => DB::transaction(function () use ($attributes): AuditLog {
+            $record = Cache::lock('audit-log-chain', 10)->block(5, fn (): AuditLog => DB::transaction(function () use ($attributes): AuditLog {
                 $previousHash = AuditLog::query()->latest('id')->lockForUpdate()->value('hash') ?? self::GENESIS_HASH;
 
                 return AuditLog::query()->create([
@@ -79,8 +82,27 @@ class AuditLogger
             }));
         } catch (Throwable $exception) {
             report($exception);
+            AlertEngine::noteAuditWriteFailure($action, $exception);
 
             throw new AuditWriteFailed("Audit record for [{$action}] could not be written.", previous: $exception);
+        }
+
+        if (AlertEngine::watches($action)) {
+            DB::afterCommit(fn () => $this->observe($record));
+        }
+
+        return $record;
+    }
+
+    /**
+     * Hands a committed record to the alert engine. Alerting never fails the audited operation.
+     */
+    private function observe(AuditLog $record): void
+    {
+        try {
+            app(AlertEngine::class)->observe($record);
+        } catch (Throwable $exception) {
+            report($exception);
         }
     }
 

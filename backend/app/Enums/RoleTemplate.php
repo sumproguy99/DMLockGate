@@ -69,6 +69,7 @@ enum RoleTemplate: string
                 PermissionKey::AdminSecurityPolicies,
                 PermissionKey::AdminNotifications,
                 PermissionKey::AdminIncidentsView,
+                PermissionKey::AdminIncidentsManage,
                 PermissionKey::AdminReportsExport,
             ],
             self::PropertyManager => [

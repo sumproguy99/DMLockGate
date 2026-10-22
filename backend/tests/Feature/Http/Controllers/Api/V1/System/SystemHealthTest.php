@@ -114,7 +114,7 @@ class SystemHealthTest extends TestCase
         $this->assertSame('ok', $subsystems['state_sync']['status']);
         $this->assertSame('ok', $subsystems['eufy']['status']);
         $this->assertSame('ok', $subsystems['audit']['status']);
-        $this->assertSame('not_implemented', $subsystems['notifications']['status']);
+        $this->assertSame('ok', $subsystems['notifications']['status']);
         $this->assertSame('not_implemented', $subsystems['live_updates']['status']);
     }
 

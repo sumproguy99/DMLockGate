@@ -156,7 +156,7 @@ A user who types the address of a page they can't use sees "Not available to you
 
 **Not in the shell yet:**
 - **Notification center, global search, settings shortcut:** these have no backend yet.
-- **Navigation items from project.md 34.4 that have no backend yet:** access codes, schedules, trusted devices, location, security center, alerts, incidents, notifications, settings, help. They're added as their features are built.
+- **Navigation items from project.md 34.4 that have no backend yet:** access codes, schedules, trusted devices, geofences, settings. They're added as their features are built (Location map, Security center and Notifications have been since).
 
 **Component gallery:** `/dev/components`, in development builds only.
 
@@ -188,9 +188,10 @@ The backend leaves out (returns null for) each section the user may not see, so 
 - lock state sync (newest scheduled poll; a warning after 15 minutes);
 - Eufy integration (the bridge's `/v1/health`, cached 15 seconds, 5-second timeout);
 - audit trail (append-only triggers installed);
-- notifications and live updates, which show "Not built yet".
+- notifications (in-app only; push and email are not built yet);
+- live updates, which show "Not built yet".
 
-**Not on the dashboard, because the backend has no support yet:** lockdown status and quick action, alert acknowledgement and the Security Center, revoked devices, proximity-unlock controls, widget customization.
+**Not on the dashboard, because the backend has no support yet:** lockdown status and quick action (alerts are handled in the Security center), revoked devices, proximity-unlock controls, widget customization.
 
 ## Administrative screens
 
@@ -244,7 +245,7 @@ The backend leaves out (returns null for) each section the user may not see, so 
 ## Mobile web app
 
 **A separate interface** under `/m` (project.md 34.7), built on the same tokens, logo and components as the desktop application (`src/mobile/`).
-- **Header:** the logo mark, "DM LockGuard", a compact Eufy status (the same health check as the desktop header, including "Eufy degraded" when commands keep failing), a notification bell with the number of current alerts (red when any is critical), and the user's initials linking to More.
+- **Header:** the logo mark, "DM LockGuard", a compact Eufy status (the same health check as the desktop header, including "Eufy degraded" when commands keep failing), a notification bell with the unread notifications, or the number of current alerts when everything is read (red when any current alert is critical), and the user's initials linking to More.
 - **Bottom navigation:** Home, Activity, Devices, More, each at least 64 px tall and inside the safe area. Activity needs `lock.view_history` (the feed's own permission); Devices needs `lock.view_status` or `devices.view`. Hidden tabs are also refused by address ("Not available to you"), and the backend refuses the data either way.
 - **More:** the account (name, email, roles, whether two-step verification is on), links to Notifications, Account security, Location and proximity, and Help, then **Use the desktop view** and **Sign out**, set apart at the bottom so it isn't tapped by accident.
 - **Which view opens:** `/` sends a phone-width screen (under 768 px) to `/m` before the desktop shell renders. Choosing **Use the desktop view** (More) or **Mobile view** (desktop account menu) is remembered in this browser (`localStorage` key `lockguard.view`) and overrides the screen width.
@@ -256,7 +257,7 @@ The backend leaves out (returns null for) each section the user may not see, so 
 - **Lock controls (`/m/locks/:id`):** the same card without its title, the last problem the lock reported, Device details (connection, battery, last contact, last confirmed state, model, masked serial, firmware, commands on or off) and the five most recent requests.
 - **Activity:** `GET /activity`: lock requests by their real stage and the state changes the locks reported (the scheduled sync's repeats are dropped), newest first. Filters: All, Requests or Lock reports, and Result (succeeded, failed or unknown, denied, in progress). **Load older activity** pages back 30 at a time. Other people are only "Another user".
 - **Devices:** the locks, each linking to its controls. **Trusted phones** says LockGuard does not register them yet and points to signing out other sessions instead.
-- **Notifications:** alerts worked out from the locks and the integration (`lib/alerts.ts`): integration offline, sign-in needed or degraded; a lock jammed, offline, stale or unknown; battery at 25% or less (critical at 10%). Severity, time, description and a link to the lock. There is no stored history or read status yet, and alerts cannot be turned off; the screen says both.
+- **Notifications:** "Right now": alerts worked out from the locks and the integration (`lib/alerts.ts`): integration offline, sign-in needed or degraded; a lock jammed, offline, stale or unknown; battery at 25% or less (critical at 10%). Then the person's stored notifications with read status (see Security alerts, incidents and notifications).
 - **Account security:** account details and roles; two-step verification set-up (after the identity check: an **Open in authenticator app** link with the `otpauth://` address and the key to type, a code, then the recovery codes shown once) and removal with a warning; **Where you are signed in** (`GET /auth/sessions`: browser and system, address, last activity, "This device") and **Sign out everywhere else** after confirming (`DELETE /auth/sessions/others`, audited as `auth.other_sessions_signed_out`). No QR code: a phone opens the link directly, and adding a QR library needs approval.
 - **Location and proximity:** the browser's location permission (read through the Permissions API without asking for a location), that sharing is on as agreed at sign-in, what LockGuard records and for how long, **When your location was shared** (`GET /location/mine`: each lock request with a position and each administrator's request, with who asked), and why automatic unlocking is unavailable. Proximity is off and near-door detection does not exist.
 - **Help and troubleshooting:** expandable answers for an unavailable lock, a degraded integration, unknown or stale state, an unknown or failed command, a denied request, location, and an ended session.
@@ -295,6 +296,29 @@ Decided by the operator on 2026-10-21: **signing in is agreeing to share locatio
 
 **Changing the notice:** edit the text in `LoginPage.tsx` and raise `notice_version` in `config/lockguard.php` together, so the audit log shows which wording each sign-in agreed to.
 
+## Security alerts, incidents and notifications
+
+Built on 2026-10-22 (project.md sections 18 and 22, 34.6 G and 34.8 G).
+
+**Alert engine** (`app/Services/Security/AlertEngine.php`):
+- **Event rules** read the audit trail. `AuditLogger` hands each watched record to the engine once the caller's transaction has committed, so nothing is raised for an operation that rolled back, and an alerting failure never fails the operation. Repeated failed sign-ins and identity checks (5 in 15 minutes per account, or per address for unknown accounts; High), repeated denied lock requests (3 in 15 minutes per person; Medium), repeated failed or unconfirmed commands (3 in 30 minutes per lock; High), a command whose outcome is unknown (Medium), an administrative or sensitive permission given by role or override (Medium; ordinary door access is not reported), two-step sign-in turned off (Medium), a recovery code used (Low).
+- **Condition rules** run every minute (`lockguard:check-alerts`, scheduled): the Eufy integration unreachable or needing sign-in (Critical) or degraded (High), a lock offline (High), jammed (High), with stale or unknown state (Medium), battery at 25% or less (Medium; 10% or less High), audit protection triggers missing (Critical), and a failed audit write noted by `AuditLogger` (Critical). Condition alerts resolve themselves when the condition clears and cannot be resolved by hand.
+- **Storm control:** one active alert per problem (repeats add to its count), a problem that returns within 60 minutes of resolving reopens its alert without notifying again, event alerts with no new occurrence for 24 hours resolve themselves, and each person gets at most 20 alert notifications an hour (Critical is never held back). All thresholds are `LOCKGUARD_ALERT_*` settings in `.env`.
+- **Correlation:** High and Critical alerts open an incident, or join the open incident about the same lock, account, address or subsystem.
+- **Not alerts:** location anomalies (a phone's position proves nothing, project.md 18), unrecognized or revoked devices (trusted devices are not built).
+
+**Incidents:** New, Acknowledged, Investigating, Contained, Resolved, Closed. Any status may follow another except that Closed is final. Every change is kept in the incident's history with who made it and an optional note, and is audited (`security.incident_status_changed`). Resolving or closing an incident resolves its event alerts.
+
+**Permissions:** `admin.incidents_view` to see alerts and incidents (Super Administrator, Security Administrator, Read-Only Auditor); the new `admin.incidents_manage` to acknowledge and resolve alerts, open incidents and change their status (Super Administrator, Security Administrator; migration `2026_10_22_000004` adds it to the existing built-in roles). No step-up, so a handler can respond at once.
+
+**Notifications** are Laravel database notifications (`notifications` table) with read status, in the app only. Incident handlers always receive security notifications, marked as mandatory; no preference can turn them off. People who can currently use a lock are told when it is offline, jammed or low on battery. The person an account alert is about is told in words meant for them ("Failed sign-in attempts on your account"). A failed notification is logged and never removes the alert or its audit record.
+
+**Screens:**
+- **Security center** (`/security`, Security group): Alerts (needs attention by default; status, severity and search filters; Details, Acknowledge, Resolve with a note, Open incident), Incidents (open by default; table linking to each incident), and Security events (ready-made audit views: all failures, refusals, failed and refused sign-ins, denied lock requests, command failures, location failures, Security Center actions, with a link into the audit log). `?alert=<id>` opens an alert's details, which is where notifications link.
+- **Incident** (`/security/incidents/:id`): severity, status, who opened it, its alerts, the history, and for handlers a status form. A closed incident says it is final.
+- **Notifications** (`/notifications`, Overview group, and the bell in the header with the unread count): All or Unread, Mark read, Mark all read, links to the alert (for people with incident access) and the lock.
+- **Mobile Notifications:** "Right now" (the problems worked out live from the locks, as before) and "Your notifications" with read status. The bell shows the unread count, or when everything is read, how many problems need attention now.
+
 ## Final review (UI checkpoint 9) and remaining limitations
 
 Checked on 2026-10-21 against project.md 34.14 and 34.15:
@@ -308,7 +332,7 @@ Checked on 2026-10-21 against project.md 34.14 and 34.15:
 - Access codes and access schedules as their own screens; time-limited lock access is on each user's page. The T85D0 has no keypad-code commands.
 - Trusted-device enrollment and revocation; Devices points to signing out other sessions instead.
 - Geofences and proximity detection. Locations are collected only for the location map (see Location map and location requests).
-- Security Center incidents and alert acknowledgement, stored notifications with read status, push notifications, and a desktop notification center. Mobile alerts are worked out live from lock and integration state.
+- Push and email notifications, and per-person notification preferences (built since: Security Center, incidents, stored notifications with read status, the notification center; see Security alerts, incidents and notifications).
 - Global search, editable settings (they live in `.env`), role editing, lockdown, and dashboard widget customization.
 - Self-service password recovery; the sign-in page says to ask an administrator.
 
@@ -318,7 +342,8 @@ Checked on 2026-10-21 against project.md 34.14 and 34.15:
 - The activity feed's `before` paging can skip events that share the exact millisecond at a page boundary.
 - The end-to-end harness uses a Playwright install from outside the project, because adding Playwright as a dev dependency needs approval.
 - Lock commands validate their body before the permission check (the one exception in the access matrix); the errors only describe format.
-- One unexplained Vitest failure was seen on a cold first run during this review; the next five runs passed 210/210.
+- One unexplained Vitest failure was seen on a cold first run during this review. Found on 2026-10-22: the mobile "Locking until confirmed" test raced the command's poll timer under load; the test now holds the lock's report until it has checked the in-between state.
+- Alerts, incidents and notifications are kept indefinitely; there is no retention setting for them yet.
 
 ## Development
 

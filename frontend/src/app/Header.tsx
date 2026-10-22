@@ -1,13 +1,37 @@
-import { ChevronDown, ChevronRight, LogOut, Menu as MenuIcon, Smartphone } from 'lucide-react'
+import { Bell, ChevronDown, ChevronRight, LogOut, Menu as MenuIcon, Smartphone } from 'lucide-react'
 import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { useAuth, useCurrentUser } from '../auth/auth-context'
 import { IconButton } from '../components/ui/Button'
 import { Menu } from '../components/ui/Menu'
 import { useToast } from '../components/ui/toast-context'
 import { IntegrationIndicator } from './IntegrationIndicator'
 import { findNavItem } from './navigation'
+import { useUnreadNotifications } from './notification-count-context'
 import { saveViewPreference } from './view-preference'
+
+/** The bell: opens the notification center, with the unread count. */
+function NotificationBell() {
+  const unread = useUnreadNotifications().data ?? 0
+
+  return (
+    <Link
+      to="/notifications"
+      aria-label={unread === 0 ? 'Notifications, none unread' : `Notifications, ${unread} unread`}
+      className="relative flex size-11 items-center justify-center rounded-full text-text-muted hover:bg-elevated hover:text-text"
+    >
+      <Bell className="size-5" aria-hidden />
+      {unread > 0 && (
+        <span
+          aria-hidden
+          className="absolute top-1 right-1 flex min-w-5 items-center justify-center rounded-full bg-danger-strong px-1 text-caption font-semibold text-white"
+        >
+          {unread > 99 ? '99+' : unread}
+        </span>
+      )}
+    </Link>
+  )
+}
 
 function initials(name: string): string {
   return name
@@ -55,6 +79,7 @@ export function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
 
       <div className="flex items-center gap-3">
         <IntegrationIndicator />
+        <NotificationBell />
         <div className="hidden text-right leading-tight md:block">
           <p className="text-support font-medium">{user.name}</p>
           <p className="text-caption text-text-muted">{role}</p>

@@ -24,8 +24,11 @@ import { MobileLockPage } from './mobile/MobileLockPage'
 import { MobileMorePage } from './mobile/MobileMorePage'
 import { MobileNotificationsPage } from './mobile/MobileNotificationsPage'
 import { MobileShell } from './mobile/MobileShell'
+import { NotificationsPage } from './pages/NotificationsPage'
 import { AuditLogPage } from './pages/security/AuditLogPage'
+import { IncidentDetailPage } from './pages/security/IncidentDetailPage'
 import { LocationMapPage } from './pages/security/LocationMapPage'
+import { SecurityCenterPage } from './pages/security/SecurityCenterPage'
 import { SystemHealthPage } from './pages/security/SystemHealthPage'
 import { NewUserPage } from './pages/users/NewUserPage'
 import { RolesPage } from './pages/users/RolesPage'
@@ -145,6 +148,23 @@ export function AppRoutes() {
         }
       >
         <Route index element={<DashboardPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route
+          path="security"
+          element={
+            <RequirePermission permissions={['admin.incidents_view']}>
+              <SecurityCenterPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="security/incidents/:id"
+          element={
+            <RequirePermission permissions={['admin.incidents_view']}>
+              <IncidentDetailPage />
+            </RequirePermission>
+          }
+        />
         <Route
           path="users"
           element={

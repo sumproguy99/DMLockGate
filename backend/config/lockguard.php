@@ -94,4 +94,46 @@ return [
         'lock_request_window_seconds' => 300,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Security alerts and notifications
+    |--------------------------------------------------------------------------
+    |
+    | Event rules raise an alert when `threshold` matching audit records fall within `window_minutes`
+    | (failed sign-ins count per account, or per address when the account is unknown; denied requests
+    | per person; command failures per lock). Each later match adds to the same alert.
+    |
+    | battery_low_percent / battery_critical_percent: the battery alert is Medium at or below the
+    | first and High at or below the second.
+    |
+    | quiet_hours: an event alert with no new occurrences for this long is resolved automatically.
+    |
+    | reopen_minutes: a problem that comes back this soon after its alert was resolved reopens that
+    | alert without notifying anyone again, so a flapping lock or bridge cannot flood people.
+    |
+    | notifications_per_hour: at most this many alert notifications per person per hour. Alerts past
+    | the limit are still recorded and shown in the Security Center.
+    |
+    */
+
+    'alerts' => [
+        'failed_sign_ins' => [
+            'threshold' => (int) env('LOCKGUARD_ALERT_FAILED_SIGN_INS', 5),
+            'window_minutes' => (int) env('LOCKGUARD_ALERT_FAILED_SIGN_INS_MINUTES', 15),
+        ],
+        'denied_lock_requests' => [
+            'threshold' => (int) env('LOCKGUARD_ALERT_DENIED_REQUESTS', 3),
+            'window_minutes' => (int) env('LOCKGUARD_ALERT_DENIED_REQUESTS_MINUTES', 15),
+        ],
+        'lock_command_failures' => [
+            'threshold' => (int) env('LOCKGUARD_ALERT_COMMAND_FAILURES', 3),
+            'window_minutes' => (int) env('LOCKGUARD_ALERT_COMMAND_FAILURES_MINUTES', 30),
+        ],
+        'battery_low_percent' => (int) env('LOCKGUARD_ALERT_BATTERY_LOW_PERCENT', 25),
+        'battery_critical_percent' => (int) env('LOCKGUARD_ALERT_BATTERY_CRITICAL_PERCENT', 10),
+        'quiet_hours' => (int) env('LOCKGUARD_ALERT_QUIET_HOURS', 24),
+        'reopen_minutes' => (int) env('LOCKGUARD_ALERT_REOPEN_MINUTES', 60),
+        'notifications_per_hour' => (int) env('LOCKGUARD_NOTIFICATIONS_PER_HOUR', 20),
+    ],
+
 ];

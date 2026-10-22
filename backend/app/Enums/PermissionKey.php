@@ -51,6 +51,7 @@ enum PermissionKey: string
     case AdminSecurityPolicies = 'admin.security_policies';
     case AdminNotifications = 'admin.notifications';
     case AdminIncidentsView = 'admin.incidents_view';
+    case AdminIncidentsManage = 'admin.incidents_manage';
     case AdminReportsExport = 'admin.reports_export';
     case AdminAuditRetention = 'admin.audit_retention';
 
@@ -94,6 +95,7 @@ enum PermissionKey: string
             self::AdminSecurityPolicies => 'Manage security policies',
             self::AdminNotifications => 'Configure notifications',
             self::AdminIncidentsView => 'View security incidents',
+            self::AdminIncidentsManage => 'Handle security alerts and incidents',
             self::AdminReportsExport => 'Export authorized reports',
             self::AdminAuditRetention => 'Manage audit retention',
         };
@@ -134,6 +136,7 @@ enum PermissionKey: string
             self::AdminSecurityPolicies => 'Change authentication, session, remote-unlock and lockdown policies.',
             self::AdminNotifications => 'Configure notification providers and rules.',
             self::AdminIncidentsView => 'See security alerts and incidents.',
+            self::AdminIncidentsManage => 'Acknowledge and resolve alerts, open incidents and change their status. Holders always receive security notifications.',
             self::AdminReportsExport => 'Export audit and access reports.',
             self::AdminAuditRetention => 'Change audit and data-retention settings.',
         };

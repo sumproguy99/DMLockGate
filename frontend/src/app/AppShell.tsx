@@ -4,6 +4,7 @@ import { BrandLogo } from '../components/brand/BrandLogo'
 import { Dialog } from '../components/ui/Dialog'
 import { Header } from './Header'
 import { HealthProvider } from './HealthProvider'
+import { NotificationCountProvider } from './NotificationCountProvider'
 import { StepUpProvider } from './StepUpProvider'
 import { NavigationList, Sidebar } from './Sidebar'
 
@@ -49,6 +50,7 @@ export function AppShell() {
 
   return (
     <HealthProvider>
+      <NotificationCountProvider>
       <StepUpProvider>
         <div className="flex min-h-dvh">
           <a
@@ -84,6 +86,7 @@ export function AppShell() {
           </Dialog>
         </div>
       </StepUpProvider>
+      </NotificationCountProvider>
     </HealthProvider>
   )
 }

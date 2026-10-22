@@ -128,7 +128,7 @@ class SystemHealth
             $this->stateSync($integration),
             $this->eufy($integration['status'], $integration['degraded_reason'] ?? null),
             $this->auditTrail(),
-            ['key' => 'notifications', 'status' => 'not_implemented', 'summary' => 'Notifications are not built yet.'],
+            ['key' => 'notifications', 'status' => 'ok', 'summary' => 'In-app notifications only. Push and email are not built yet.'],
             ['key' => 'live_updates', 'status' => 'not_implemented', 'summary' => 'Live updates are not built yet. Screens refresh on a timer instead.'],
         ];
     }

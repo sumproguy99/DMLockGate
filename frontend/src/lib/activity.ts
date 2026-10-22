@@ -32,6 +32,12 @@ const auditTitles: Record<string, Partial<Record<AuditOutcome, string>> & { defa
   'location.shared': { default: 'Location shared', failure: 'Location could not be shared' },
   'location.history_viewed': { default: 'Location map viewed', denied: 'Location map refused' },
   'location.pruned': { default: 'Old location records deleted' },
+  'security.alert_acknowledged': { default: 'Security alert acknowledged', denied: 'Alert acknowledgement refused' },
+  'security.alert_resolved': { default: 'Security alert resolved', denied: 'Alert resolution refused' },
+  'security.incident_opened': { default: 'Security incident opened', denied: 'Opening an incident refused' },
+  'security.incident_status_changed': { default: 'Incident status changed', denied: 'Incident change refused' },
+  'security.alerts_viewed': { default: 'Security alerts viewed', denied: 'Security alerts refused' },
+  'security.incidents_viewed': { default: 'Security incidents viewed', denied: 'Security incidents refused' },
 }
 
 const outcomeTone: Record<AuditOutcome, Tone> = {

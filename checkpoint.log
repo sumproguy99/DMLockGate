@@ -478,3 +478,29 @@ What needs to be done.
 Run the two new migrations on the live database (php artisan migrate) and restart the API and scheduler. Try it on a phone: allow location when the browser asks, lock once, then request the location from the desktop map with LockGuard open on the phone. Commit when Dustin asks.
 What is important or stands out that needs attention or needs to be address.
 A phone answers only while LockGuard is open and visible there with location allowed; iOS Safari stops timers in the background, so expect "did not answer" when the app is closed. Location only works over HTTPS or localhost in browsers: on the LAN address (http://192.168.1.12) phones cannot give a position, so the phone needs an HTTPS address (for example Tailscale HTTPS) for any of this to work. Until then the phone answers "unsupported" and its Location screen says so. OpenStreetMap's tile servers see which map areas are viewed. Changing the notice text needs notice_version raised too.
+
+---
+Timestamp: 2026-10-21 ET
+Percent complete: 90%
+Description of what you are working on.
+Location map: putting it live.
+What you have done so far:
+Ran the two location migrations on the live MySQL database (location_requests, location_reports; new tables only, checked with --pretend first). The bridge (8788) and web dev server (5173) are running; the API (8100), queue worker and scheduler were not running. No lock command sent.
+What needs to be done.
+Dustin to start the API, queue worker and scheduler. Phone test of the location map over HTTPS. Then the backend features the UI waits on (docs/UI_DESIGN.md "Final review").
+What is important or stands out that needs attention or needs to be address.
+The scheduler has not run since 2026-10-19 04:15 UTC, so sync-locks and the new prune-locations job are not running until it is started. Phones need an HTTPS address to share location.
+
+---
+Timestamp: 2026-10-22 ET
+Percent complete: 92%
+Description of what you are working on.
+Security alerts, incidents and notifications (project.md sections 18 and 22; Security Center 34.6 G; mobile notifications 34.8 G).
+What you have done so far:
+Backend: alert engine fed by committed audit records (failed sign-ins and identity checks, denied lock requests, repeated command failures, unknown command outcomes, administrative permission grants, two-step sign-in turned off, recovery codes) and by a once-a-minute condition check, lockguard:check-alerts (integration unreachable or degraded, lock offline, jammed, stale or unknown, low battery, audit triggers missing, failed audit writes). Deduplication per problem, quiet reopening within 60 minutes, quiet event alerts resolved after 24 hours, a per-person hourly notification cap (never for Critical), High and Critical alerts opening or joining an incident about the same lock, account, address or subsystem. Incidents New to Closed with a history of every change and who made it; closed is final. New permission admin.incidents_manage (Super and Security Administrator, migration adds it to the existing roles); auditors view only. In-app notifications (Laravel database notifications) with read status: handlers always (mandatory), lock users for offline, jammed and battery, the account owner for their own account alerts. 12 API routes, all in the access matrix; every action audited. Thresholds in .env (LOCKGUARD_ALERT_*). Frontend: Security center (alerts, incidents, security events), incident page with status changes and history, notification center with header bell and unread count, mobile Notifications with "Right now" and stored notifications. Checked in the isolated e2e stack (throwaway SQLite, fake bridge): real failed sign-ins raised a High alert and incident, a bridge outage a Critical one, a low battery a Medium one; screenshots at 1440 and 390 px with no sideways scroll. Fixed the flaky mobile "Locking until confirmed" test (it raced the poll timer under load). Tests: PHP 312/312 (38 new), frontend 235/235 (12 new) three runs in a row, type-check, lint and build clean. docs/UI_DESIGN.md and .env.example updated. Live database not migrated yet. No lock command sent.
+What needs to be done.
+Dustin to approve running the four new migrations on the live database (php artisan migrate; this also gives the existing Super and Security Administrator roles admin.incidents_manage), then restart the API, queue worker and scheduler so lockguard:check-alerts runs. Commit when Dustin asks. Next backend features: trusted devices, access codes and schedules, settings.
+What is important or stands out that needs attention or needs to be address.
+Once the scheduler runs on the live system, every lock whose state is stale (the scheduler has not run since 2026-10-19) will raise a Medium "state not confirmed" alert until the first sync; they resolve themselves. No push or email channel and no notification preferences yet. Alerts, incidents and notifications have no retention limit yet.
+[2026-10-22] Live DB: ran the four alert/incident/notification migrations (2026_10_22_000001-000004) after a --pretend check, with Dustin's OK. admin.incidents_manage granted to super_administrator and security_administrator. Next: Dustin restarts the API (8100), queue worker and scheduler so lockguard:check-alerts runs every minute. Not committed yet.
+[2026-10-22] Started the API (8100), queue worker and scheduler in their own minimized windows. First lockguard:check-alerts run raised two Medium 'state not confirmed' alerts (Front Door, Back Door), as expected until the first sync.

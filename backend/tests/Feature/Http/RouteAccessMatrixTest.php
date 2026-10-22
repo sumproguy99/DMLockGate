@@ -14,6 +14,8 @@ use App\Models\LocationRequest;
 use App\Models\Lock;
 use App\Models\Property;
 use App\Models\Role;
+use App\Models\SecurityAlert;
+use App\Models\SecurityIncident;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use Database\Seeders\PermissionCatalogSeeder;
@@ -40,6 +42,8 @@ class RouteAccessMatrixTest extends TestCase
     private const HISTORY = ['super_administrator', 'security_administrator', 'property_manager', 'resident', 'read_only_auditor'];
 
     private const AUDIT = ['super_administrator', 'security_administrator', 'read_only_auditor'];
+
+    private const INCIDENT_HANDLERS = ['super_administrator', 'security_administrator'];
 
     /**
      * Route name => the roles allowed past authorization. Routes about the caller's own account are
@@ -94,6 +98,20 @@ class RouteAccessMatrixTest extends TestCase
         'api.v1.location.map' => ['super_administrator'],
         'api.v1.location.requests.show' => ['super_administrator'],
         'api.v1.location.requests.store' => ['super_administrator'],
+        // Each person's own notifications.
+        'api.v1.notifications.index' => self::ALL,
+        'api.v1.notifications.summary' => self::ALL,
+        'api.v1.notifications.read-all' => self::ALL,
+        'api.v1.notifications.read' => self::ALL,
+        // Security Center: auditors see alerts and incidents; only incident handlers act on them.
+        'api.v1.security.alerts.index' => self::AUDIT,
+        'api.v1.security.alerts.show' => self::AUDIT,
+        'api.v1.security.alerts.acknowledge' => self::INCIDENT_HANDLERS,
+        'api.v1.security.alerts.resolve' => self::INCIDENT_HANDLERS,
+        'api.v1.security.incidents.index' => self::AUDIT,
+        'api.v1.security.incidents.show' => self::AUDIT,
+        'api.v1.security.incidents.store' => self::INCIDENT_HANDLERS,
+        'api.v1.security.incidents.status' => self::INCIDENT_HANDLERS,
     ];
 
     /**
@@ -151,9 +169,12 @@ class RouteAccessMatrixTest extends TestCase
                 ]);
                 // Asked by someone else, addressed to the user under test.
                 $locationRequest = LocationRequest::factory()->create(['requested_by' => $target->id, 'target_user_id' => $user->id]);
+                $alert = SecurityAlert::factory()->create();
+                $incident = SecurityIncident::factory()->create();
+                $notification = $user->notifications()->create(['id' => (string) Str::uuid(), 'type' => 'security_alert', 'data' => ['title' => 'Matrix']]);
                 $uri = '/'.str_replace(
-                    ['{lock}', '{user}', '{accessRequest}', '{eventId}', '{locationRequest}'],
-                    [$lock->id, $target->id, $request->public_id, $eventId, $locationRequest->public_id],
+                    ['{lock}', '{user}', '{accessRequest}', '{eventId}', '{locationRequest}', '{alert}', '{incident}', '{notification}'],
+                    [$lock->id, $target->id, $request->public_id, $eventId, $locationRequest->public_id, $alert->public_id, $incident->public_id, $notification->id],
                     $route->uri(),
                 );
 
@@ -220,6 +241,8 @@ class RouteAccessMatrixTest extends TestCase
             'api.v1.locks.update' => ['name' => 'Front Door'],
             'api.v1.lock-requests.location.store', 'api.v1.location.requests.respond' => $fix,
             'api.v1.location.requests.store' => ['user_id' => $target->id],
+            'api.v1.security.incidents.store' => ['title' => 'Matrix incident', 'severity' => 'medium'],
+            'api.v1.security.incidents.status' => ['status' => 'investigating'],
             default => [],
         };
     }
