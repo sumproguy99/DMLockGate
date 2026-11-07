@@ -46,6 +46,20 @@ class LockAccessFlagTest extends TestCase
             ->assertJsonPath('data.0.your_access', ['granted' => true, 'reason' => null]);
     }
 
+    public function test_a_resident_gets_the_real_lock_ids_when_grant_ids_differ(): void
+    {
+        $backDoor = Lock::factory()->create(['name' => 'Back Door']);
+        $other = $this->userWithRole(RoleTemplate::Resident);
+        $other->locks()->attach([$this->lock->id, $backDoor->id]);
+        $resident = $this->userWithRole(RoleTemplate::Resident);
+        $resident->locks()->attach([$this->lock->id, $backDoor->id]);
+
+        $locks = $this->actingAs($resident)->getJson(route('api.v1.locks.index'))->assertOk()->json('data');
+
+        $this->assertSame([$backDoor->id, $this->lock->id], array_column($locks, 'id'));
+        $this->assertSame([true, true], array_column(array_column($locks, 'your_access'), 'granted'));
+    }
+
     public function test_an_administrator_who_sees_every_lock_but_has_no_grant_is_told_why(): void
     {
         $this->actingAs($this->userWithRole(RoleTemplate::SuperAdministrator))->getJson(route('api.v1.locks.index'))

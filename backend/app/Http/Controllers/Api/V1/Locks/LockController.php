@@ -35,7 +35,8 @@ class LockController extends Controller
 
         $locks = match (true) {
             $this->permissions->allows($user, PermissionKey::DevicesView) => Lock::query(),
-            $this->permissions->allows($user, PermissionKey::LockViewStatus) => $user->locks()->getQuery(),
+            // By id, not through the grant join: the grant table's own id would overwrite each lock's.
+            $this->permissions->allows($user, PermissionKey::LockViewStatus) => Lock::query()->whereIn('locks.id', $user->locks()->select('locks.id')),
             default => Lock::query()->whereRaw('1 = 0'),
         };
 
