@@ -181,6 +181,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Invitations
+    |--------------------------------------------------------------------------
+    |
+    | public_url: the address people open from the invitation email, so it must work from their
+    | phone (the public HTTPS address, never localhost). The link is {public_url}/invite/{token}.
+    |
+    | days: how long an invitation link works. The registration code it holds lasts as long, and
+    | at least a day after the account is created.
+    |
+    | quiz_questions: how many questions the training quiz asks; every one must be answered right.
+    |
+    */
+
+    'invitations' => [
+        'public_url' => rtrim((string) env('LOCKGUARD_PUBLIC_URL', 'https://lockguard.dmfmedia.net'), '/'),
+        'days' => (int) env('LOCKGUARD_INVITATION_DAYS', 7),
+        'quiz_questions' => 5,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Trusted proxies
     |--------------------------------------------------------------------------
     |

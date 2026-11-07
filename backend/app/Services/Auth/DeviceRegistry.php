@@ -180,10 +180,7 @@ class DeviceRegistry
         return DB::transaction(function () use ($user, $actor, $channel): array {
             DeviceRegistrationCode::query()->where('user_id', $user->id)->usable()->update(['cancelled_at' => now()]);
 
-            $code = '';
-            for ($i = 0; $i < self::CODE_LENGTH; $i++) {
-                $code .= self::CODE_ALPHABET[random_int(0, strlen(self::CODE_ALPHABET) - 1)];
-            }
+            $code = self::generateCode();
             $expiresAt = now()->addHours((int) config('lockguard.devices.registration_code_hours'));
 
             DeviceRegistrationCode::query()->create([
@@ -198,8 +195,59 @@ class DeviceRegistry
                 'channel' => $channel,
             ]);
 
-            return ['code' => substr($code, 0, 4).'-'.substr($code, 4), 'expires_at' => $expiresAt];
+            return ['code' => self::formatCode($code), 'expires_at' => $expiresAt];
         });
+    }
+
+    /**
+     * A new random registration code, without the dash it is shown with.
+     */
+    public static function generateCode(): string
+    {
+        $code = '';
+        for ($i = 0; $i < self::CODE_LENGTH; $i++) {
+            $code .= self::CODE_ALPHABET[random_int(0, strlen(self::CODE_ALPHABET) - 1)];
+        }
+
+        return $code;
+    }
+
+    /**
+     * A code as it is shown to people: ABCD-EFGH.
+     */
+    public static function formatCode(string $code): string
+    {
+        return substr($code, 0, 4).'-'.substr($code, 4);
+    }
+
+    /**
+     * Device checks when someone registers their device at the end of an invitation, after their
+     * password was accepted: the same address and other-account rules as signing in. Their held
+     * code is put in the session for register() to redeem, as checkSignIn does with a typed code.
+     *
+     * @throws ApiException When this device may not be used with this account.
+     */
+    public function checkInvitationDevice(Request $request, User $user, DeviceRegistrationCode $code): void
+    {
+        if (! $this->addressAllowed($request, $user)) {
+            $this->audit->record('device.address_refused', AuditOutcome::Denied, targets: ['user' => $user->id], reason: 'Device registration from a network address this account is not allowed to use.');
+
+            throw ApiException::addressNotAllowed();
+        }
+
+        $other = $this->registeredToOther($request, $user);
+        if ($other !== null) {
+            $this->audit->record('device.other_account_refused', AuditOutcome::Denied, targets: ['user' => $user->id, 'device' => $other->id], reason: 'Device registration on a device registered to another person.', metadata: [
+                'device' => $other->name,
+            ]);
+
+            throw ApiException::deviceBelongsToOther();
+        }
+
+        $request->session()->forget(self::CODE_SESSION_KEY);
+        if ($this->isBound($user)) {
+            $request->session()->put(self::CODE_SESSION_KEY, $code->id);
+        }
     }
 
     /**

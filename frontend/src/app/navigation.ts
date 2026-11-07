@@ -1,4 +1,4 @@
-import { Activity, Bell, Building2, LayoutDashboard, Lock, MapPinned, MonitorSmartphone, ScrollText, ShieldAlert, ShieldCheck, Smartphone, Users, type LucideIcon } from 'lucide-react'
+import { Activity, Bell, Building2, LayoutDashboard, Lock, Mail, MailPlus, MapPinned, MonitorSmartphone, ScrollText, ShieldAlert, ShieldCheck, Smartphone, Users, type LucideIcon } from 'lucide-react'
 import type { CurrentUser } from '../api/auth'
 import { hasAnyPermission } from '../auth/auth-context'
 
@@ -46,6 +46,7 @@ export const navigation: readonly NavGroup[] = [
     label: 'Access management',
     items: [
       { label: 'Users', path: '/users', icon: Users, permissions: USER_ADMIN_PERMISSIONS },
+      { label: 'Invitations', path: '/invitations', icon: MailPlus, permissions: ['users.create'] },
       { label: 'Roles and permissions', path: '/roles', icon: ShieldCheck, permissions: USER_ADMIN_PERMISSIONS },
       { label: 'Properties', path: '/properties', icon: Building2, permissions: ['admin.integration_settings'] },
       { label: 'Locks', path: '/locks', icon: Lock, permissions: ['lock.view_status', 'devices.view'] },
@@ -62,6 +63,10 @@ export const navigation: readonly NavGroup[] = [
       { label: 'Audit log', path: '/audit', icon: ScrollText, permissions: ['admin.incidents_view'] },
       { label: 'System health', path: '/system', icon: Activity, permissions: DIAGNOSTICS_PERMISSIONS },
     ],
+  },
+  {
+    label: 'Settings',
+    items: [{ label: 'Email settings', path: '/settings/email', icon: Mail, permissions: ['admin.notifications'] }],
   },
 ]
 

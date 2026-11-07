@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Internal\EufyEventController;
 use App\Http\Controllers\Api\V1\Audit\AuditLogController;
+use App\Http\Controllers\Api\V1\Auth\AcceptInvitationController;
 use App\Http\Controllers\Api\V1\Auth\ConfirmIdentityController;
 use App\Http\Controllers\Api\V1\Auth\CurrentUserController;
 use App\Http\Controllers\Api\V1\Auth\MfaChallengeController;
@@ -22,7 +23,9 @@ use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\Security\SecurityAlertController;
 use App\Http\Controllers\Api\V1\Security\SecurityIncidentController;
 use App\Http\Controllers\Api\V1\System\DashboardController;
+use App\Http\Controllers\Api\V1\System\EmailSettingsController;
 use App\Http\Controllers\Api\V1\System\SystemHealthController;
+use App\Http\Controllers\Api\V1\Users\InvitationController;
 use App\Http\Controllers\Api\V1\Users\PermissionPreviewController;
 use App\Http\Controllers\Api\V1\Users\RoleController;
 use App\Http\Controllers\Api\V1\Users\UserController;
@@ -36,6 +39,17 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::post('auth/login', [SessionController::class, 'store'])->name('auth.login');
     Route::post('auth/mfa/verify', MfaChallengeController::class)->name('auth.mfa.verify');
+
+    // Accepting an invitation, signed out: the link's token is the credential. Creating the account,
+    // the training lessons, the quiz, then registering the device (which needs the password and signs in).
+    Route::prefix('invitations/accept/{token}')->where(['token' => '[A-Za-z0-9]{64}'])->name('invitations.accept.')->middleware('throttle:60,1')->group(function (): void {
+        Route::get('/', [AcceptInvitationController::class, 'show'])->name('show');
+        Route::post('account', [AcceptInvitationController::class, 'account'])->name('account');
+        Route::post('lessons/{lesson}', [AcceptInvitationController::class, 'lesson'])->where('lesson', '[a-z-]{1,32}')->name('lesson');
+        Route::get('quiz', [AcceptInvitationController::class, 'quiz'])->name('quiz');
+        Route::post('quiz', [AcceptInvitationController::class, 'answer'])->name('quiz.answer');
+        Route::post('device', [AcceptInvitationController::class, 'device'])->name('device');
+    });
 
     Route::middleware(['auth:sanctum', 'active', 'device'])->group(function (): void {
         Route::post('auth/logout', [SessionController::class, 'destroy'])->name('auth.logout');
@@ -101,6 +115,19 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('devices/{device}/trust', [UserDeviceController::class, 'trust'])->whereUuid('device')->middleware('step-up')->name('devices.trust');
         // A one-time code that registers the one device a bound account works on.
         Route::post('users/{user}/device-codes', [UserDeviceController::class, 'createRegistrationCode'])->middleware(['step-up', 'throttle:12,1'])->name('users.device-codes.store');
+
+        // Invitations: an email with a link to create an account, take the training and register a device.
+        Route::get('invitations', [InvitationController::class, 'index'])->name('invitations.index');
+        Route::middleware(['step-up', 'throttle:20,1'])->group(function (): void {
+            Route::post('invitations', [InvitationController::class, 'store'])->name('invitations.store');
+            Route::post('invitations/{invitation}/resend', [InvitationController::class, 'resend'])->whereUuid('invitation')->name('invitations.resend');
+        });
+        Route::post('invitations/{invitation}/cancel', [InvitationController::class, 'cancel'])->whereUuid('invitation')->name('invitations.cancel');
+
+        // Email settings: how LockGuard sends invitations. Saving needs step-up (it holds a password).
+        Route::get('settings/email', [EmailSettingsController::class, 'show'])->name('settings.email.show');
+        Route::put('settings/email', [EmailSettingsController::class, 'update'])->middleware('step-up')->name('settings.email.update');
+        Route::post('settings/email/test', [EmailSettingsController::class, 'test'])->middleware('throttle:6,1')->name('settings.email.test');
 
         // Suspension is deliberately not behind step-up so an administrator can cut off access at once.
         Route::post('users/{user}/suspend', [UserStatusController::class, 'suspend'])->name('users.suspend');

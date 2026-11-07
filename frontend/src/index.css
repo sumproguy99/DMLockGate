@@ -34,3 +34,68 @@
     }
   }
 }
+
+/* Pip the paperclip (components/onboarding/Pip.tsx). Reduced motion stops these through the rule above. */
+@keyframes pip-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes pip-wave {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-18deg);
+  }
+}
+
+@keyframes pip-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes pip-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.pip-bob {
+  animation: pip-bob 3.2s var(--ease-standard) infinite;
+}
+
+.pip-wave {
+  animation: pip-wave 0.9s ease-in-out infinite;
+}
+
+.pip-blink {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pip-blink 4.5s linear infinite;
+}
+
+.pip-confetti {
+  animation: pip-pop 0.5s var(--ease-standard) both;
+}
+
+.pip-pop {
+  animation: pip-pop 0.32s var(--ease-standard) both;
+}

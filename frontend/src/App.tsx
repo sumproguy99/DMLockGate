@@ -33,6 +33,9 @@ import { DeviceLocationsPage } from './pages/security/DeviceLocationsPage'
 import { LocationMapPage } from './pages/security/LocationMapPage'
 import { SecurityCenterPage } from './pages/security/SecurityCenterPage'
 import { SystemHealthPage } from './pages/security/SystemHealthPage'
+import { InvitationPage } from './pages/invitation/InvitationPage'
+import { EmailSettingsPage } from './pages/settings/EmailSettingsPage'
+import { InvitationsPage } from './pages/users/InvitationsPage'
 import { NewUserPage } from './pages/users/NewUserPage'
 import { RolesPage } from './pages/users/RolesPage'
 import { UserDetailPage } from './pages/users/UserDetailPage'
@@ -100,6 +103,8 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      {/* Accepting an invitation works signed out: the link's token is the credential. */}
+      <Route path="/invite/:token" element={<InvitationPage />} />
       {ComponentGallery && (
         <Route
           path="/dev/components"
@@ -191,6 +196,22 @@ export function AppRoutes() {
           element={
             <RequirePermission permissions={USER_ADMIN_PERMISSIONS}>
               <UserDetailPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="invitations"
+          element={
+            <RequirePermission permissions={['users.create']}>
+              <InvitationsPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="settings/email"
+          element={
+            <RequirePermission permissions={['admin.notifications']}>
+              <EmailSettingsPage />
             </RequirePermission>
           }
         />

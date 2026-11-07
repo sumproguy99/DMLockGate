@@ -10,6 +10,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use App\Services\Auth\DeviceRegistry;
+use App\Services\Invitations\InvitationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -29,6 +30,7 @@ class SessionController extends Controller
         private readonly AuditLogger $audit,
         private readonly CompleteLogin $completeLogin,
         private readonly DeviceRegistry $devices,
+        private readonly InvitationService $invitations,
     ) {}
 
     /**
@@ -69,6 +71,13 @@ class SessionController extends Controller
             $this->audit->record('auth.login', AuditOutcome::Denied, targets: ['user' => $user->id], reason: 'Account is '.($user->status?->value ?? 'inactive').' or expired.');
 
             throw ApiException::accountInactive();
+        }
+
+        // Invited people finish the training from their invitation link before they can sign in.
+        if ($this->invitations->owesTraining($user)) {
+            $this->audit->record('auth.login', AuditOutcome::Denied, targets: ['user' => $user->id], reason: 'Invitation training not completed.');
+
+            throw ApiException::trainingRequired();
         }
 
         // A revoked device stays revoked: the right password does not bring it back.

@@ -252,7 +252,7 @@ describe('the signed-in shell', () => {
     const { container } = renderApp('/')
 
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' })
-    expect(navLinks()).toEqual(['Dashboard', 'Notifications', 'Users', 'Roles and permissions', 'Properties', 'Locks', 'Devices', 'System health'])
+    expect(navLinks()).toEqual(['Dashboard', 'Notifications', 'Users', 'Invitations', 'Roles and permissions', 'Properties', 'Locks', 'Devices', 'System health'])
     expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByText('Alex Admin')).toBeInTheDocument()
     expect(screen.getByText('Owner')).toBeInTheDocument()

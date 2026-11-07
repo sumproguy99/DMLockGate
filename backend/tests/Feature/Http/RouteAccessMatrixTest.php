@@ -10,6 +10,7 @@ use App\Enums\LockAction;
 use App\Enums\RoleTemplate;
 use App\Models\AccessRequest;
 use App\Models\AuditLog;
+use App\Models\Invitation;
 use App\Models\LocationRequest;
 use App\Models\Lock;
 use App\Models\Property;
@@ -89,6 +90,15 @@ class RouteAccessMatrixTest extends TestCase
         'api.v1.devices.revoke' => ['super_administrator', 'security_administrator'],
         'api.v1.devices.trust' => ['super_administrator'],
         'api.v1.users.device-codes.store' => ['super_administrator'],
+        // Invitations: users.create, like creating an account directly.
+        'api.v1.invitations.index' => ['super_administrator', 'property_manager'],
+        'api.v1.invitations.store' => ['super_administrator', 'property_manager'],
+        'api.v1.invitations.resend' => ['super_administrator', 'property_manager'],
+        'api.v1.invitations.cancel' => ['super_administrator', 'property_manager'],
+        // Email settings: admin.notifications.
+        'api.v1.settings.email.show' => self::INCIDENT_HANDLERS,
+        'api.v1.settings.email.update' => self::INCIDENT_HANDLERS,
+        'api.v1.settings.email.test' => self::INCIDENT_HANDLERS,
         'api.v1.users.roles.update' => ['super_administrator'],
         'api.v1.users.permissions.update' => ['super_administrator'],
         'api.v1.locks.index' => self::ALL,
@@ -137,7 +147,16 @@ class RouteAccessMatrixTest extends TestCase
     ];
 
     /** Signed-out routes, checked elsewhere. */
-    private const PUBLIC = ['api.v1.auth.login', 'api.v1.auth.mfa.verify'];
+    private const PUBLIC = [
+        'api.v1.auth.login',
+        'api.v1.auth.mfa.verify',
+        'api.v1.invitations.accept.show',
+        'api.v1.invitations.accept.account',
+        'api.v1.invitations.accept.lesson',
+        'api.v1.invitations.accept.quiz',
+        'api.v1.invitations.accept.quiz.answer',
+        'api.v1.invitations.accept.device',
+    ];
 
     protected function setUp(): void
     {
@@ -188,9 +207,10 @@ class RouteAccessMatrixTest extends TestCase
                 $notification = $user->notifications()->create(['id' => (string) Str::uuid(), 'type' => 'security_alert', 'data' => ['title' => 'Matrix']]);
                 // The caller's own device for their own routes, the other person's for administrators'.
                 $device = UserDevice::factory()->create(['user_id' => str_starts_with((string) $name, 'api.v1.auth.') ? $user->id : $target->id]);
+                $invitation = Invitation::factory()->create(['invited_by' => $target->id]);
                 $uri = '/'.str_replace(
-                    ['{lock}', '{user}', '{accessRequest}', '{eventId}', '{locationRequest}', '{alert}', '{incident}', '{notification}', '{device}'],
-                    [$lock->id, $target->id, $request->public_id, $eventId, $locationRequest->public_id, $alert->public_id, $incident->public_id, $notification->id, $device->public_id],
+                    ['{lock}', '{user}', '{accessRequest}', '{eventId}', '{locationRequest}', '{alert}', '{incident}', '{notification}', '{device}', '{invitation}'],
+                    [$lock->id, $target->id, $request->public_id, $eventId, $locationRequest->public_id, $alert->public_id, $incident->public_id, $notification->id, $device->public_id, $invitation->public_id],
                     $route->uri(),
                 );
 
@@ -261,6 +281,9 @@ class RouteAccessMatrixTest extends TestCase
             'api.v1.security.incidents.status' => ['status' => 'investigating'],
             'api.v1.auth.devices.update', 'api.v1.devices.update' => ['name' => 'Matrix phone'],
             'api.v1.devices.revoke' => ['reason' => 'Access matrix test'],
+            'api.v1.invitations.store' => ['email' => Str::random(12).'@example.test'],
+            'api.v1.settings.email.update' => ['enabled' => false, 'host' => 'smtp.example.test', 'port' => 587, 'security' => 'starttls', 'from_address' => 'lockguard@example.test', 'from_name' => 'DM LockGuard'],
+            'api.v1.settings.email.test' => ['to' => 'matrix@example.test'],
             default => [],
         };
     }

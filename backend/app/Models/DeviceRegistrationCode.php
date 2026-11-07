@@ -47,6 +47,16 @@ class DeviceRegistrationCode extends Model
     }
 
     /**
+     * The invitation that holds this code, when it came from one.
+     *
+     * @return BelongsTo<Invitation, $this>
+     */
+    public function invitation(): BelongsTo
+    {
+        return $this->belongsTo(Invitation::class);
+    }
+
+    /**
      * @return BelongsTo<User, $this>
      */
     public function creator(): BelongsTo

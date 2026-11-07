@@ -46,4 +46,24 @@ class ApiException extends RuntimeException
     {
         return new self(403, 'device_revoked', 'This device has been removed from your account. Sign in from another device, or ask an administrator.');
     }
+
+    public static function trainingRequired(): self
+    {
+        return new self(403, 'training_required', 'Finish the LockGuard training from your invitation link before you sign in. Open the invitation email and tap Accept Invitation to carry on where you left off.');
+    }
+
+    public static function invitationNotFound(): self
+    {
+        return new self(404, 'invitation_not_found', 'This invitation link is not valid. Check that you opened the whole link, or ask your administrator for a new invitation.');
+    }
+
+    public static function invitationClosed(string $status): self
+    {
+        return match ($status) {
+            'completed' => new self(410, 'invitation_completed', 'This invitation has already been used. Sign in with your email and password.'),
+            'cancelled' => new self(410, 'invitation_cancelled', 'This invitation was cancelled. Ask your administrator for a new one.'),
+            'expired' => new self(410, 'invitation_expired', 'This invitation has expired. Ask your administrator to send it again.'),
+            default => new self(409, 'invitation_wrong_step', 'This step is not available yet. Go back and finish the earlier steps first.'),
+        };
+    }
 }
