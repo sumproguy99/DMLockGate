@@ -13,7 +13,8 @@ export type AuthState =
 
 export type Auth = {
   state: AuthState
-  signIn: (email: string, password: string) => Promise<LoginResult>
+  /** deviceCode registers this device, for an account bound to one device. */
+  signIn: (email: string, password: string, deviceCode?: string) => Promise<LoginResult>
   verifyMfa: (input: { code: string } | { recovery_code: string }) => Promise<void>
   signOut: () => Promise<void>
   /** Reads the signed-in user again, after a change to their own account such as two-step verification. */

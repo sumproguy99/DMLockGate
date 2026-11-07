@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Auth;
 use App\Enums\AuditOutcome;
 use App\Http\Controllers\Controller;
 use App\Services\Audit\AuditLogger;
+use App\Services\Auth\DeviceRegistry;
 use App\Services\Auth\SessionRevoker;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -35,7 +36,7 @@ class OwnSessionController extends Controller
                 ->get(['id', 'ip_address', 'user_agent', 'last_activity'])
                 ->map(fn (object $row): array => [
                     'current' => $row->id === $currentId,
-                    'device' => self::describeUserAgent($row->user_agent),
+                    'device' => DeviceRegistry::describeUserAgent($row->user_agent),
                     'ip_address' => $row->ip_address,
                     'last_active_at' => CarbonImmutable::createFromTimestampUTC((int) $row->last_activity)->toIso8601ZuluString('millisecond'),
                 ])
@@ -66,36 +67,5 @@ class OwnSessionController extends Controller
         });
 
         return response()->json(['data' => ['signed_out' => $ended]]);
-    }
-
-    /**
-     * "Chrome on Android" from a user agent, or null when it is not recognized.
-     */
-    private static function describeUserAgent(?string $userAgent): ?string
-    {
-        if ($userAgent === null || $userAgent === '') {
-            return null;
-        }
-
-        $browser = match (true) {
-            str_contains($userAgent, 'Edg/') => 'Edge',
-            str_contains($userAgent, 'Firefox/') || str_contains($userAgent, 'FxiOS/') => 'Firefox',
-            str_contains($userAgent, 'CriOS/') || str_contains($userAgent, 'Chrome/') => 'Chrome',
-            str_contains($userAgent, 'Safari/') => 'Safari',
-            default => null,
-        };
-        $system = match (true) {
-            str_contains($userAgent, 'iPhone') || str_contains($userAgent, 'iPad') => 'iOS',
-            str_contains($userAgent, 'Android') => 'Android',
-            str_contains($userAgent, 'Windows') => 'Windows',
-            str_contains($userAgent, 'Mac OS X') => 'macOS',
-            str_contains($userAgent, 'Linux') => 'Linux',
-            default => null,
-        };
-
-        return match (true) {
-            $browser !== null && $system !== null => "{$browser} on {$system}",
-            default => $browser ?? $system,
-        };
     }
 }

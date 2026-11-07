@@ -59,17 +59,21 @@ function PasswordStep({ notice }: { notice?: string }) {
   const [busy, setBusy] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [fields, setFields] = useState<FieldErrors>({})
+  // Shown once the server says this account is bound to a device and this one is not registered.
+  const [needsCode, setNeedsCode] = useState(false)
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
     const email = String(data.get('email') ?? '').trim()
     const password = String(data.get('password') ?? '')
+    const deviceCode = String(data.get('device_code') ?? '').trim()
     const missing: FieldErrors = {
       email: email ? null : 'Enter your email address.',
       password: password ? null : 'Enter your password.',
+      device_code: needsCode && !deviceCode ? 'Enter the registration code from your administrator.' : null,
     }
-    if (missing.email || missing.password) {
+    if (missing.email || missing.password || missing.device_code) {
       setFields(missing)
       setFormError(null)
       return
@@ -79,8 +83,13 @@ function PasswordStep({ notice }: { notice?: string }) {
     setFormError(null)
     setFields({})
     try {
-      await signIn(email, password)
+      await signIn(email, password, needsCode ? deviceCode : undefined)
     } catch (error) {
+      if (error instanceof ApiError && error.code === 'device_registration_required') {
+        setNeedsCode(true)
+        setBusy(false)
+        return
+      }
       const { form, fields: fieldErrors } = errorsFrom(error)
       setFormError(form)
       setFields(fieldErrors)
@@ -90,10 +99,30 @@ function PasswordStep({ notice }: { notice?: string }) {
 
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-4">
-      {notice && !formError && <Banner tone="unknown" title={notice} />}
+      {notice && !formError && !needsCode && <Banner tone="unknown" title={notice} />}
       {formError && <Banner tone="danger" title="Could not sign in">{formError}</Banner>}
+      {needsCode && !formError && (
+        <Banner tone="info" title="Register this device">
+          Your account can only be used on the one device registered to it. Enter the registration code your administrator
+          gave you to make this your device. Any device registered before stops working.
+        </Banner>
+      )}
       <TextField name="email" label="Email" type="email" autoComplete="username" error={fields.email} required autoFocus />
       <PasswordField name="password" label="Password" autoComplete="current-password" error={fields.password} required />
+      {needsCode && (
+        <TextField
+          name="device_code"
+          label="Registration code"
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          maxLength={16}
+          placeholder="XXXX-XXXX"
+          error={fields.device_code}
+          required
+          autoFocus
+        />
+      )}
       <Button type="submit" icon={LogIn} loading={busy} fullWidth aria-describedby="location-notice">
         Sign in
       </Button>

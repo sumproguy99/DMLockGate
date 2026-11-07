@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\Auth\ConfirmIdentityController;
 use App\Http\Controllers\Api\V1\Auth\CurrentUserController;
 use App\Http\Controllers\Api\V1\Auth\MfaChallengeController;
 use App\Http\Controllers\Api\V1\Auth\MfaController;
+use App\Http\Controllers\Api\V1\Auth\OwnDeviceController;
 use App\Http\Controllers\Api\V1\Auth\OwnSessionController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
 use App\Http\Controllers\Api\V1\Location\LocationMapController;
@@ -25,6 +26,7 @@ use App\Http\Controllers\Api\V1\System\SystemHealthController;
 use App\Http\Controllers\Api\V1\Users\PermissionPreviewController;
 use App\Http\Controllers\Api\V1\Users\RoleController;
 use App\Http\Controllers\Api\V1\Users\UserController;
+use App\Http\Controllers\Api\V1\Users\UserDeviceController;
 use App\Http\Controllers\Api\V1\Users\UserPermissionController;
 use App\Http\Controllers\Api\V1\Users\UserRoleController;
 use App\Http\Controllers\Api\V1\Users\UserSecurityHistoryController;
@@ -35,7 +37,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::post('auth/login', [SessionController::class, 'store'])->name('auth.login');
     Route::post('auth/mfa/verify', MfaChallengeController::class)->name('auth.mfa.verify');
 
-    Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
+    Route::middleware(['auth:sanctum', 'active', 'device'])->group(function (): void {
         Route::post('auth/logout', [SessionController::class, 'destroy'])->name('auth.logout');
         Route::get('auth/me', CurrentUserController::class)->name('auth.me');
         Route::post('auth/confirm', ConfirmIdentityController::class)->name('auth.confirm');
@@ -43,6 +45,13 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         // The user's own sign-ins. Signing out the others protects the account, so it needs no step-up.
         Route::get('auth/sessions', [OwnSessionController::class, 'index'])->name('auth.sessions.index');
         Route::delete('auth/sessions/others', [OwnSessionController::class, 'destroyOthers'])->middleware('throttle:6,1')->name('auth.sessions.destroy-others');
+
+        // The user's own devices. Renaming and revoking protect the account and need no step-up;
+        // trusting the device in hand raises its standing, so it does.
+        Route::get('auth/devices', [OwnDeviceController::class, 'index'])->name('auth.devices.index');
+        Route::post('auth/devices/current/trust', [OwnDeviceController::class, 'trustCurrent'])->middleware('step-up')->name('auth.devices.trust-current');
+        Route::patch('auth/devices/{device}', [OwnDeviceController::class, 'update'])->whereUuid('device')->name('auth.devices.update');
+        Route::post('auth/devices/{device}/revoke', [OwnDeviceController::class, 'revoke'])->whereUuid('device')->middleware('throttle:12,1')->name('auth.devices.revoke');
 
         // Dashboard and health. Read-only; each section is filtered by the caller's permissions.
         Route::get('dashboard', DashboardController::class)->name('dashboard');
@@ -83,6 +92,15 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
         Route::get('permissions', [RoleController::class, 'permissions'])->name('permissions.index');
         Route::post('permission-preview', PermissionPreviewController::class)->name('permission-preview');
+
+        // Everyone's devices. Revoking is not behind step-up, like suspension, so a lost phone can be cut off at once.
+        Route::get('devices', [UserDeviceController::class, 'index'])->name('devices.index');
+        Route::get('users/{user}/devices', [UserDeviceController::class, 'forUser'])->name('users.devices.index');
+        Route::patch('devices/{device}', [UserDeviceController::class, 'update'])->whereUuid('device')->name('devices.update');
+        Route::post('devices/{device}/revoke', [UserDeviceController::class, 'revoke'])->whereUuid('device')->name('devices.revoke');
+        Route::post('devices/{device}/trust', [UserDeviceController::class, 'trust'])->whereUuid('device')->middleware('step-up')->name('devices.trust');
+        // A one-time code that registers the one device a bound account works on.
+        Route::post('users/{user}/device-codes', [UserDeviceController::class, 'createRegistrationCode'])->middleware(['step-up', 'throttle:12,1'])->name('users.device-codes.store');
 
         // Suspension is deliberately not behind step-up so an administrator can cut off access at once.
         Route::post('users/{user}/suspend', [UserStatusController::class, 'suspend'])->name('users.suspend');

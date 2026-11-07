@@ -47,6 +47,16 @@ class LocationReport extends Model
     }
 
     /**
+     * The browser or phone the location came from, when known.
+     *
+     * @return BelongsTo<UserDevice, $this>
+     */
+    public function device(): BelongsTo
+    {
+        return $this->belongsTo(UserDevice::class, 'user_device_id');
+    }
+
+    /**
      * @return BelongsTo<AccessRequest, $this>
      */
     public function accessRequest(): BelongsTo

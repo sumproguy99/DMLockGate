@@ -37,14 +37,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(
     () =>
-      onUnauthenticated(() =>
-        setState((current) => (current.status === 'signed_in' ? { status: 'signed_out', notice: SESSION_ENDED_NOTICE } : current)),
+      onUnauthenticated((error) =>
+        setState((current) =>
+          current.status === 'signed_in'
+            ? { status: 'signed_out', notice: error.status === 401 ? SESSION_ENDED_NOTICE : error.message }
+            : current,
+        ),
       ),
     [],
   )
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const result = await authApi.login(email, password)
+  const signIn = useCallback(async (email: string, password: string, deviceCode?: string) => {
+    const result = await authApi.login(email, password, deviceCode)
     setState(result.status === 'authenticated' ? { status: 'signed_in', user: result.user } : { status: 'mfa_required' })
     return result
   }, [])

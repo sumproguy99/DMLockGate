@@ -1,10 +1,10 @@
-import { ChevronRight, KeyRound, Smartphone } from 'lucide-react'
+import { ChevronRight, KeyRound } from 'lucide-react'
 import { Link } from 'react-router'
 import { LockStateBadge } from '../components/status/LockStatus'
+import { OwnDevicesCard } from '../components/devices/OwnDevicesCard'
 import { DeviceStatus } from '../components/status/DeviceStatus'
 import { Banner } from '../components/ui/Banner'
 import { Button } from '../components/ui/Button'
-import { Card } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
 import { PageHeader } from '../components/ui/PageHeader'
 import { LoadingState } from '../components/ui/Spinner'
@@ -12,15 +12,14 @@ import { useMobileLocks } from './locks-context'
 
 /**
  * Mobile Devices (project.md 34.8 E): the locks this person can see, each linking to its controls,
- * and the trusted-phone section. LockGuard does not enroll trusted phones yet, so that section says
- * so instead of listing anything.
+ * and the person's own phones and browsers with their trust status.
  */
 export function MobileDevicesPage() {
   const locks = useMobileLocks()
 
   return (
     <>
-      <PageHeader title="Devices" description="Your locks, their connection and battery." />
+      <PageHeader title="Devices" description="Your locks, and the phones and browsers signed in to your account." />
       <div className="flex flex-col gap-5">
         <section aria-labelledby="devices-locks">
           <h2 id="devices-locks" className="mb-2 text-section">
@@ -74,15 +73,7 @@ export function MobileDevicesPage() {
           )}
         </section>
 
-        <Card title="Trusted phones" headingLevel={2}>
-          <div className="flex gap-3">
-            <Smartphone className="mt-0.5 size-5 shrink-0 text-text-muted" aria-hidden />
-            <p className="text-support text-text-muted">
-              LockGuard does not register trusted phones yet, so there is nothing to list or revoke here. To stop a lost phone
-              from using your account, sign out your other sessions under More → Account security.
-            </p>
-          </div>
-        </Card>
+        <OwnDevicesCard />
       </div>
     </>
   )

@@ -19,7 +19,7 @@ function tooltipFor(pin: MapPin): HTMLElement {
   const card = document.createElement('div')
   const lines: [string, string][] = [
     ['font-semibold', title],
-    ['', pin.user.name],
+    ['', pin.device ? `${pin.user.name} · ${pin.device.name}` : pin.user.name],
     ['', formatAbsolute(pin.at)],
     ['font-semibold', result],
     ['opacity-80', `Within about ${Math.round(pin.accuracy_meters)} m`],

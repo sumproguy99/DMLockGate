@@ -5,6 +5,7 @@ namespace App\Services\Locks;
 use App\Enums\AccessChannel;
 use App\Enums\AccessRequestStatus;
 use App\Enums\AuditOutcome;
+use App\Enums\DeviceStatus;
 use App\Enums\LockAction;
 use App\Enums\PermissionKey;
 use App\Exceptions\ApiException;
@@ -14,6 +15,7 @@ use App\Models\AuthorizationDecision;
 use App\Models\Lock;
 use App\Models\LockCommand;
 use App\Models\User;
+use App\Models\UserDevice;
 use App\Services\Audit\AuditLogger;
 use App\Services\Authorization\PermissionResolver;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -38,6 +40,7 @@ class LockCommandService
 
     /**
      * @param  ?int  $identityConfirmedAt  Unix time the user last proved their identity in this session.
+     * @param  ?UserDevice  $device  The device the request came from; null for API-token clients.
      */
     public function request(
         User $user,
@@ -48,6 +51,7 @@ class LockCommandService
         ?int $identityConfirmedAt,
         ?string $ipAddress = null,
         ?string $userAgent = null,
+        ?UserDevice $device = null,
     ): AccessRequest {
         $existing = $this->findDuplicate($user, $lock, $action, $idempotencyKey);
         if ($existing !== null) {
@@ -56,7 +60,7 @@ class LockCommandService
 
         try {
             return DB::transaction(fn (): AccessRequest => $this->createAndDecide(
-                $user, $lock, $action, $channel, $idempotencyKey, $identityConfirmedAt, $ipAddress, $userAgent,
+                $user, $lock, $action, $channel, $idempotencyKey, $identityConfirmedAt, $ipAddress, $userAgent, $device,
             ));
         } catch (UniqueConstraintViolationException) {
             // A concurrent request with the same idempotency key won the race; return that one.
@@ -88,6 +92,7 @@ class LockCommandService
         ?int $identityConfirmedAt,
         ?string $ipAddress,
         ?string $userAgent,
+        ?UserDevice $device,
     ): AccessRequest {
         // Serialize requests per lock so two cannot both pass the lock_busy check.
         $lock = Lock::query()->whereKey($lock->id)->lockForUpdate()->firstOrFail();
@@ -97,6 +102,7 @@ class LockCommandService
             'public_id' => (string) Str::uuid(),
             'user_id' => $user->id,
             'lock_id' => $lock->id,
+            'user_device_id' => $device?->id,
             'action' => $action,
             'channel' => $channel,
             'idempotency_key' => $idempotencyKey,
@@ -108,7 +114,7 @@ class LockCommandService
         ]);
         $request->forceFill(['status' => AccessRequestStatus::Authenticating])->save();
 
-        [$checks, $failure] = $this->evaluate($user, $lock, $action, $channel, $identityConfirmedAt);
+        [$checks, $failure] = $this->evaluate($user, $lock, $action, $channel, $identityConfirmedAt, $device);
 
         AuthorizationDecision::query()->create([
             'access_request_id' => $request->id,
@@ -120,16 +126,17 @@ class LockCommandService
         ]);
 
         $auditContext = ['request_id' => $request->public_id, 'action' => $action->value, 'channel' => $channel->value];
+        $auditTargets = ['user' => $user->id, 'lock' => $lock->id, 'device' => $device?->id];
 
         if ($failure !== null) {
             $request->forceFill(['status' => AccessRequestStatus::Denied, 'completed_at' => now()])->save();
-            $this->audit->record('lock.command_denied', AuditOutcome::Denied, actor: $user, targets: ['user' => $user->id, 'lock' => $lock->id], reason: $failure['message'], metadata: [...$auditContext, 'denial' => $failure['code']]);
+            $this->audit->record('lock.command_denied', AuditOutcome::Denied, actor: $user, targets: $auditTargets, reason: $failure['message'], metadata: [...$auditContext, 'denial' => $failure['code']]);
 
             return $request;
         }
 
         $request->forceFill(['status' => AccessRequestStatus::Authorized])->save();
-        $this->audit->record('lock.command_authorized', AuditOutcome::Success, actor: $user, targets: ['user' => $user->id, 'lock' => $lock->id], metadata: $auditContext);
+        $this->audit->record('lock.command_authorized', AuditOutcome::Success, actor: $user, targets: $auditTargets, metadata: $auditContext);
 
         LockCommand::query()->create([
             'access_request_id' => $request->id,
@@ -149,7 +156,7 @@ class LockCommandService
      *
      * @return array{0: list<array{check: string, result: string, detail?: string}>, 1: array{code: string, message: string}|null}
      */
-    private function evaluate(User $user, Lock $lock, LockAction $action, AccessChannel $channel, ?int $identityConfirmedAt): array
+    private function evaluate(User $user, Lock $lock, LockAction $action, AccessChannel $channel, ?int $identityConfirmedAt, ?UserDevice $device): array
     {
         $isRemoteUnlock = $action === LockAction::Unlock && $channel === AccessChannel::Remote;
         $remotePolicy = (string) config('lockguard.locks.remote_unlock_policy');
@@ -157,6 +164,18 @@ class LockCommandService
         $checks = [
             'account_active' => fn (): ?array => $user->isActive() ? null
                 : ['account_inactive', 'This account is suspended, revoked or expired.'],
+
+            // Re-read, so a device revoked a moment ago cannot slip a request through.
+            'device' => function () use ($action, $device): ?array {
+                if ($device !== null && UserDevice::query()->whereKey($device->id)->value('status') === DeviceStatus::Revoked) {
+                    return ['device_revoked', 'This device has been removed from your account.'];
+                }
+                if ($action === LockAction::Unlock && config('lockguard.devices.unlock_requires_trusted') && ! ($device?->isTrusted() ?? false)) {
+                    return ['device_not_trusted', 'Unlocking needs a trusted device. Trust this device under Devices first.'];
+                }
+
+                return null;
+            },
 
             'valid_operation' => fn (): ?array => match (true) {
                 $channel === AccessChannel::Proximity => ['proximity_unavailable', 'Proximity unlocking is not available yet.'],

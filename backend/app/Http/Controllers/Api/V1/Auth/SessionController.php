@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
+use App\Services\Auth\DeviceRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -27,6 +28,7 @@ class SessionController extends Controller
     public function __construct(
         private readonly AuditLogger $audit,
         private readonly CompleteLogin $completeLogin,
+        private readonly DeviceRegistry $devices,
     ) {}
 
     /**
@@ -68,6 +70,17 @@ class SessionController extends Controller
 
             throw ApiException::accountInactive();
         }
+
+        // A revoked device stays revoked: the right password does not bring it back.
+        $device = $this->devices->find($request, $user);
+        if ($device?->isRevoked()) {
+            $this->audit->record('device.revoked_access_attempt', AuditOutcome::Denied, targets: ['user' => $user->id, 'device' => $device->id], reason: 'Sign-in from a revoked device.', metadata: ['device' => $device->name]);
+
+            throw ApiException::deviceRevoked();
+        }
+
+        // Device binding: this browser must be the user's registered device, or register with a code.
+        $this->devices->checkSignIn($request, $user, $request->validated('device_code'));
 
         $request->session()->regenerate();
 

@@ -35,5 +35,7 @@
         <env name="LOCKGUARD_LOCK_DRIVER" value="unconfigured"/>
         <env name="LOCKGUARD_BRIDGE_URL" value="http://bridge.invalid"/>
         <env name="LOCKGUARD_BRIDGE_SECRET" value=""/>
+        <!-- Device binding is covered by DeviceBindingTest, which turns it on. -->
+        <env name="LOCKGUARD_DEVICE_BINDING" value="false"/>
     </php>
 </phpunit>

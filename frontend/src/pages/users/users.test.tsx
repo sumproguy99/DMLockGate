@@ -207,6 +207,36 @@ describe('a user page', () => {
     expect(within(screen.getByRole('alertdialog')).queryByText('That did not work')).not.toBeInTheDocument()
   })
 
+  it('creates a registration code for a person bound to one device and shows it once', async () => {
+    let created = false
+    const fetch = mockFetch({
+      ...signedIn(makeUser({ ...admin, permissions: [...admin.permissions, 'devices.enroll'] })),
+      'GET /api/v1/roles': () => json(200, { data: roles }),
+      'GET /api/v1/permissions': () => json(200, { data: catalog }),
+      'GET /api/v1/users/2': () => json(200, { data: managed() }),
+      'GET /api/v1/users/2/security-history': () => json(200, { data: [], next_cursor: null }),
+      'GET /api/v1/users/2/devices': () =>
+        json(200, { data: [], meta: { bound: true, registration_code_expires_at: created ? '2026-11-03T12:00:00.000Z' : null } }),
+      'POST /api/v1/users/2/device-codes': () => {
+        created = true
+        return json(201, { data: { code: 'ABCD-EFGH', expires_at: '2026-11-03T12:00:00.000Z' } })
+      },
+    })
+    const { container } = renderAt('/users/2')
+    const user = userEvent.setup()
+
+    expect(await screen.findByText('No registered device')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Create registration code' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'Registration code' })
+    expect(within(dialog).getByText('ABCD-EFGH')).toBeInTheDocument()
+    await expectNoAxeViolations(container)
+    await user.click(within(dialog).getByRole('button', { name: 'Done' }))
+
+    expect(await screen.findByText(/An unused code is waiting/)).toBeInTheDocument()
+    expect(posted(fetch, 'POST', '/api/v1/users/2/device-codes')).toHaveLength(1)
+  })
+
   it('does not offer to change your own account', async () => {
     adminSession({ 'GET /api/v1/users/1': () => json(200, { data: managed({ id: 1, name: 'Ada Admin' }) }) })
     renderAt('/users/1')

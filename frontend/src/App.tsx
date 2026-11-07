@@ -10,6 +10,7 @@ import { Banner } from './components/ui/Banner'
 import { Button } from './components/ui/Button'
 import { LoadingState } from './components/ui/Spinner'
 import { DashboardPage } from './pages/DashboardPage'
+import { DevicesPage } from './pages/DevicesPage'
 import { LockDetailPage } from './pages/locks/LockDetailPage'
 import { LocksPage } from './pages/locks/LocksPage'
 import { PropertiesPage } from './pages/locks/PropertiesPage'
@@ -19,6 +20,7 @@ import { MobileActivityPage } from './mobile/MobileActivityPage'
 import { MobileDevicesPage } from './mobile/MobileDevicesPage'
 import { MobileHelpPage } from './mobile/MobileHelpPage'
 import { MobileHomePage } from './mobile/MobileHomePage'
+import { MobileLocationHistoryPage } from './mobile/MobileLocationHistoryPage'
 import { MobileLocationPage } from './mobile/MobileLocationPage'
 import { MobileLockPage } from './mobile/MobileLockPage'
 import { MobileMorePage } from './mobile/MobileMorePage'
@@ -27,6 +29,7 @@ import { MobileShell } from './mobile/MobileShell'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { AuditLogPage } from './pages/security/AuditLogPage'
 import { IncidentDetailPage } from './pages/security/IncidentDetailPage'
+import { DeviceLocationsPage } from './pages/security/DeviceLocationsPage'
 import { LocationMapPage } from './pages/security/LocationMapPage'
 import { SecurityCenterPage } from './pages/security/SecurityCenterPage'
 import { SystemHealthPage } from './pages/security/SystemHealthPage'
@@ -136,6 +139,7 @@ export function AppRoutes() {
         <Route path="notifications" element={<MobileNotificationsPage />} />
         <Route path="account" element={<MobileAccountPage />} />
         <Route path="location" element={<MobileLocationPage />} />
+        <Route path="location/history" element={<MobileLocationHistoryPage />} />
         <Route path="help" element={<MobileHelpPage />} />
         <Route path="more" element={<MobileMorePage />} />
         <Route path="*" element={<NotFound />} />
@@ -149,6 +153,7 @@ export function AppRoutes() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="devices" element={<DevicesPage />} />
         <Route
           path="security"
           element={
@@ -226,6 +231,14 @@ export function AppRoutes() {
           element={
             <RequirePermission permissions={['location.view_history']}>
               <LocationMapPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="device-locations"
+          element={
+            <RequirePermission permissions={['location.view_history']}>
+              <DeviceLocationsPage />
             </RequirePermission>
           }
         />

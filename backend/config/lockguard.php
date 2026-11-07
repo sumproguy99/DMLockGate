@@ -136,4 +136,59 @@ return [
         'notifications_per_hour' => (int) env('LOCKGUARD_NOTIFICATIONS_PER_HOUR', 20),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Devices
+    |--------------------------------------------------------------------------
+    |
+    | Each browser that signs in is recognized by a random token in an HTTP-only cookie; only its
+    | hash is stored. A revoked device's session ends on its next request, and it cannot sign in or
+    | make lock requests again.
+    |
+    | cookie / cookie_days: the cookie's name and how long a browser stays recognized.
+    |
+    | unlock_requires_trusted: when true, unlocking is refused from a device the user has not
+    | trusted. Off by default so existing users are not locked out; locking never needs it.
+    |
+    | binding: when true, every account except those holding an exempt role can only be used on
+    | the one device it registered with a one-time code from an administrator. Signing in anywhere
+    | else is refused, and a registered device cannot be used with any other account.
+    |
+    | exempt_roles: role keys that are not bound (administrators).
+    |
+    | address_accounts: accounts locked to network addresses instead of a registered device, for
+    | unattended clients such as a kiosk that cannot enter a code. Such an account is not bound and
+    | needs no code, but every sign-in and request (session or API token) from any other address is
+    | refused. Format: email=address|address;email=address (addresses may be CIDR ranges).
+    |
+    | registration_code_hours: how long a registration code stays usable.
+    |
+    */
+
+    'devices' => [
+        'cookie' => env('LOCKGUARD_DEVICE_COOKIE', 'lockguard_device'),
+        'cookie_days' => (int) env('LOCKGUARD_DEVICE_COOKIE_DAYS', 400),
+        'unlock_requires_trusted' => (bool) env('LOCKGUARD_UNLOCK_REQUIRES_TRUSTED_DEVICE', false),
+        'binding' => (bool) env('LOCKGUARD_DEVICE_BINDING', true),
+        'exempt_roles' => array_values(array_filter(array_map('trim', explode(',', (string) env('LOCKGUARD_DEVICE_BINDING_EXEMPT_ROLES', 'super_administrator,security_administrator'))))),
+        'address_accounts' => collect(explode(';', (string) env('LOCKGUARD_DEVICE_ADDRESS_ACCOUNTS', '')))
+            ->map(fn (string $entry): array => array_map('trim', explode('=', $entry, 2)))
+            ->filter(fn (array $pair): bool => count($pair) === 2 && $pair[0] !== '' && $pair[1] !== '')
+            ->mapWithKeys(fn (array $pair): array => [strtolower($pair[0]) => array_values(array_filter(array_map('trim', explode('|', $pair[1]))))])
+            ->all(),
+        'registration_code_hours' => (int) env('LOCKGUARD_DEVICE_CODE_HOURS', 24),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Trusted proxies
+    |--------------------------------------------------------------------------
+    |
+    | Addresses whose X-Forwarded-For header is believed, so the audit log, sessions, alerts and
+    | address-locked accounts see the visitor's real address rather than the proxy's. Only list
+    | proxies you run (the Vite dev server on this machine by default); CIDR ranges allowed.
+    |
+    */
+
+    'trusted_proxies' => array_values(array_filter(array_map('trim', explode(',', (string) env('LOCKGUARD_TRUSTED_PROXIES', '127.0.0.1,::1'))))),
 ];

@@ -1,7 +1,7 @@
-import { ChevronLeft, MapPin, Radar } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MapPin, Radar } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { fetchOwnLocationSharing, type SharedLocation } from '../api/location'
+import { fetchOwnLocationSharing } from '../api/location'
 import { Timestamp } from '../components/status/Timestamp'
 import { DetailRow as Row } from '../components/system/HealthPanels'
 import { Banner } from '../components/ui/Banner'
@@ -12,6 +12,7 @@ import { PageHeader } from '../components/ui/PageHeader'
 import { LoadingState } from '../components/ui/Spinner'
 import { StatusBadge } from '../components/ui/StatusBadge'
 import type { Tone } from '../components/ui/tones'
+import { describeShared } from '../lib/location-sharing'
 import { useLoaded } from '../lib/useLoaded'
 
 type Permission = 'granted' | 'denied' | 'prompt' | 'unsupported' | 'checking'
@@ -50,15 +51,6 @@ function useLocationPermission(): Permission {
   }, [])
 
   return permission
-}
-
-/** What a shared location was for, in the person's own words. */
-function describeShared(item: SharedLocation): string {
-  if (item.kind === 'location_request') {
-    return item.requested_by ? `${item.requested_by} asked for your location` : 'An administrator asked for your location'
-  }
-  const verb = item.action === 'unlock' ? 'Unlock' : 'Lock'
-  return item.lock ? `${verb} request for ${item.lock}` : `${verb} request`
 }
 
 /**
@@ -111,7 +103,16 @@ export function MobileLocationPage() {
           </ul>
         </Card>
 
-        <Card title="When your location was shared" headingLevel={2}>
+        <Card
+          title="When your location was shared"
+          headingLevel={2}
+          actions={
+            <Link to="/m/location/history" className="inline-flex min-h-11 items-center gap-1 text-label font-semibold text-primary-text">
+              Timeline
+              <ChevronRight className="size-4" aria-hidden />
+            </Link>
+          }
+        >
           {sharing.loading && !sharing.data ? (
             <LoadingState label="Loading…" />
           ) : sharing.error && !sharing.data ? (

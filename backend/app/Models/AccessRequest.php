@@ -56,6 +56,17 @@ class AccessRequest extends Model
     }
 
     /**
+     * The device the request came from; null for API-token clients and requests made before
+     * devices were recorded.
+     *
+     * @return BelongsTo<UserDevice, $this>
+     */
+    public function device(): BelongsTo
+    {
+        return $this->belongsTo(UserDevice::class, 'user_device_id');
+    }
+
+    /**
      * @return HasOne<AuthorizationDecision, $this>
      */
     public function decision(): HasOne

@@ -2,6 +2,7 @@
 
 use App\Exceptions\ApiException;
 use App\Http\Middleware\EnsureAccountIsActive;
+use App\Http\Middleware\EnsureDeviceIsAllowed;
 use App\Http\Middleware\RequireRecentConfirmation;
 use App\Http\Middleware\VerifyBridgeSignature;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -36,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->statefulApi();
         $middleware->alias([
             'active' => EnsureAccountIsActive::class,
+            'device' => EnsureDeviceIsAllowed::class,
             'step-up' => RequireRecentConfirmation::class,
             'bridge.signature' => VerifyBridgeSignature::class,
         ]);

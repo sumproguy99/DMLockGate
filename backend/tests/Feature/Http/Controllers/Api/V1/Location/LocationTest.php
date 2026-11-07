@@ -15,6 +15,8 @@ use App\Models\LocationRequest;
 use App\Models\Lock;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\UserDevice;
+use App\Services\Auth\DeviceRegistry;
 use Database\Seeders\PermissionCatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -237,6 +239,34 @@ class LocationTest extends TestCase
         $this->assertSame(1, AuditLog::query()->where('action', 'location.history_viewed')->where('actor_user_id', $admin->id)->count());
     }
 
+    public function test_each_location_records_the_device_it_came_from_and_the_map_names_it(): void
+    {
+        $admin = $this->userWithRole(RoleTemplate::SuperAdministrator);
+        $resident = $this->userWithRole(RoleTemplate::Resident);
+        $phone = UserDevice::factory()->create(['user_id' => $resident->id, 'name' => 'Riley iPhone']);
+        $laptop = UserDevice::factory()->create(['user_id' => $resident->id, 'name' => 'Riley laptop']);
+
+        // A lock request sent from the phone: its location belongs to the phone, whichever browser posts it.
+        $lockRequest = $this->lockRequest($resident);
+        $lockRequest->forceFill(['user_device_id' => $phone->id])->save();
+        $this->as($resident)->withSession([CompleteLogin::CONFIRMED_AT_KEY => now()->getTimestamp(), DeviceRegistry::SESSION_KEY => $laptop->id])
+            ->postJson(route('api.v1.lock-requests.location.store', $lockRequest), $this->fix())
+            ->assertCreated();
+
+        // A location shared on request: the device that answered.
+        $asked = LocationRequest::factory()->create(['requested_by' => $admin->id, 'target_user_id' => $resident->id]);
+        $this->as($resident)->withSession([CompleteLogin::CONFIRMED_AT_KEY => now()->getTimestamp(), DeviceRegistry::SESSION_KEY => $laptop->id])
+            ->postJson(route('api.v1.location.requests.respond', $asked->public_id), $this->fix())
+            ->assertOk();
+
+        $this->assertSame($phone->id, LocationReport::query()->where('access_request_id', $lockRequest->id)->value('user_device_id'));
+        $this->assertSame($laptop->id, LocationReport::query()->where('location_request_id', $asked->id)->value('user_device_id'));
+
+        $pins = collect($this->as($admin)->getJson(route('api.v1.location.map'))->assertOk()->json('data.pins'));
+        $this->assertSame('Riley iPhone', $pins->firstWhere('kind', LocationReport::PURPOSE_LOCK_REQUEST)['device']['name']);
+        $this->assertSame(['id', 'name', 'status'], array_keys($pins->firstWhere('kind', LocationReport::PURPOSE_LOCATION_REQUEST)['device']));
+    }
+
     public function test_the_map_is_refused_without_location_history_permission(): void
     {
         $this->as($this->userWithRole(RoleTemplate::Resident))->getJson(route('api.v1.location.map'))->assertForbidden();
@@ -257,6 +287,8 @@ class LocationTest extends TestCase
         $this->assertCount(2, $shared);
         $this->assertSame('Dana Admin', $shared->firstWhere('kind', LocationReport::PURPOSE_LOCATION_REQUEST)['requested_by']);
         $this->assertSame('Front Door', $shared->firstWhere('kind', LocationReport::PURPOSE_LOCK_REQUEST)['lock']);
-        $this->assertArrayNotHasKey('latitude', $shared->first());
+        // People see their own positions and the device each came from, for their timeline.
+        $this->assertArrayHasKey('latitude', $shared->first());
+        $this->assertArrayHasKey('device', $shared->first());
     }
 }

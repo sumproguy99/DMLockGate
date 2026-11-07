@@ -45,6 +45,7 @@ const pins: MapPin[] = [
     captured_at: minutesAgo(10),
     at: minutesAgo(10),
     user: { id: 7, name: 'Riley Resident' },
+    device: { id: 21, name: 'Riley iPhone', status: 'trusted' },
     action: 'unlock',
     lock: { id: 1, name: 'Front Door' },
     status: 'confirmed_success',
@@ -59,6 +60,7 @@ const pins: MapPin[] = [
     captured_at: minutesAgo(30),
     at: minutesAgo(30),
     user: { id: 8, name: 'Gale Guest' },
+    device: null,
     action: 'lock',
     lock: { id: 1, name: 'Front Door' },
     status: 'denied',
@@ -143,6 +145,7 @@ describe('the location map', () => {
       captured_at: polls[1].location!.captured_at,
       at: polls[1].location!.captured_at,
       user: { id: 7, name: 'Riley Resident' },
+      device: null,
       requested_by: { id: 1, name: 'Dana Admin' },
     }
     let arrived = false
@@ -218,6 +221,67 @@ describe('the location map', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Not available to you' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Location map' })).not.toBeInTheDocument()
+  })
+})
+
+describe('device locations', () => {
+  const olderPhonePin: MapPin = {
+    ...(pins[0] as Extract<MapPin, { kind: 'lock_request' }>),
+    id: 5,
+    at: minutesAgo(60 * 26),
+    captured_at: minutesAgo(60 * 26),
+    action: 'lock',
+    outcome: 'failure',
+  }
+
+  it("shows each device's latest location and expands its whole history", async () => {
+    mockFetch({ ...signedIn(owner), 'GET /api/v1/location/map?days=7': () => json(200, { data: mapData({ pins: [...pins, olderPhonePin] }) }) })
+    const { container } = renderAt('/device-locations')
+    const user = userEvent.setup()
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Device locations' })).toBeInTheDocument()
+    // Two devices (Riley's phone, and Gale's records without a device): one pin each.
+    expect(await screen.findByText('2 pins on the map')).toBeInTheDocument()
+    const list = screen.getByRole('list', { name: 'Devices and their locations' })
+    const phone = within(list).getByRole('button', { name: /^Riley iPhone/ })
+    expect(phone).toHaveAttribute('aria-expanded', 'false')
+    expect(phone).toHaveTextContent('2 locations')
+    expect(within(list).getByRole('button', { name: /^Device not recorded/ })).toHaveTextContent('Gale Guest')
+
+    await user.click(phone)
+    expect(phone).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText('3 pins on the map')).toBeInTheDocument()
+    const history = document.getElementById(phone.getAttribute('aria-controls')!)!
+    const entries = within(history).getAllByRole('button')
+    expect(entries).toHaveLength(2)
+    expect(entries[0]).toHaveTextContent('Unlock Front Door')
+    expect(entries[1]).toHaveTextContent('Lock Front Door')
+    expect(entries[1]).toHaveTextContent('Failed')
+    expect(within(history).getAllByRole('heading', { level: 3 })).toHaveLength(2)
+
+    await user.click(entries[1])
+    expect(screen.getByTestId('map')).toHaveAttribute('data-focus', '5')
+    expect(entries[1]).toHaveAttribute('aria-pressed', 'true')
+
+    await user.click(phone)
+    expect(screen.getByText('2 pins on the map')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Device locations' })).toHaveAttribute('aria-current', 'page')
+    await expectNoAxeViolations(container)
+  })
+
+  it('says when no device reported a location', async () => {
+    mockFetch({ ...signedIn(owner), 'GET /api/v1/location/map?days=7': () => json(200, { data: mapData({ pins: [] }) }) })
+    renderAt('/device-locations')
+
+    expect(await screen.findByText('No locations in this period')).toBeInTheDocument()
+  })
+
+  it('is not offered without location history permission', async () => {
+    mockFetch(signedIn(makeUser({ permissions: ['admin.incidents_view'] })))
+    renderAt('/device-locations')
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Not available to you' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Device locations' })).not.toBeInTheDocument()
   })
 })
 

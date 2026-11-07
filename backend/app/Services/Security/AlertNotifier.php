@@ -44,8 +44,8 @@ class AlertNotifier
                 $user->notify(new SecurityAlertNotification(
                     $alert,
                     $mandatory,
-                    $personal ? self::personalTitle($alert->rule) : null,
-                    $personal ? self::personalDescription($alert->rule) : null,
+                    $personal ? self::personalTitle($alert) : null,
+                    $personal ? self::personalDescription($alert) : null,
                 ));
                 $sent++;
             } catch (Throwable $exception) {
@@ -74,7 +74,7 @@ class AlertNotifier
             }
 
             $isSubject = $alert->rule->notifiesSubjectUser() && $alert->subject_user_id === $user->id;
-            if ($this->permissions->allows($user, PermissionKey::AdminIncidentsManage)) {
+            if ($alert->rule->notifiesHandlers() && $this->permissions->allows($user, PermissionKey::AdminIncidentsManage)) {
                 $recipients[] = [$user, true, false];
             } elseif ($isSubject) {
                 $recipients[] = [$user, false, true];
@@ -97,24 +97,32 @@ class AlertNotifier
         return RateLimiter::attempt('alert-notifications:'.$user->id, (int) config('lockguard.alerts.notifications_per_hour'), fn (): bool => true, 3600) !== false;
     }
 
-    private static function personalTitle(AlertRule $rule): string
+    private static function personalTitle(SecurityAlert $alert): string
     {
-        return match ($rule) {
+        $device = $alert->context['device'] ?? 'a device';
+
+        return match ($alert->rule) {
             AlertRule::FailedSignIns => 'Failed sign-in attempts on your account',
             AlertRule::MfaDisabled => 'Two-step sign-in was turned off for your account',
             AlertRule::RecoveryCodeUsed => 'A recovery code was used for your account',
             AlertRule::AdminPermissionChange => 'You were given administrative permissions',
-            default => $rule->label(),
+            AlertRule::NewDeviceSignIn => "New sign-in on your account: {$device}",
+            AlertRule::RevokedDeviceAccess => "A removed device tried to use your account: {$device}",
+            AlertRule::DeviceLost => "Device reported lost: {$device}",
+            default => $alert->rule->label(),
         };
     }
 
-    private static function personalDescription(AlertRule $rule): string
+    private static function personalDescription(SecurityAlert $alert): string
     {
-        return match ($rule) {
+        return match ($alert->rule) {
             AlertRule::FailedSignIns => 'Someone entered the wrong password or code for your account several times. If it was not you, change your password and tell an administrator.',
             AlertRule::MfaDisabled => 'Your account now signs in with a password alone. If you did not do this, tell an administrator straight away.',
             AlertRule::RecoveryCodeUsed => 'One of your one-time recovery codes was used to sign in. If it was not you, tell an administrator straight away.',
             AlertRule::AdminPermissionChange => 'An administrator gave your account more permissions. Take care with what you change.',
+            AlertRule::NewDeviceSignIn => 'Your account was signed in on a browser or phone it has not used before. If it was not you, revoke the device under Devices and change your password.',
+            AlertRule::RevokedDeviceAccess => 'A device you or an administrator removed from your account tried to sign in, and was refused. If you no longer have it, tell an administrator.',
+            AlertRule::DeviceLost => 'The device was removed from your account and you were signed out everywhere. Sign in again on the devices you still have.',
             default => '',
         };
     }

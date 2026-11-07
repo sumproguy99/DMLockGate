@@ -24,7 +24,8 @@ function errorText(error: unknown, fallback: string): string {
 
 /**
  * Mobile Account security (project.md 34.8 H): the account and its roles, two-step verification,
- * and where the account is signed in, with signing out everywhere else. No administration here.
+ * a way to its trusted devices, and where the account is signed in, with signing out everywhere
+ * else. No administration here.
  */
 export function MobileAccountPage() {
   const user = useCurrentUser()
@@ -55,6 +56,17 @@ export function MobileAccountPage() {
         </Card>
 
         <TwoStepCard />
+        <Card title="Trusted devices" headingLevel={2}>
+          <p className="text-support text-text-muted">
+            Trust the phone you keep with you, and revoke or report lost any device you no longer have.
+          </p>
+          <Link
+            to="/m/devices"
+            className="mt-3 inline-flex min-h-11 items-center gap-1 text-label font-semibold text-primary-text"
+          >
+            Manage your devices
+          </Link>
+        </Card>
         <SessionsCard />
       </div>
     </>

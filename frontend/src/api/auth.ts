@@ -21,8 +21,10 @@ export async function fetchCurrentUser(): Promise<CurrentUser> {
   return data
 }
 
-export async function login(email: string, password: string): Promise<LoginResult> {
-  const { data } = await api<{ data: LoginResult }>('/auth/login', { method: 'POST', body: { email, password } })
+/** deviceCode is the one-time registration code, for an account bound to one device. */
+export async function login(email: string, password: string, deviceCode?: string): Promise<LoginResult> {
+  const body = deviceCode ? { email, password, device_code: deviceCode } : { email, password }
+  const { data } = await api<{ data: LoginResult }>('/auth/login', { method: 'POST', body })
   return data
 }
 

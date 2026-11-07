@@ -1,4 +1,4 @@
-import { Activity, Bell, Building2, LayoutDashboard, Lock, MapPinned, ScrollText, ShieldAlert, ShieldCheck, Users, type LucideIcon } from 'lucide-react'
+import { Activity, Bell, Building2, LayoutDashboard, Lock, MapPinned, MonitorSmartphone, ScrollText, ShieldAlert, ShieldCheck, Smartphone, Users, type LucideIcon } from 'lucide-react'
 import type { CurrentUser } from '../api/auth'
 import { hasAnyPermission } from '../auth/auth-context'
 
@@ -31,7 +31,7 @@ export const DIAGNOSTICS_PERMISSIONS = ['admin.integration_settings', 'admin.inc
 
 /**
  * The sidebar (project.md 34.4), limited to screens LockGuard's backend supports today. Items in
- * the spec without a backend yet (access codes, grants, schedules, trusted devices, geofences,
+ * the spec without a backend yet (access codes, grants, schedules, geofences,
  * settings) are added with their features, so nothing here leads to a feature that does not exist.
  */
 export const navigation: readonly NavGroup[] = [
@@ -49,6 +49,8 @@ export const navigation: readonly NavGroup[] = [
       { label: 'Roles and permissions', path: '/roles', icon: ShieldCheck, permissions: USER_ADMIN_PERMISSIONS },
       { label: 'Properties', path: '/properties', icon: Building2, permissions: ['admin.integration_settings'] },
       { label: 'Locks', path: '/locks', icon: Lock, permissions: ['lock.view_status', 'devices.view'] },
+      // Everyone manages their own devices here; devices.view also shows everyone's.
+      { label: 'Devices', path: '/devices', icon: MonitorSmartphone, permissions: [] },
     ],
   },
   {
@@ -56,6 +58,7 @@ export const navigation: readonly NavGroup[] = [
     items: [
       { label: 'Security center', path: '/security', icon: ShieldAlert, permissions: ['admin.incidents_view'] },
       { label: 'Location map', path: '/location', icon: MapPinned, permissions: ['location.view_history'] },
+      { label: 'Device locations', path: '/device-locations', icon: Smartphone, permissions: ['location.view_history'] },
       { label: 'Audit log', path: '/audit', icon: ScrollText, permissions: ['admin.incidents_view'] },
       { label: 'System health', path: '/system', icon: Activity, permissions: DIAGNOSTICS_PERMISSIONS },
     ],

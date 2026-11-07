@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -73,6 +74,16 @@ class User extends Authenticatable
         return $this->belongsToMany(Lock::class, 'user_lock_access')
             ->withPivot('valid_from', 'valid_until', 'granted_by')
             ->withTimestamps();
+    }
+
+    /**
+     * The browsers and phones this user has signed in from.
+     *
+     * @return HasMany<UserDevice, $this>
+     */
+    public function devices(): HasMany
+    {
+        return $this->hasMany(UserDevice::class);
     }
 
     /**

@@ -17,6 +17,9 @@ enum AlertRule: string
     case MfaDisabled = 'mfa_disabled';
     case RecoveryCodeUsed = 'recovery_code_used';
     case AuditWriteFailure = 'audit_write_failure';
+    case NewDeviceSignIn = 'new_device_sign_in';
+    case RevokedDeviceAccess = 'revoked_device_access';
+    case DeviceLost = 'device_lost';
 
     // Condition rules
     case IntegrationUnavailable = 'integration_unavailable';
@@ -37,6 +40,9 @@ enum AlertRule: string
             self::MfaDisabled => 'Two-step sign-in turned off',
             self::RecoveryCodeUsed => 'Recovery code used',
             self::AuditWriteFailure => 'Audit record could not be written',
+            self::NewDeviceSignIn => 'Sign-in from a new device',
+            self::RevokedDeviceAccess => 'Revoked device used',
+            self::DeviceLost => 'Device reported lost',
             self::IntegrationUnavailable => 'Lock integration unavailable',
             self::LockOffline => 'Lock offline',
             self::LockJammed => 'Lock jammed',
@@ -67,8 +73,18 @@ enum AlertRule: string
             self::LockOffline, self::LockJammed, self::LockStateUnconfirmed, self::LockCommandFailures, self::LockOutcomeUnknown => 'lock_connectivity',
             self::BatteryLow => 'battery_warning',
             self::IntegrationUnavailable => 'integration_failure',
+            self::RevokedDeviceAccess, self::DeviceLost => 'device_revoked',
             default => 'security_incident',
         };
+    }
+
+    /**
+     * Whether incident handlers are told. A new device is only news to its owner; handlers still see
+     * the alert in the Security Center.
+     */
+    public function notifiesHandlers(): bool
+    {
+        return $this !== self::NewDeviceSignIn;
     }
 
     /**
@@ -84,6 +100,6 @@ enum AlertRule: string
      */
     public function notifiesSubjectUser(): bool
     {
-        return in_array($this, [self::FailedSignIns, self::MfaDisabled, self::RecoveryCodeUsed, self::AdminPermissionChange], true);
+        return in_array($this, [self::FailedSignIns, self::MfaDisabled, self::RecoveryCodeUsed, self::AdminPermissionChange, self::NewDeviceSignIn, self::RevokedDeviceAccess, self::DeviceLost], true);
     }
 }

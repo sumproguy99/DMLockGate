@@ -10,6 +10,7 @@ use App\Services\Locks\Integration\FakeLockDriver;
 use App\Services\Locks\Integration\LockDriver;
 use App\Services\Locks\Integration\UnconfiguredLockDriver;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -36,6 +37,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // The visitor's real address behind the proxies on this machine (the Vite dev server),
+        // from X-Forwarded-For only. A header from anyone else is ignored, so it cannot be faked.
+        TrustProxies::at((array) config('lockguard.trusted_proxies'));
+        TrustProxies::withHeaders(Request::HEADER_X_FORWARDED_FOR);
+
         RateLimiter::for('lock-commands', fn (Request $request): Limit => Limit::perMinute(10)->by((string) ($request->user()?->id ?? $request->ip())));
 
         foreach (PermissionKey::cases() as $permission) {

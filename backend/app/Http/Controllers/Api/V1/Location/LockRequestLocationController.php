@@ -29,6 +29,7 @@ class LockRequestLocationController extends Controller
         try {
             LocationReport::query()->create([
                 'user_id' => $accessRequest->user_id,
+                'user_device_id' => $accessRequest->user_device_id ?? $request->attributes->get('device')?->id,
                 'purpose' => LocationReport::PURPOSE_LOCK_REQUEST,
                 'access_request_id' => $accessRequest->id,
                 'latitude' => $fix['latitude'],

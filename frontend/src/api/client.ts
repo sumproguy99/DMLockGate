@@ -36,9 +36,13 @@ export const REQUEST_TIMEOUT_MS = 20_000
 type Listener = (error: ApiError) => void
 const unauthenticatedListeners = new Set<Listener>()
 
+/** 403 codes the server sends after it has ended the session because of the device. */
+export const SESSION_ENDING_CODES: ReadonlySet<string> = new Set(['device_revoked', 'device_registration_required', 'address_not_allowed'])
+
 /**
- * Called when any request comes back 401, so the app can return to sign-in with a "session
- * expired" message. Returns an unsubscribe function.
+ * Called when any request comes back 401, or with a code that ended the session (see
+ * SESSION_ENDING_CODES), so the app can return to sign-in with a message. Returns an
+ * unsubscribe function.
  */
 export function onUnauthenticated(listener: Listener): () => void {
   unauthenticatedListeners.add(listener)
@@ -135,7 +139,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
 
   if (!response.ok) {
     const error = await toError(response)
-    if (error.status === 401 && !options.quiet401) {
+    if ((error.status === 401 && !options.quiet401) || SESSION_ENDING_CODES.has(error.code)) {
       unauthenticatedListeners.forEach((listener) => listener(error))
     }
     throw error

@@ -134,6 +134,7 @@ class LocationRequestController extends Controller
             $fix = $request->fix();
             LocationReport::query()->create([
                 'user_id' => $user->id,
+                'user_device_id' => $request->attributes->get('device')?->id,
                 'purpose' => LocationReport::PURPOSE_LOCATION_REQUEST,
                 'location_request_id' => $locationRequest->id,
                 'latitude' => $fix['latitude'],

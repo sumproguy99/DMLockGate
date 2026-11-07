@@ -207,8 +207,11 @@ export function AuditLogPage() {
             { value: '', label: 'All categories' },
             { value: 'auth', label: 'Sign-in and identity' },
             { value: 'user', label: 'User administration' },
+            { value: 'device', label: 'Devices' },
             { value: 'lock', label: 'Locks and access' },
             { value: 'property', label: 'Properties' },
+            { value: 'location', label: 'Location' },
+            { value: 'security', label: 'Security center' },
             { value: 'audit', label: 'Audit log use' },
           ]}
         />

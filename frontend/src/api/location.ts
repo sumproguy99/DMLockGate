@@ -14,6 +14,9 @@ export type UnavailableReason = 'permission_denied' | 'position_unavailable' | '
 
 export type MapPerson = { id: number; name: string }
 
+/** The browser or phone a location came from; null for older records that did not note it. */
+export type MapDevice = { id: number; name: string; status: 'recognized' | 'trusted' | 'revoked' }
+
 type PinBase = {
   id: number
   latitude: number
@@ -23,6 +26,7 @@ type PinBase = {
   /** When it happened: the lock request's time, or when the phone shared its position. */
   at: string
   user: MapPerson
+  device: MapDevice | null
 }
 
 /** How a lock request ended, as the person pressing the button would see it. */
@@ -65,12 +69,18 @@ export type LocationRequestRecord = {
 }
 
 export type SharedLocation = {
+  id: number
   at: string
   kind: 'lock_request' | 'location_request'
   accuracy_meters: number
   lock: string | null
   action: 'lock' | 'unlock' | null
   requested_by: string | null
+  /** The name of the device it came from, when known. */
+  device: string | null
+  latitude: number
+  longitude: number
+  captured_at: string
 }
 
 export type OwnLocationSharing = {

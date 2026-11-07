@@ -156,7 +156,7 @@ A user who types the address of a page they can't use sees "Not available to you
 
 **Not in the shell yet:**
 - **Notification center, global search, settings shortcut:** these have no backend yet.
-- **Navigation items from project.md 34.4 that have no backend yet:** access codes, schedules, trusted devices, geofences, settings. They're added as their features are built (Location map, Security center and Notifications have been since).
+- **Navigation items from project.md 34.4 that have no backend yet:** access codes, schedules, geofences, settings. They're added as their features are built (Location map, Security center, Notifications and Devices have been since).
 
 **Component gallery:** `/dev/components`, in development builds only.
 
@@ -238,7 +238,7 @@ The backend leaves out (returns null for) each section the user may not see, so 
 - access codes and temporary access as their own screen (34.6 E; time-limited lock access is on each user's page);
 - location and proximity (F);
 - the Security Center's incidents and alert acknowledgement (G; the audit log's failure and denial filters cover the event feed);
-- trusted devices;
+- trusted devices (built since; see Trusted devices);
 - editable settings;
 - role editing.
 
@@ -256,7 +256,7 @@ The backend leaves out (returns null for) each section the user may not see, so 
 - **Lock card (`MobileLockCard`):** a large state in its tone with icon and words: Locked, Unlocked, Jammed, **Locking…/Unlocking…** while a command is on its way ("Still unlocked until the lock reports its new state"), **State unknown**, **State stale**, or **Device unavailable** (lock disconnected). Connection, battery, last contact and the last request. **Lock** (filled) and **Unlock** (outlined) are full width, 56 px tall, with 24 px between them; Unlock asks for confirmation and, when the policy requires it, the identity check. The command lifecycle, wording and "no answer" retry with the same key are the desktop's (`useLockCommand`, `CommandOutcome`); nothing is ever sent again automatically.
 - **Lock controls (`/m/locks/:id`):** the same card without its title, the last problem the lock reported, Device details (connection, battery, last contact, last confirmed state, model, masked serial, firmware, commands on or off) and the five most recent requests.
 - **Activity:** `GET /activity`: lock requests by their real stage and the state changes the locks reported (the scheduled sync's repeats are dropped), newest first. Filters: All, Requests or Lock reports, and Result (succeeded, failed or unknown, denied, in progress). **Load older activity** pages back 30 at a time. Other people are only "Another user".
-- **Devices:** the locks, each linking to its controls. **Trusted phones** says LockGuard does not register them yet and points to signing out other sessions instead.
+- **Devices:** the locks, each linking to its controls, then the person's own devices (see Trusted devices).
 - **Notifications:** "Right now": alerts worked out from the locks and the integration (`lib/alerts.ts`): integration offline, sign-in needed or degraded; a lock jammed, offline, stale or unknown; battery at 25% or less (critical at 10%). Then the person's stored notifications with read status (see Security alerts, incidents and notifications).
 - **Account security:** account details and roles; two-step verification set-up (after the identity check: an **Open in authenticator app** link with the `otpauth://` address and the key to type, a code, then the recovery codes shown once) and removal with a warning; **Where you are signed in** (`GET /auth/sessions`: browser and system, address, last activity, "This device") and **Sign out everywhere else** after confirming (`DELETE /auth/sessions/others`, audited as `auth.other_sessions_signed_out`). No QR code: a phone opens the link directly, and adding a QR library needs approval.
 - **Location and proximity:** the browser's location permission (read through the Permissions API without asking for a location), that sharing is on as agreed at sign-in, what LockGuard records and for how long, **When your location was shared** (`GET /location/mine`: each lock request with a position and each administrator's request, with who asked), and why automatic unlocking is unavailable. Proximity is off and near-door detection does not exist.
@@ -305,7 +305,7 @@ Built on 2026-10-22 (project.md sections 18 and 22, 34.6 G and 34.8 G).
 - **Condition rules** run every minute (`lockguard:check-alerts`, scheduled): the Eufy integration unreachable or needing sign-in (Critical) or degraded (High), a lock offline (High), jammed (High), with stale or unknown state (Medium), battery at 25% or less (Medium; 10% or less High), audit protection triggers missing (Critical), and a failed audit write noted by `AuditLogger` (Critical). Condition alerts resolve themselves when the condition clears and cannot be resolved by hand.
 - **Storm control:** one active alert per problem (repeats add to its count), a problem that returns within 60 minutes of resolving reopens its alert without notifying again, event alerts with no new occurrence for 24 hours resolve themselves, and each person gets at most 20 alert notifications an hour (Critical is never held back). All thresholds are `LOCKGUARD_ALERT_*` settings in `.env`.
 - **Correlation:** High and Critical alerts open an incident, or join the open incident about the same lock, account, address or subsystem.
-- **Not alerts:** location anomalies (a phone's position proves nothing, project.md 18), unrecognized or revoked devices (trusted devices are not built).
+- **Not alerts:** location anomalies (a phone's position proves nothing, project.md 18). Device alerts are described under Trusted devices.
 
 **Incidents:** New, Acknowledged, Investigating, Contained, Resolved, Closed. Any status may follow another except that Closed is final. Every change is kept in the incident's history with who made it and an optional note, and is audited (`security.incident_status_changed`). Resolving or closing an incident resolves its event alerts.
 
@@ -319,6 +319,30 @@ Built on 2026-10-22 (project.md sections 18 and 22, 34.6 G and 34.8 G).
 - **Notifications** (`/notifications`, Overview group, and the bell in the header with the unread count): All or Unread, Mark read, Mark all read, links to the alert (for people with incident access) and the lock.
 - **Mobile Notifications:** "Right now" (the problems worked out live from the locks, as before) and "Your notifications" with read status. The bell shows the unread count, or when everything is read, how many problems need attention now.
 
+## Trusted devices
+
+Built on 2026-10-22 (project.md sections 6, 7, 12, 16 and 34.8 E).
+
+**How a device is recognized:** at sign-in, each browser gets a random 64-character token in an HTTP-only, SameSite=Lax cookie (`lockguard_device`, 400 days) and LockGuard stores only its SHA-256 hash (`user_devices`). The session remembers which device it signed in on. One browser used by two people is a separate device on each account. Sessions from before devices were recorded get their device on their next request, without an alert. The name starts as "Chrome on Android" and so on, and can be changed.
+
+**Standing:** Not trusted (every device that signs in), Trusted, Revoked.
+- **Trusting** needs a recent identity check (step-up). People trust only the device in hand; administrators with `devices.enroll` can trust someone else's.
+- **Revoking** needs no step-up, so a lost phone can be cut off at once. A revoked device's session ends on its next request (`EnsureDeviceIsAllowed`, the `device` middleware on every signed-in route), it cannot sign in again even with the right password, and its lock requests are refused (`device` check in `LockCommandService`, which re-reads the device). It cannot be un-revoked; a browser whose site data is cleared signs in as a new device.
+- **Reporting lost** also revokes it and signs out the account everywhere (sessions and API tokens). When the owner reports it, the session they report from stays signed in.
+- **Unlocking with a trusted device only:** `LOCKGUARD_UNLOCK_REQUIRES_TRUSTED_DEVICE=true`. Off by default so nobody is locked out; locking never needs it.
+
+**Who can do what:** everyone lists, renames, revokes and reports lost their own devices (`/api/v1/auth/devices`). `devices.view` lists everyone's (Super, Security Administrator, Property Manager), `devices.rename` renames, `devices.revoke` revokes and reports lost (Super, Security Administrator), `devices.enroll` trusts (Super Administrator). Administrators act on others under the usual user-management rules: not on their own account there, and not on someone who outranks them.
+
+**Audit and alerts:** `device.new_sign_in`, `device.trusted`, `device.renamed`, `device.revoked`, `device.reported_lost` and `device.revoked_access_attempt` (category Devices; also in each person's security history). Alerts:
+- **Sign-in from a new device** (Low): only the owner is told, and only for an account's second and later devices.
+- **Revoked device used** (High, opens an incident): an attempt to sign in or make a request from a revoked device. Handlers and the owner are told.
+- **Device reported lost** (High, opens an incident). Handlers and the owner are told.
+
+**Screens:**
+- **Devices** (`/devices`, Access management, for everyone): Your devices, with a "This device is not trusted" prompt to trust the device in hand; for `devices.view` also Everyone's devices, searchable by device, person or email and filtered by status. Actions are in each device's menu: Rename, Trust, Revoke, Report lost. Each confirmation says what happens; administrators also give a reason, which the audit log keeps.
+- **User page:** the person's devices with the same actions, for `devices.view`.
+- **Mobile Devices:** the locks, then Your devices. **Mobile Account security** links to it.
+
 ## Final review (UI checkpoint 9) and remaining limitations
 
 Checked on 2026-10-21 against project.md 34.14 and 34.15:
@@ -330,7 +354,6 @@ Checked on 2026-10-21 against project.md 34.14 and 34.15:
 
 **Not built, because the backend has no support yet** (each screen that touches one says so):
 - Access codes and access schedules as their own screens; time-limited lock access is on each user's page. The T85D0 has no keypad-code commands.
-- Trusted-device enrollment and revocation; Devices points to signing out other sessions instead.
 - Geofences and proximity detection. Locations are collected only for the location map (see Location map and location requests).
 - Push and email notifications, and per-person notification preferences (built since: Security Center, incidents, stored notifications with read status, the notification center; see Security alerts, incidents and notifications).
 - Global search, editable settings (they live in `.env`), role editing, lockdown, and dashboard widget customization.

@@ -69,6 +69,9 @@ class AlertEngine
             'user.permissions_changed',
             'auth.mfa_disabled',
             'auth.mfa_recovery_code_used',
+            'device.new_sign_in',
+            'device.revoked_access_attempt',
+            'device.reported_lost',
         ], true);
     }
 
@@ -82,6 +85,9 @@ class AlertEngine
             $failed && in_array($record->action, self::COMMAND_FAILURE_ACTIONS, true) => $this->commandFailure($record),
             $record->action === 'user.roles_changed' || $record->action === 'user.permissions_changed' => $this->permissionChange($record),
             $record->action === 'auth.mfa_disabled' => $this->accountEvent($record, AlertRule::MfaDisabled, AlertSeverity::Medium, 'turned off two-step sign-in', 'The account now signs in with a password alone. Check that the owner did this.'),
+            $record->action === 'device.new_sign_in' => $this->deviceEvent($record, AlertRule::NewDeviceSignIn, AlertSeverity::Low, 'signed in on a new device', 'A browser or phone that has not been used with this account before. If the owner does not recognize it, revoke it and change the password.'),
+            $record->action === 'device.revoked_access_attempt' => $this->deviceEvent($record, AlertRule::RevokedDeviceAccess, AlertSeverity::High, 'tried to use a revoked device', 'A device that was removed from this account tried to sign in or make a request, and was refused. Find out who has the device.'),
+            $record->action === 'device.reported_lost' => $this->deviceEvent($record, AlertRule::DeviceLost, AlertSeverity::High, 'has a device reported lost', 'The device was revoked and the account was signed out everywhere. Check the account\'s recent activity, and help the owner sign in again on a replacement.'),
             $record->action === 'auth.mfa_recovery_code_used' => $this->accountEvent($record, AlertRule::RecoveryCodeUsed, AlertSeverity::Low, 'used a recovery code', 'A one-time recovery code was used instead of the authenticator app. If the owner has lost their phone, help them set up two-step sign-in again.'),
             default => null,
         };
@@ -434,6 +440,26 @@ class AlertEngine
         $name = User::query()->whereKey($userId)->value('name') ?? 'A user';
 
         $this->raise($rule, $rule->value.':user:'.$userId, $severity, "{$name} {$what}", $description, ['user' => $userId, 'event_id' => $record->event_id]);
+    }
+
+    /**
+     * One alert per device. The device's name goes in the title and context, so its owner can tell
+     * which one it was.
+     */
+    private function deviceEvent(AuditLog $record, AlertRule $rule, AlertSeverity $severity, string $what, string $description): void
+    {
+        if ($record->target_user_id === null || $record->target_device_id === null) {
+            return;
+        }
+        $name = User::query()->whereKey($record->target_user_id)->value('name') ?? 'A user';
+        $device = $record->metadata['device'] ?? 'a device';
+
+        $this->raise($rule, $rule->value.':device:'.$record->target_device_id, $severity, "{$name} {$what}: {$device}", $description, [
+            'user' => $record->target_user_id,
+            'ip' => $record->ip_address,
+            'event_id' => $record->event_id,
+            'context' => ['device' => $device, 'device_id' => $record->target_device_id, 'ip_address' => $record->ip_address],
+        ]);
     }
 
     private function integrationCondition(): ?SecurityAlert

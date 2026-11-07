@@ -41,7 +41,7 @@ class LocationMapController extends Controller
         $since = now()->subDays($days);
 
         $reports = LocationReport::query()
-            ->with(['user:id,name', 'accessRequest.lock:id,name', 'locationRequest.requester:id,name'])
+            ->with(['user:id,name', 'device:id,name,status', 'accessRequest.lock:id,name', 'locationRequest.requester:id,name'])
             ->where('received_at', '>=', $since)
             ->when(isset($filters['user_id']), fn ($query) => $query->where('user_id', $filters['user_id']))
             ->orderByDesc('received_at')
@@ -79,6 +79,11 @@ class LocationMapController extends Controller
             'accuracy_meters' => $report->accuracy_meters,
             'captured_at' => $report->captured_at->toIso8601ZuluString('millisecond'),
             'user' => ['id' => $report->user->id, 'name' => $report->user->name],
+            'device' => $report->device === null ? null : [
+                'id' => $report->device->id,
+                'name' => $report->device->name,
+                'status' => $report->device->status->value,
+            ],
         ];
 
         $accessRequest = $report->accessRequest;

@@ -3,6 +3,8 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import { ApiError } from '../../api/client'
 import { updateUser, type ManagedUser, type ProfileChanges } from '../../api/users'
 import { StepUpCancelled, useStepUp } from '../../app/step-up-context'
+import { hasAnyPermission, useCurrentUser } from '../../auth/auth-context'
+import { UserDevicesCard } from '../../components/devices/UserDevicesCard'
 import { Timestamp } from '../../components/status/Timestamp'
 import { Banner } from '../../components/ui/Banner'
 import { Button } from '../../components/ui/Button'
@@ -27,6 +29,7 @@ function fieldsFrom(user: ManagedUser): Fields {
 export function UserProfileTab({ user, editable, onSaved }: { user: ManagedUser; editable: boolean; onSaved: (user: ManagedUser) => void }) {
   const toast = useToast()
   const withStepUp = useStepUp()
+  const me = useCurrentUser()
   const [busy, setBusy] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string | null>>({})
@@ -126,10 +129,9 @@ export function UserProfileTab({ user, editable, onSaved }: { user: ManagedUser;
           <Detail label="Status changed">{user.status_changed_at ? <Timestamp iso={user.status_changed_at} /> : 'Never'}</Detail>
           <Detail label="Created">{user.created_at ? <Timestamp iso={user.created_at} /> : 'Unknown'}</Detail>
         </dl>
-        <p className="mt-4 text-caption text-text-muted">
-          Trusted devices are not tracked yet. To end this person's sessions, use Sign out everywhere.
-        </p>
       </Card>
+
+      {hasAnyPermission(me, ['devices.view']) && <UserDevicesCard userId={user.id} name={user.name} />}
     </div>
   )
 }

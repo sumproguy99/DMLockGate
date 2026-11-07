@@ -16,5 +16,7 @@ export LOCKGUARD_BRIDGE_URL=http://127.0.0.1:8790
 export LOCKGUARD_BRIDGE_SECRET=e2e-only-secret-0123456789abcdef0123456789
 export LOCKGUARD_CONFIRM_TIMEOUT_SECONDS=8
 export LOCKGUARD_CONFIRM_POLL_SECONDS=1
+# The existing checks sign in residents and guests on fresh browsers; binding has its own tests.
+export LOCKGUARD_DEVICE_BINDING=false
 export LOG_CHANNEL=stderr
 export LOG_STACK=stderr

@@ -23,7 +23,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class AuditLogController extends Controller
 {
     /** Action prefixes offered as event categories. */
-    public const CATEGORIES = ['auth', 'user', 'lock', 'property', 'location', 'security', 'audit'];
+    public const CATEGORIES = ['auth', 'user', 'device', 'lock', 'property', 'location', 'security', 'audit'];
 
     public const EXPORT_LIMIT = 10_000;
 

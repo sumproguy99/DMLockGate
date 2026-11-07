@@ -3,7 +3,9 @@
 namespace Tests\Feature\Services\Locks;
 
 use App\Actions\Auth\CompleteLogin;
+use App\Enums\AccessChannel;
 use App\Enums\AccessRequestStatus;
+use App\Enums\DeviceStatus;
 use App\Enums\LockAction;
 use App\Enums\LockConnectionStatus;
 use App\Enums\PermissionKey;
@@ -17,13 +19,16 @@ use App\Models\LockCommand;
 use App\Models\LockStateEvent;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\UserDevice;
 use App\Services\Audit\AuditLogger;
+use App\Services\Auth\DeviceRegistry;
 use App\Services\Locks\Integration\FakeLockDriver;
 use App\Services\Locks\Integration\IntegrationOutcomeUnknown;
 use App\Services\Locks\Integration\IntegrationUnavailable;
 use App\Services\Locks\Integration\LockDriver;
 use App\Services\Locks\Integration\ReportedState;
 use App\Services\Locks\Integration\UnconfiguredLockDriver;
+use App\Services\Locks\LockCommandService;
 use App\Services\Locks\LockStateRecorder;
 use Carbon\CarbonImmutable;
 use Database\Seeders\PermissionCatalogSeeder;
@@ -97,7 +102,7 @@ class LockCommandServiceTest extends TestCase
         $this->assertSame(AccessRequestStatus::ConfirmedSuccess, $request->status);
         $this->assertSame('allow', $request->decision->decision);
         $this->assertSame(
-            ['account_active', 'valid_operation', 'permission', 'lock_access', 'schedule', 'remote_unlock_policy', 'authentication_strength', 'location', 'security_hold', 'lock_busy'],
+            ['account_active', 'device', 'valid_operation', 'permission', 'lock_access', 'schedule', 'remote_unlock_policy', 'authentication_strength', 'location', 'security_hold', 'lock_busy'],
             array_column($request->decision->checks, 'check'),
         );
         $this->assertSame('not_applicable', collect($request->decision->checks)->firstWhere('check', 'security_hold')['result']);
@@ -525,5 +530,46 @@ class LockCommandServiceTest extends TestCase
 
         $this->assertSame([], $this->driver->sent);
         $this->assertSame(0, AuditLog::query()->where('action', 'lock.command_authorized')->count());
+    }
+
+    public function test_a_request_from_a_device_revoked_moments_ago_is_denied(): void
+    {
+        $resident = $this->userWithRole(RoleTemplate::Resident);
+        $device = UserDevice::factory()->create(['user_id' => $resident->id]);
+        UserDevice::query()->whereKey($device->id)->update(['status' => DeviceStatus::Revoked]);
+
+        $request = app(LockCommandService::class)->request(
+            user: $resident,
+            lock: $this->lock,
+            action: LockAction::Lock,
+            channel: AccessChannel::Remote,
+            idempotencyKey: fake()->uuid(),
+            identityConfirmedAt: null,
+            device: $device,
+        );
+
+        $this->assertSame(AccessRequestStatus::Denied, $request->status);
+        $this->assertSame('device_revoked', $request->decision->reason_code);
+        $this->assertSame($device->id, $request->user_device_id);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'lock.command_denied', 'target_device_id' => $device->id]);
+        $this->assertSame([], $this->driver->sent);
+    }
+
+    public function test_unlocking_can_be_set_to_need_a_trusted_device_while_locking_never_does(): void
+    {
+        config(['lockguard.devices.unlock_requires_trusted' => true]);
+        $resident = $this->userWithRole(RoleTemplate::Resident);
+        $device = UserDevice::factory()->create(['user_id' => $resident->id]);
+        $this->withSession([DeviceRegistry::SESSION_KEY => $device->id]);
+
+        $this->command($resident, 'unlock', stepUp: true)
+            ->assertForbidden()
+            ->assertJsonPath('error.code', 'device_not_trusted');
+        $this->command($resident, 'lock')->assertAccepted();
+
+        $device->forceFill(['status' => DeviceStatus::Trusted])->save();
+        $this->driver->setState($this->lock, ReportedLockState::Locked);
+        $this->command($resident, 'unlock', stepUp: true)->assertAccepted();
+        $this->assertSame($device->id, AccessRequest::query()->latest('id')->value('user_device_id'));
     }
 }

@@ -17,6 +17,7 @@ use App\Models\Role;
 use App\Models\SecurityAlert;
 use App\Models\SecurityIncident;
 use App\Models\User;
+use App\Models\UserDevice;
 use App\Services\Audit\AuditLogger;
 use Database\Seeders\PermissionCatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -45,6 +46,8 @@ class RouteAccessMatrixTest extends TestCase
 
     private const INCIDENT_HANDLERS = ['super_administrator', 'security_administrator'];
 
+    private const DEVICE_VIEWERS = ['super_administrator', 'security_administrator', 'property_manager'];
+
     /**
      * Route name => the roles allowed past authorization. Routes about the caller's own account are
      * open to everyone signed in.
@@ -55,6 +58,10 @@ class RouteAccessMatrixTest extends TestCase
         'api.v1.auth.confirm' => self::ALL,
         'api.v1.auth.sessions.index' => self::ALL,
         'api.v1.auth.sessions.destroy-others' => self::ALL,
+        'api.v1.auth.devices.index' => self::ALL,
+        'api.v1.auth.devices.trust-current' => self::ALL,
+        'api.v1.auth.devices.update' => self::ALL,
+        'api.v1.auth.devices.revoke' => self::ALL,
         'api.v1.auth.mfa.store' => self::ALL,
         'api.v1.auth.mfa.confirm' => self::ALL,
         'api.v1.auth.mfa.destroy' => self::ALL,
@@ -75,6 +82,13 @@ class RouteAccessMatrixTest extends TestCase
         'api.v1.users.reactivate' => self::USER_ADMINS,
         'api.v1.users.revoke' => ['super_administrator', 'security_administrator'],
         'api.v1.users.sessions.revoke' => ['super_administrator', 'security_administrator'],
+        // Other people's devices: devices.view, devices.rename, devices.revoke and devices.enroll.
+        'api.v1.devices.index' => self::DEVICE_VIEWERS,
+        'api.v1.users.devices.index' => self::DEVICE_VIEWERS,
+        'api.v1.devices.update' => ['super_administrator'],
+        'api.v1.devices.revoke' => ['super_administrator', 'security_administrator'],
+        'api.v1.devices.trust' => ['super_administrator'],
+        'api.v1.users.device-codes.store' => ['super_administrator'],
         'api.v1.users.roles.update' => ['super_administrator'],
         'api.v1.users.permissions.update' => ['super_administrator'],
         'api.v1.locks.index' => self::ALL,
@@ -172,9 +186,11 @@ class RouteAccessMatrixTest extends TestCase
                 $alert = SecurityAlert::factory()->create();
                 $incident = SecurityIncident::factory()->create();
                 $notification = $user->notifications()->create(['id' => (string) Str::uuid(), 'type' => 'security_alert', 'data' => ['title' => 'Matrix']]);
+                // The caller's own device for their own routes, the other person's for administrators'.
+                $device = UserDevice::factory()->create(['user_id' => str_starts_with((string) $name, 'api.v1.auth.') ? $user->id : $target->id]);
                 $uri = '/'.str_replace(
-                    ['{lock}', '{user}', '{accessRequest}', '{eventId}', '{locationRequest}', '{alert}', '{incident}', '{notification}'],
-                    [$lock->id, $target->id, $request->public_id, $eventId, $locationRequest->public_id, $alert->public_id, $incident->public_id, $notification->id],
+                    ['{lock}', '{user}', '{accessRequest}', '{eventId}', '{locationRequest}', '{alert}', '{incident}', '{notification}', '{device}'],
+                    [$lock->id, $target->id, $request->public_id, $eventId, $locationRequest->public_id, $alert->public_id, $incident->public_id, $notification->id, $device->public_id],
                     $route->uri(),
                 );
 
@@ -243,6 +259,8 @@ class RouteAccessMatrixTest extends TestCase
             'api.v1.location.requests.store' => ['user_id' => $target->id],
             'api.v1.security.incidents.store' => ['title' => 'Matrix incident', 'severity' => 'medium'],
             'api.v1.security.incidents.status' => ['status' => 'investigating'],
+            'api.v1.auth.devices.update', 'api.v1.devices.update' => ['name' => 'Matrix phone'],
+            'api.v1.devices.revoke' => ['reason' => 'Access matrix test'],
             default => [],
         };
     }

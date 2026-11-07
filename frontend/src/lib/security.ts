@@ -41,6 +41,7 @@ export const categoryLabel: Record<string, string> = {
   lock_connectivity: 'Lock connection',
   battery_warning: 'Battery',
   integration_failure: 'Lock integration',
+  device_revoked: 'Devices',
 }
 
 /** How a resolved alert came to be resolved, in words. */

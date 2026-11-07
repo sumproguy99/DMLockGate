@@ -44,6 +44,7 @@ class LockCommandController extends Controller
             identityConfirmedAt: $request->hasSession() ? $request->session()->get(CompleteLogin::CONFIRMED_AT_KEY) : null,
             ipAddress: $request->ip(),
             userAgent: $request->userAgent(),
+            device: $request->attributes->get('device'),
         );
         $accessRequest->load('decision', 'command');
 

@@ -4,7 +4,9 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ActivityFeedItem } from '../api/activity'
 import type { CurrentUser } from '../api/auth'
+import type { Device } from '../api/devices'
 import type { LockRequest, LockSummary } from '../api/locks'
+import type { SharedLocation } from '../api/location'
 import type { SystemHealth } from '../api/system'
 import { AppRoutes } from '../App'
 import { AuthProvider } from '../auth/AuthProvider'
@@ -103,6 +105,32 @@ function stubGeolocation(answer: 'position' | 'denied') {
   vi.stubGlobal('navigator', { ...navigator, geolocation: { getCurrentPosition, watchPosition: vi.fn() } })
   return getCurrentPosition
 }
+
+function phone(overrides: Partial<Device> = {}): Device {
+  return {
+    id: 'dev-phone',
+    name: 'Chrome on Android',
+    status: 'recognized',
+    current: true,
+    browser: 'Chrome on Android',
+    last_ip_address: '192.0.2.10',
+    first_seen_at: minutesAgo(600),
+    last_seen_at: minutesAgo(1),
+    registered_at: null,
+    trusted_at: null,
+    trusted_by: null,
+    revoked_at: null,
+    revoked_by: null,
+    revoke_reason: null,
+    reported_lost: false,
+    ...overrides,
+  }
+}
+
+const laptop = (overrides: Partial<Device> = {}): Device =>
+  phone({ id: 'dev-laptop', name: 'Edge on Windows', browser: 'Edge on Windows', current: false, last_seen_at: minutesAgo(90), ...overrides })
+
+const ownDevices = (devices: Device[]) => ({ data: devices, meta: { current_recognized: true, unlock_requires_trusted: false } })
 
 const calls = (fetch: ReturnType<typeof mockFetch>, method: string, path: string) =>
   fetch.mock.calls.filter((call) => String(call[0]) === path && (call[1]?.method ?? 'GET') === method)
@@ -356,15 +384,65 @@ describe('mobile Activity', () => {
 })
 
 describe('mobile Devices and Notifications', () => {
-  it('lists the locks with links to their controls and explains trusted phones', async () => {
-    mockFetch(session(resident))
+  it('lists the locks with links to their controls and the phones signed in to the account', async () => {
+    mockFetch({ ...session(resident), 'GET /api/v1/auth/devices': () => json(200, ownDevices([phone(), laptop()])) })
     const { container } = renderAt('/m/devices')
 
     expect(await screen.findByRole('link', { name: /Front Door/ })).toHaveAttribute('href', '/m/locks/1')
-    expect(screen.getByRole('heading', { level: 2, name: 'Trusted phones' }).closest('section')).toHaveTextContent(
-      'does not register trusted phones yet',
-    )
+    const devices = (await screen.findByRole('heading', { level: 2, name: 'Your devices' })).closest('section')!
+    expect(await within(devices).findByText('Edge on Windows')).toBeInTheDocument()
+    expect(within(devices).getByText('This device')).toBeInTheDocument()
+    expect(within(devices).getByText('This device is not trusted')).toBeInTheDocument()
     await expectNoAxeViolations(container)
+  })
+
+  it('trusts this phone after the identity check', async () => {
+    let trusted = false
+    let attempts = 0
+    mockFetch({
+      ...session(resident),
+      'GET /api/v1/auth/devices': () => json(200, ownDevices([phone(trusted ? { status: 'trusted', trusted_at: minutesAgo(0) } : {})])),
+      'POST /api/v1/auth/devices/current/trust': () => {
+        if (++attempts === 1) {
+          return apiError(403, 'step_up_required', 'Confirm your identity to continue.')
+        }
+        trusted = true
+        return json(200, { data: phone({ status: 'trusted' }) })
+      },
+      'POST /api/v1/auth/confirm': () => json(200, { data: { confirmed_until: minutesAgo(-10) } }),
+    })
+    renderAt('/m/devices')
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Trust this device' }))
+    const stepUp = await screen.findByRole('dialog', { name: "Confirm it's you" })
+    await user.type(within(stepUp).getByLabelText(/^Password/), 'secret')
+    await user.click(within(stepUp).getByRole('button', { name: 'Confirm' }))
+
+    expect(await screen.findByText('This device is now trusted')).toBeInTheDocument()
+    expect(await screen.findByText('Trusted')).toBeInTheDocument()
+    expect(screen.queryByText('This device is not trusted')).not.toBeInTheDocument()
+  })
+
+  it('reports another device lost after saying what that does', async () => {
+    const fetch = mockFetch({
+      ...session(resident),
+      'GET /api/v1/auth/devices': () => json(200, ownDevices([phone(), laptop()])),
+      'POST /api/v1/auth/devices/dev-laptop/revoke': () =>
+        json(200, { data: laptop({ status: 'revoked', reported_lost: true }), meta: { signed_out: { browser_logins: 2, api_clients: 0 } } }),
+    })
+    renderAt('/m/devices')
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Actions for Edge on Windows' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Report lost' }))
+    const dialog = await screen.findByRole('alertdialog', { name: 'Report “Edge on Windows” lost?' })
+    expect(dialog).toHaveTextContent('every other sign-in on your account also ends now')
+    await user.click(within(dialog).getByRole('button', { name: 'Report lost' }))
+
+    expect(await screen.findByText('Edge on Windows reported lost. 2 sign-ins ended.')).toBeInTheDocument()
+    expect(calls(fetch, 'POST', '/api/v1/auth/devices/dev-laptop/revoke')[0][1]?.body).toBe(JSON.stringify({ lost: true }))
+    expect(screen.queryByRole('button', { name: 'Actions for Chrome on Android' })).toBeInTheDocument()
   })
 
   it('lists every alert with its severity, or says nothing needs attention', async () => {
@@ -493,6 +571,20 @@ describe('mobile Account security', () => {
   })
 })
 
+function sharedEntry(overrides: Partial<SharedLocation> & Pick<SharedLocation, 'id' | 'at' | 'kind'>): SharedLocation {
+  return {
+    accuracy_meters: 12,
+    lock: null,
+    action: null,
+    requested_by: null,
+    device: null,
+    latitude: 35.2271,
+    longitude: -80.8431,
+    captured_at: overrides.at,
+    ...overrides,
+  }
+}
+
 describe('mobile Location, Help and More', () => {
   it('shows what is recorded and every time the location was shared, without asking for a location', async () => {
     const getCurrentPosition = stubGeolocation('position')
@@ -504,8 +596,8 @@ describe('mobile Location, Help and More', () => {
             notice_version: '2026-10-21',
             retention_days: 30,
             shared: [
-              { at: minutesAgo(5), kind: 'location_request', accuracy_meters: 18, lock: null, action: null, requested_by: 'Dana Admin' },
-              { at: minutesAgo(60), kind: 'lock_request', accuracy_meters: 9, lock: 'Front Door', action: 'unlock', requested_by: null },
+              sharedEntry({ id: 1, at: minutesAgo(5), kind: 'location_request', accuracy_meters: 18, requested_by: 'Dana Admin' }),
+              sharedEntry({ id: 2, at: minutesAgo(60), kind: 'lock_request', accuracy_meters: 9, lock: 'Front Door', action: 'unlock', device: 'Riley iPhone' }),
             ],
           },
         }),
@@ -519,6 +611,37 @@ describe('mobile Location, Help and More', () => {
     expect(screen.getByText('Unlock request for Front Door')).toBeInTheDocument()
     expect(screen.getByText('Why automatic unlocking is not available')).toBeInTheDocument()
     expect(getCurrentPosition).not.toHaveBeenCalled()
+    await expectNoAxeViolations(container)
+  })
+
+  it('shows the location timeline by day, with where, why and from which device', async () => {
+    mockFetch({
+      ...session(resident),
+      'GET /api/v1/location/mine': () =>
+        json(200, {
+          data: {
+            notice_version: '2026-10-21',
+            retention_days: 30,
+            shared: [
+              sharedEntry({ id: 1, at: minutesAgo(5), kind: 'location_request', requested_by: 'Dana Admin', device: 'Riley iPhone' }),
+              sharedEntry({ id: 2, at: minutesAgo(60 * 30), kind: 'lock_request', lock: 'Front Door', action: 'lock' }),
+            ],
+          },
+        }),
+    })
+    const { container } = renderAt('/m/location')
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('link', { name: 'Timeline' }))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Location timeline' })).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(2)
+    const first = screen.getAllByRole('listitem')[0]
+    expect(first).toHaveTextContent('Dana Admin asked for your location')
+    expect(first).toHaveTextContent('Riley iPhone')
+    expect(within(first).getByRole('link')).toHaveAttribute('href', 'https://www.openstreetmap.org/?mlat=35.22710&mlon=-80.84310#map=17/35.22710/-80.84310')
+    expect(screen.getByText('Lock request for Front Door')).toBeInTheDocument()
+    expect(screen.getByText(/Device not recorded/)).toBeInTheDocument()
     await expectNoAxeViolations(container)
   })
 

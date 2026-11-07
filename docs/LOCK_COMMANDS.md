@@ -27,17 +27,18 @@ These are separate records, never collapsed into one status:
 ## Authorization checks (in order; the first failure denies)
 
 1. `account_active`: the account is not suspended, revoked or expired.
-2. `valid_operation`: the lock is registered and its commands are enabled. Proximity requests are refused until proximity unlocking exists.
-3. `permission`:
+2. `device`: the request did not come from a revoked device. With `LOCKGUARD_UNLOCK_REQUIRES_TRUSTED_DEVICE=true`, unlocking also needs a device the user has trusted (off by default; locking never needs it).
+3. `valid_operation`: the lock is registered and its commands are enabled. Proximity requests are refused until proximity unlocking exists.
+4. `permission`:
    - Locking needs `lock.lock`.
    - Unlocking needs `lock.unlock`, plus `lock.remote_unlock` when the request is remote.
-4. `lock_access`: the user has a `user_lock_access` row for this lock.
-5. `schedule`: the current time is inside that row's `valid_from` / `valid_until` window.
-6. `remote_unlock_policy`: rejects remote unlock when the policy is `disabled`, or when the policy value is not recognized.
-7. `authentication_strength`: under the `step_up` policy (the default), a remote unlock needs a password (and MFA) confirmation within `LOCKGUARD_STEP_UP_SECONDS`.
-8. `location`: under the `location_required` policy, remote unlock is rejected because location-aware access does not exist yet.
-9. `security_hold`: recorded as `not_applicable` until lockdown mode is built.
-10. `lock_busy`: rejected while another command for the same lock is queued or submitted.
+5. `lock_access`: the user has a `user_lock_access` row for this lock.
+6. `schedule`: the current time is inside that row's `valid_from` / `valid_until` window.
+7. `remote_unlock_policy`: rejects remote unlock when the policy is `disabled`, or when the policy value is not recognized.
+8. `authentication_strength`: under the `step_up` policy (the default), a remote unlock needs a password (and MFA) confirmation within `LOCKGUARD_STEP_UP_SECONDS`.
+9. `location`: under the `location_required` policy, remote unlock is rejected because location-aware access does not exist yet.
+10. `security_hold`: recorded as `not_applicable` until lockdown mode is built.
+11. `lock_busy`: rejected while another command for the same lock is queued or submitted.
 
 **Every request from the app is treated as remote.** Until location reporting exists, LockGuard cannot tell that the user is at the door, and a missing location report is never treated as evidence of presence. So a Temporary Guest, who holds `lock.unlock` but not `lock.remote_unlock`, can lock but cannot unlock yet.
 

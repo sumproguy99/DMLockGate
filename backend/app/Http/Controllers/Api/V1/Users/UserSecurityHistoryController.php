@@ -15,7 +15,7 @@ use Illuminate\Http\Request;
  */
 class UserSecurityHistoryController extends Controller
 {
-    private const ACTION_PREFIXES = ['auth.', 'user.'];
+    private const ACTION_PREFIXES = ['auth.', 'user.', 'device.'];
 
     public function __construct(private readonly UserManagementGuard $guard) {}
 

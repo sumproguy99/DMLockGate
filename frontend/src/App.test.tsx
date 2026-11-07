@@ -147,6 +147,55 @@ describe('signing in', () => {
     expect(verifyBodies).toEqual([{ code: '123456' }, { recovery_code: 'abcd-efgh' }])
   })
 
+  it('asks for a registration code on a device the account is not registered on, and sends it', async () => {
+    const fetch = mockFetch({
+      'GET /api/v1/auth/me': () => apiError(401, 'unauthenticated', 'Sign in to continue.'),
+      'POST /api/v1/auth/login': ({ body }) =>
+        (body as { device_code?: string }).device_code === 'ABCD-EFGH'
+          ? json(200, { data: { status: 'authenticated', user: admin } })
+          : apiError(403, 'device_registration_required', 'This device is not registered for your account.'),
+    })
+    const { container } = renderApp('/login')
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByRole('textbox', { name: /Email/ }), 'riley@example.test')
+    await user.type(screen.getByLabelText(/^Password/), 'secret')
+    await user.click(screen.getByRole('button', { name: 'Sign in' }))
+
+    const codeField = await screen.findByRole('textbox', { name: /Registration code/ })
+    expect(screen.getByText('Register this device')).toBeInTheDocument()
+    await expectNoAxeViolations(container)
+
+    await user.click(screen.getByRole('button', { name: 'Sign in' }))
+    expect(codeField).toHaveAccessibleDescription('Enter the registration code from your administrator.')
+
+    await user.type(codeField, 'ABCD-EFGH')
+    await user.click(screen.getByRole('button', { name: 'Sign in' }))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument()
+    const bodies = fetch.mock.calls.filter((call) => String(call[0]) === '/api/v1/auth/login').map((call) => JSON.parse(String(call[1]?.body)))
+    expect(bodies).toEqual([
+      { email: 'riley@example.test', password: 'secret' },
+      { email: 'riley@example.test', password: 'secret', device_code: 'ABCD-EFGH' },
+    ])
+  })
+
+  it('shows why when a device is refused at sign-in', async () => {
+    mockFetch({
+      'GET /api/v1/auth/me': () => apiError(401, 'unauthenticated', 'Sign in to continue.'),
+      'POST /api/v1/auth/login': () => apiError(403, 'device_belongs_to_other', 'This device is registered to another person.'),
+    })
+    renderApp('/login')
+    const user = userEvent.setup()
+
+    await user.type(await screen.findByRole('textbox', { name: /Email/ }), 'sam@example.test')
+    await user.type(screen.getByLabelText(/^Password/), 'secret')
+    await user.click(screen.getByRole('button', { name: 'Sign in' }))
+
+    expect(await screen.findByText('This device is registered to another person.')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: /Registration code/ })).not.toBeInTheDocument()
+  })
+
   it('returns to sign-in with a notice when the MFA step expired', async () => {
     mockFetch({
       'GET /api/v1/auth/me': () => apiError(401, 'unauthenticated', 'Sign in to continue.'),
@@ -195,7 +244,7 @@ describe('the signed-in shell', () => {
     renderApp('/')
 
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' })
-    expect(navLinks()).toEqual(['Dashboard', 'Notifications', 'Locks'])
+    expect(navLinks()).toEqual(['Dashboard', 'Notifications', 'Locks', 'Devices'])
   })
 
   it('shows administrators every built screen', async () => {
@@ -203,7 +252,7 @@ describe('the signed-in shell', () => {
     const { container } = renderApp('/')
 
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' })
-    expect(navLinks()).toEqual(['Dashboard', 'Notifications', 'Users', 'Roles and permissions', 'Properties', 'Locks', 'System health'])
+    expect(navLinks()).toEqual(['Dashboard', 'Notifications', 'Users', 'Roles and permissions', 'Properties', 'Locks', 'Devices', 'System health'])
     expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByText('Alex Admin')).toBeInTheDocument()
     expect(screen.getByText('Owner')).toBeInTheDocument()
@@ -289,6 +338,20 @@ describe('the signed-in shell', () => {
 
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Sign in to DM LockGuard' })).toBeInTheDocument())
     expect(screen.getByText('Your session ended. Sign in again to continue.')).toBeInTheDocument()
+  })
+
+  it('returns to sign-in with the reason when the server ends the session because of the device', async () => {
+    mockFetch({
+      ...signedIn(admin),
+      'GET /api/v1/locks': () => apiError(403, 'device_registration_required', 'This device is not registered for your account.'),
+    })
+    renderApp('/')
+
+    await screen.findByRole('heading', { level: 1, name: 'Dashboard' })
+    await api('/locks').catch(() => {})
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Sign in to DM LockGuard' })).toBeInTheDocument())
+    expect(screen.getByText('This device is not registered for your account.')).toBeInTheDocument()
   })
 
   it('has a skip link to the main content', async () => {
