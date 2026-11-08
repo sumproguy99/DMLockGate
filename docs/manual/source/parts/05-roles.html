@@ -1,0 +1,406 @@
+<x-chapter n="5" id="roles" title="User roles" sub="Who can do what, who can't, and why. With a story for every role." ico="users" c1="#6d3fd8" c2="#0d1f35">
+
+<p class="lead">Every LockGuard account has a <b>role</b>. A role is a ready-made bundle of <b>permissions</b>: small "yes, you may" switches such as <em>Lock a door</em> or <em>Suspend an account</em>.</p>
+
+<x-term word="Role-based access control (RBAC)" tech="An authorization model in which permissions are attached to roles and users receive permissions by being assigned roles, rather than permission by permission.">Instead of handing out keys one at a time, you hand out key rings. "Resident" is a key ring; "Super Administrator" is the janitor's giant key ring.</x-term>
+<x-term word="Permission" tech="A named capability, e.g. lock.unlock, checked by the server on every request. Anything not explicitly allowed is denied (deny by default).">One single "you're allowed to do this" switch. If the switch isn't on, the answer is no.</x-term>
+
+<figure class="photo"><img src="img/photos/keys-hand.jpg" alt="A hand holding a bunch of keys" loading="lazy"></figure>
+<figcaption>A role is a key ring: the right keys for the job, and no more. <span class="small">Photo: Maria Ziegler on Unsplash</span></figcaption>
+
+<div class="grid g3">
+  <div class="card"><h4>{i:shield-check} The server decides</h4><p>Hiding a button isn't security. LockGuard's server checks every permission on <b>every</b> request, so even a clever person with a hacked app gets "no".</p></div>
+  <div class="card"><h4>{i:lock} Doors are given separately</h4><p>A role says <em>what</em> you may do; <b>lock access</b> says <em>which doors</em>. Even a Super Administrator can't open a door until they've been given access to it.</p></div>
+  <div class="card"><h4>{i:user-cog} Overrides exist</h4><p>An administrator can add a single extra permission (or block one) for one person, without inventing a new role.</p></div>
+</div>
+
+<h3 id="roles-compare">The comparison chart</h3>
+<p>This is the whole story on one page. Read a column to see everything one role can do, or a row to see who can do one thing. <span class="yes">✓</span> = included, <span class="no">✗</span> = not included, <span class="some">!</span> = not by default (see the note below). Click a role's name to jump to its section.</p>
+<!--MATRIX-->
+
+<x-caution title="Why some roles show ! for unlocking">Every unlock sent through the LockGuard app counts as a <b>remote unlock</b>, so it needs two permissions: <code>lock.unlock</code> <em>and</em> <code>lock.remote_unlock</code>. Out of the box only the <b>Super Administrator</b> and <b>Resident</b> roles have both. Property Managers, Temporary Guests and Service Providers can <b>lock</b> from the app but won't see an Unlock button until an administrator adds the <b>"Request remote unlocking"</b> permission to that person as an individual override (<a href="#howto-override">here's how</a>).</x-caution>
+
+<h4>How many permissions each role has</h4>
+<p>There are 35 permissions in total. Bigger bar = bigger key ring.</p>
+<!--BARS-->
+<x-note>Nobody gets "Walk-up proximity unlock" from a role, not even the Super Administrator. It's deliberately left out and has to be granted on purpose, one person at a time, once the feature exists.</x-note>
+
+<h3 id="roles-relationships">How the roles relate to each other</h3>
+<p>Think of three layers. The <b>Super Administrator</b> runs the whole system. Two <b>managers</b> look after it: the Property Manager handles <em>people and access</em>, and the Security Administrator handles <em>threats and safety</em>. Below them, four <b>door users</b> and an <b>observer</b> use or review it.</p>
+
+<div class="diagram" role="img" aria-label="Diagram of role relationships. The Super Administrator manages everyone. The Property Manager creates and manages residents, guests and service providers. The Security Administrator can suspend, sign out and revoke any lower account and handles incidents. The Read-Only Auditor reviews the audit log without changing anything.">
+<svg viewBox="0 0 980 420">
+  <defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#8a9bb0"/></marker></defs>
+  <g font-size="15" text-anchor="middle">
+    <rect x="365" y="14" width="250" height="64" rx="16" fill="#6d3fd8"/><text x="490" y="42" fill="#fff" font-weight="800">👑 Super Administrator</text><text x="490" y="64" fill="#e9e1ff" font-size="12">runs everything · 34 permissions</text>
+
+    <rect x="120" y="150" width="260" height="64" rx="16" fill="#0a6fe0"/><text x="250" y="178" fill="#fff" font-weight="800">🏢 Property Manager</text><text x="250" y="200" fill="#dbeaff" font-size="12">people &amp; access · 13</text>
+    <rect x="600" y="150" width="260" height="64" rx="16" fill="#d92d44"/><text x="730" y="178" fill="#fff" font-weight="800">🚨 Security Administrator</text><text x="730" y="200" fill="#ffe1e5" font-size="12">threats &amp; safety · 17</text>
+
+    <rect x="20" y="300" width="170" height="60" rx="14" fill="#0f8a5a"/><text x="105" y="326" fill="#fff" font-weight="700">🏠 Resident</text><text x="105" y="346" fill="#d8f7ea" font-size="12">6</text>
+    <rect x="205" y="300" width="170" height="60" rx="14" fill="#c27c00"/><text x="290" y="326" fill="#fff" font-weight="700">🎟️ Temporary Guest</text><text x="290" y="346" fill="#fff3d9" font-size="12">3</text>
+    <rect x="390" y="300" width="170" height="60" rx="14" fill="#d9580b"/><text x="475" y="326" fill="#fff" font-weight="700">🔧 Service Provider</text><text x="475" y="346" fill="#ffe6d6" font-size="12">3</text>
+    <rect x="790" y="300" width="170" height="60" rx="14" fill="#56677c"/><text x="875" y="326" fill="#fff" font-weight="700">🔍 Read-Only Auditor</text><text x="875" y="346" fill="#e5ebf2" font-size="12">5</text>
+
+    <g stroke="#8a9bb0" stroke-width="2" fill="none" marker-end="url(#ah2)">
+      <path d="M430 80 L285 148"/><path d="M550 80 L700 148"/>
+      <path d="M200 216 L120 298"/><path d="M250 216 L285 298"/><path d="M300 216 L455 298"/>
+      <path d="M690 216 L540 300" stroke-dasharray="6 5"/><path d="M640 216 L380 300" stroke-dasharray="6 5"/><path d="M620 210 L200 304" stroke-dasharray="6 5"/>
+      <path d="M615 50 C900 60 920 200 880 298"/>
+    </g>
+    <text x="330" y="102" class="muted" font-size="12">creates &amp; manages</text>
+    <text x="660" y="102" class="muted" font-size="12">creates &amp; manages</text>
+    <text x="150" y="262" class="muted" font-size="12">invites, gives door access</text>
+    <text x="620" y="262" class="muted" font-size="12">can suspend, sign out, revoke</text>
+    <text x="905" y="160" class="muted" font-size="12">assigns</text>
+    <text x="490" y="404" class="muted" font-size="13">Solid line = creates and manages · Dashed line = can stop (suspend / sign out / revoke) but not create</text>
+  </g>
+</svg>
+</div>
+
+<h4>The three golden rules between roles</h4>
+<div class="grid g3">
+  <div class="card"><h4>{i:ban} No self-service</h4><p>Nobody can change their <b>own</b> account, roles or door access from the website. Ask another administrator. (Error <code>self_modification_forbidden</code>.)</p></div>
+  <div class="card"><h4>{i:arrow-up} No promoting past yourself</h4><p>You can only hand out administrative powers <b>you already have</b>. A Property Manager can't create a Security Administrator. (Error <code>target_outranks_actor</code>.)</p></div>
+  <div class="card"><h4>{i:key-round} Door access is the exception</h4><p>Everyday door permissions (lock, unlock, history, location) aren't "admin powers", so a manager may give them even though they're not part of their own job.</p></div>
+</div>
+<x-term word="Privilege escalation" tech="Gaining permissions beyond those intended, for example by granting oneself or an accomplice a more powerful role. LockGuard prevents it with a per-actor permission 'ceiling'.">Sneakily giving yourself (or a friend) a bigger key ring. LockGuard simply won't let you.</x-term>
+
+<h4>Who is tied to one phone?</h4>
+<p>With device binding on (the default), everyone signs in only on their <b>one registered phone</b>, except the <span class="role-chip" style="--rc:var(--r-super)">Super Administrator</span> and <span class="role-chip" style="--rc:var(--r-security)">Security Administrator</span>, who may need to respond from any computer during an emergency.</p>
+
+<!-- ======================= SUPER ADMINISTRATOR ======================= -->
+<h3 id="role-super-admin">Super Administrator</h3>
+<div class="role-hero" style="--rc:var(--r-super)">
+  <div class="top">{i:user-cog}<div><h4>Super Administrator</h4><p>Full control of LockGuard, including the Eufy integration and security settings.</p></div></div>
+  <div class="facts"><div><b>34 / 35</b>permissions</div><div><b>Any device</b>not tied to one phone</div><div><b>Usually 1–2</b>people (the owner)</div><div><b>Everything</b>in the sidebar</div></div>
+</div>
+<div class="grid g2">
+  <div class="card can"><h4>{i:circle-check} Can</h4><ul class="ticks">
+    <li>Everything in the comparison chart, apart from proximity unlocking</li>
+    <li>Connect Eufy, add properties, register locks, turn commands on/off</li>
+    <li>Create people, send invitations, assign <b>any</b> role</li>
+    <li>Add individual permission overrides</li>
+    <li>Change security, location and audit-retention policies</li>
+    <li>View the location map and device locations</li>
+    <li>Configure email settings</li>
+  </ul></div>
+  <div class="card cant"><h4>{i:circle-x} Cannot</h4><ul class="crosses">
+    <li>Change their <b>own</b> roles, permissions or door access from the website</li>
+    <li>Open a door they haven't been given access to</li>
+    <li>Use proximity unlocking (not in any role)</li>
+    <li>Edit what a role contains (roles are fixed; use overrides)</li>
+    <li>Rewrite or delete history in the audit log</li>
+  </ul></div>
+</div>
+<p><b>Relationships:</b> sits at the top. Creates the first Property Managers and Security Administrators and can manage every account, except their own. If there are two Super Administrators, they look after each other's accounts; if there's only one, door access for themselves is given at the server (<code>lockguard:grant-lock-access</code>).</p>
+
+<div class="scenario" style="--rc:var(--r-super)"><span class="tag">Scenario</span>
+  <div class="who-line"><div class="avatar">D</div><div><h4>Dana owns a 12-flat building</h4><span class="small">Super Administrator</span></div></div>
+  <p>Dana installs LockGuard over a weekend. On Saturday she registers the Front Door and Bike Store locks, turns commands on, and sets up Gmail in Email settings. On Sunday she invites Marcus as <b>Property Manager</b> and Priya, an IT friend, as <b>Security Administrator</b>. From Monday on, Dana mostly glances at the Dashboard: Marcus handles the tenants, and Priya gets the alerts. Dana still has the master key ring; she just doesn't need to carry it around every day.</p>
+</div>
+
+<h4>How to: add a property and register a lock</h4>
+<ol class="steps">
+  <li><strong>Properties → Add a property.</strong> Give it a name (e.g. "Maple Court") and its time zone. Schedules use this time zone.</li>
+  <li><strong>Locks → Register a lock</strong>, or run <code>lockguard:sync-locks --register</code> at the server. LockGuard asks you to confirm your password.</li>
+  <li><strong>Open the lock and switch Commands on</strong> when you're happy. Until then LockGuard refuses every command for that lock.</li>
+</ol>
+<x-shot src="desk-lock-detail.png" url="lockguard.example.com/locks/1" caption="<b>A lock's page:</b> status, battery, connection, the Commands switch, and who has access."/>
+
+<h4 id="howto-override">How to: add an individual permission override</h4>
+<ol class="steps">
+  <li><strong>Users</strong> → click the person → <strong>Roles and permissions</strong> tab.</li>
+  <li><strong>Add an override:</strong> pick the permission (e.g. <em>Request remote unlocking</em>), choose <b>Allow</b> (or <b>Deny</b> to block something their role normally gives), and add a reason.</li>
+  <li><strong>Check the preview</strong>, which highlights sensitive changes, then save and confirm your password.</li>
+</ol>
+<x-shot src="desk-roles.png" url="lockguard.example.com/roles" caption="<b>Roles and permissions</b>: each role's exact contents. Sensitive permissions carry an amber badge."/>
+
+<h4>How to: check the audit log hasn't been tampered with</h4>
+<x-cmd shell="PowerShell" where="backend">
+php artisan lockguard:audit-verify
+</x-cmd>
+<x-tip>Turn on two-step sign-in for yourself first thing: open the Account page (on a phone <b>More → Account</b>; on a computer go to <code>/m/account</code>) and choose <b>Two-step verification</b>. A Super Administrator account without it is a very attractive target.</x-tip>
+<x-joke>With great power comes great responsibility, and about 47 notification emails a day.</x-joke>
+
+<!-- ======================= SECURITY ADMINISTRATOR ======================= -->
+<h3 id="role-security-admin">Security Administrator</h3>
+<div class="role-hero" style="--rc:var(--r-security)">
+  <div class="top">{i:siren}<div><h4>Security Administrator</h4><p>Manages account security, devices, incidents and security policies.</p></div></div>
+  <div class="facts"><div><b>17</b>permissions</div><div><b>Any device</b>not tied to one phone</div><div><b>Always</b>gets security notifications</div><div><b>Focus</b>stop threats fast</div></div>
+</div>
+<div class="grid g2">
+  <div class="card can"><h4>{i:circle-check} Can</h4><ul class="ticks">
+    <li>See door status and history; <b>lock</b> doors they have access to (e.g. in an emergency)</li>
+    <li>Suspend, reactivate and permanently revoke accounts</li>
+    <li>Take away someone's door access</li>
+    <li>See everyone's devices, switch off (revoke) a lost phone, sign people out everywhere</li>
+    <li>See current location reports and review who viewed locations</li>
+    <li>Change security policies and notification/email settings</li>
+    <li>See, acknowledge and resolve alerts; open and run incidents</li>
+    <li>Export reports</li>
+  </ul></div>
+  <div class="card cant"><h4>{i:circle-x} Cannot</h4><ul class="crosses">
+    <li><b>Unlock</b> doors (on purpose: the safety role closes doors, it doesn't open them)</li>
+    <li>Create people, send invitations, or edit their details</li>
+    <li>Assign roles or add overrides</li>
+    <li>Give anyone door access</li>
+    <li>Change the Eufy integration, properties or audit retention</li>
+    <li>See the location history map</li>
+  </ul></div>
+</div>
+<p><b>Relationships:</b> the counterweight to the Property Manager. The Property Manager <em>lets people in</em>; the Security Administrator can <em>stop anyone below the Super Administrator</em>, instantly. The Read-Only Auditor reviews the Security Administrator's work afterwards through the audit log.</p>
+
+<div class="scenario" style="--rc:var(--r-security)"><span class="tag">Scenario</span>
+  <div class="who-line"><div class="avatar">P</div><div><h4>Priya and the 2 a.m. buzz</h4><span class="small">Security Administrator</span></div></div>
+  <p>At 2:04 a.m. Priya's phone buzzes: <span class="pill bad">Repeated failed sign-ins</span> on Jordan's account, then <span class="pill warn">New device sign-in</span>. Jordan is a resident who's asleep. Priya opens the Security center, <b>suspends</b> Jordan's account (new requests stop instantly), uses <b>Sign out everywhere</b>, and opens an <b>incident</b>. In the morning Jordan explains their old tablet was stolen. Priya revokes that device, reactivates Jordan, resolves the alert and closes the incident with notes. Total sleep lost: 11 minutes.</p>
+</div>
+
+<h4>How to: handle an alert</h4>
+<ol class="steps">
+  <li><strong>Security center</strong> → open the alert. Read what triggered it and who's involved.</li>
+  <li><strong>Acknowledge</strong> it so everyone knows you're on it. Some alerts (offline lock, low battery) <b>resolve themselves</b> when the problem clears; you just acknowledge those.</li>
+  <li><strong>Act:</strong> suspend the account, sign them out everywhere, revoke a device, or lock a door.</li>
+  <li><strong>Resolve</strong> the alert, or <strong>open an incident</strong> if it needs investigating.</li>
+</ol>
+<x-shot src="desk-secadmin-security.png" url="lockguard.example.com/security" caption="<b>The Security center</b>, as a Security Administrator sees it."/>
+
+<h4>How to: run an incident from start to finish</h4>
+<div class="diagram" role="img" aria-label="Incident steps: New, Acknowledged, Investigating, Contained, Resolved, Closed.">
+<svg viewBox="0 0 980 110"><g font-size="15" text-anchor="middle">
+  <rect x="5" y="25" width="140" height="56" rx="28" fill="#56677c"/><text x="75" y="58" fill="#fff" font-weight="700">New</text>
+  <rect x="170" y="25" width="140" height="56" rx="28" fill="#c27c00"/><text x="240" y="58" fill="#fff" font-weight="700">Acknowledged</text>
+  <rect x="335" y="25" width="140" height="56" rx="28" fill="#0a6fe0"/><text x="405" y="58" fill="#fff" font-weight="700">Investigating</text>
+  <rect x="500" y="25" width="140" height="56" rx="28" fill="#6d3fd8"/><text x="570" y="58" fill="#fff" font-weight="700">Contained</text>
+  <rect x="665" y="25" width="140" height="56" rx="28" fill="#0f8a5a"/><text x="735" y="58" fill="#fff" font-weight="700">Resolved</text>
+  <rect x="830" y="25" width="140" height="56" rx="28" fill="#0d1f35"/><text x="900" y="58" fill="#fff" font-weight="700">Closed 🔒</text>
+  <g fill="#8a9bb0"><path d="M147 53 l18 0 l-6 -6 M165 53 l-6 6"/></g>
+</g></svg></div>
+<p><b>New</b>: just opened. <b>Acknowledged</b>: someone owns it. <b>Investigating</b>: finding out what happened. <b>Contained</b>: the danger is stopped (account suspended, phone revoked). <b>Resolved</b>: fixed. <b>Closed</b>: filed away for good; a closed incident can't be changed, so open a new one if it flares up again.</p>
+<x-term word="Incident response" tech="A structured process for detecting, containing, eradicating and recovering from a security event, with documentation at each stage.">A fire drill for computer trouble: notice it, stop it spreading, fix it, write down what happened.</x-term>
+<x-tip>"Sign out everywhere" ends every session the person has, on every device, but leaves their account active. It's perfect for "I think someone saw my password", combined with a password change.</x-tip>
+<x-joke>Security Administrator's favourite band? The Locksmiths. Their best album: "Revoked and Reloaded."</x-joke>
+
+<!-- ======================= PROPERTY MANAGER ======================= -->
+<h3 id="role-property-manager">Property Manager</h3>
+<div class="role-hero" style="--rc:var(--r-manager)">
+  <div class="top">{i:building-2}<div><h4>Property Manager</h4><p>Manages residents, guests, access grants and schedules for assigned properties.</p></div></div>
+  <div class="facts"><div><b>13</b>permissions</div><div><b>One phone</b>device binding applies</div><div><b>Daily</b>move-ins, move-outs, contractors</div><div><b>Focus</b>people &amp; doors</div></div>
+</div>
+<div class="grid g2">
+  <div class="card can"><h4>{i:circle-check} Can</h4><ul class="ticks">
+    <li>See door status and history; lock doors they have access to</li>
+    <li>Create people and <b>send email invitations</b></li>
+    <li>Edit people's details; suspend and reactivate accounts</li>
+    <li><b>Give and take away lock access</b>, with start and end times</li>
+    <li>Manage access schedules and keypad-code records</li>
+    <li>See everyone's registered devices</li>
+  </ul></div>
+  <div class="card cant"><h4>{i:circle-x} Cannot</h4><ul class="crosses">
+    <li>Unlock from the app by default (needs the remote-unlock override; see the caution above)</li>
+    <li>Assign roles or add overrides (by default)</li>
+    <li>Permanently revoke accounts</li>
+    <li>Revoke devices or sign people out everywhere</li>
+    <li>See alerts, incidents, the audit log or locations</li>
+    <li>Touch the Eufy integration, properties, policies or email settings</li>
+  </ul></div>
+</div>
+<p><b>Relationships:</b> reports to the Super Administrator, who usually assigns the roles of the people the Property Manager invites. Works alongside the Security Administrator: if a tenant's phone goes missing, the manager calls security to revoke it. Manages Residents, Temporary Guests and Service Providers day to day.</p>
+<x-note>Inviting with a <b>role</b> needs the <em>Assign roles</em> permission, which Property Managers don't have by default. Their invitations create the account; a Super Administrator then assigns the role (or gives the manager the "Assign roles" override).</x-note>
+
+<div class="scenario" style="--rc:var(--r-manager)"><span class="tag">Scenario</span>
+  <div class="who-line"><div class="avatar">M</div><div><h4>Marcus and the Friday shuffle</h4><span class="small">Property Manager</span></div></div>
+  <p>Friday at Maple Court: flat 4 moves out, flat 7 moves in, and a plumber is booked for Saturday 9–12. Marcus <b>suspends</b> the old tenant of flat 4 (they can't open anything from that second on), <b>sends an invitation</b> to the new tenant of flat 7, and gives Pat the plumber access to the Back Door <b>from Saturday 09:00 until 12:00</b>. At 12:01 on Saturday Pat's access simply stops. No keys changed hands, and nobody had to remember to "take the key back".</p>
+</div>
+
+<h4>How to: invite a new person</h4>
+<ol class="steps">
+  <li><strong>Access management → Invitations → Invite someone.</strong></li>
+  <li><strong>Type their email</strong> (and name, if you like). Add a short personal note; it appears in the email.</li>
+  <li><strong>Send.</strong> LockGuard asks you to confirm your password, then shows the held <b>registration code</b> once. You won't normally need it.</li>
+  <li><strong>Watch progress</strong> in the list: <span class="pill info">Waiting to accept</span> → training (e.g. "3 of 7 lessons done") → <span class="pill ok">Completed</span>.</li>
+</ol>
+<div class="grid g2">
+  <x-shot src="desk-invite-dialog.png" url="lockguard.example.com/invitations" caption="Filling in an invitation."/>
+  <x-shot src="desk-invite-sent.png" url="lockguard.example.com/invitations" caption="Sent! The registration code is shown once."/>
+</div>
+
+<h4>How to: give someone access to a door (with a time limit)</h4>
+<ol class="steps">
+  <li><strong>Users</strong> → click the person → <strong>Lock access</strong> tab.</li>
+  <li><strong>Choose the lock.</strong> Optionally set <b>From</b> and <b>Until</b>. Leave From empty to start now, and Until empty for no end.</li>
+  <li><strong>Give access.</strong> It shows up under "Locks this person can use".</li>
+</ol>
+<x-shot src="desk-user-access.png" url="lockguard.example.com/users/2" caption="<b>Lock access tab:</b> current doors on the left, &quot;Give access to a lock&quot; on the right."/>
+
+<h4>How to: handle a move-out</h4>
+<ol class="steps">
+  <li><strong>Suspend</strong> the account (Users → person → <b>Suspend</b>). New requests are blocked immediately.</li>
+  <li><strong>Remove</strong> their lock access on the Lock access tab.</li>
+  <li><strong>Ask Security</strong> to revoke their phone if it might be misused, or a Super Administrator to <b>Revoke</b> the account for good.</li>
+</ol>
+<x-caution title="Suspend is not the same as revoke">Suspending is a pause button and can be undone with Reactivate. Revoking is permanent. When in doubt, suspend.</x-caution>
+<x-joke>A property manager walks into a bar. Then gives the bar access only until 11 p.m.</x-joke>
+
+<!-- ======================= RESIDENT ======================= -->
+<h3 id="role-resident">Resident</h3>
+<div class="role-hero" style="--rc:var(--r-resident)">
+  <div class="top">{i:house}<div><h4>Resident</h4><p>Locks and unlocks assigned doors and sees their history.</p></div></div>
+  <div class="facts"><div><b>6</b>permissions</div><div><b>One phone</b>device binding applies</div><div><b>Home, Activity</b>mainly the phone app</div><div><b>Focus</b>getting in and out</div></div>
+</div>
+<div class="grid g2">
+  <div class="card can"><h4>{i:circle-check} Can</h4><ul class="ticks">
+    <li>See their doors' status, battery and connection</li>
+    <li><b>Lock and unlock</b> their doors, including from away (remote unlock, with a password check if the policy asks)</li>
+    <li>See the history of their doors</li>
+    <li>Share their location when LockGuard asks for it</li>
+    <li>Manage their own account, two-step sign-in and registered phone</li>
+  </ul></div>
+  <div class="card cant"><h4>{i:circle-x} Cannot</h4><ul class="crosses">
+    <li>Open doors they weren't given access to</li>
+    <li>Invite, create or change other people</li>
+    <li>Give anyone else access (no sharing of the "key")</li>
+    <li>See alerts, the audit log or other people's devices</li>
+    <li>Use LockGuard from a second phone without a new registration code</li>
+  </ul></div>
+</div>
+<p><b>Relationships:</b> invited and looked after by the Property Manager. Protected by the Security Administrator, who can switch off a lost phone. Their actions appear in the audit log that the Read-Only Auditor reviews.</p>
+
+<div class="scenario" style="--rc:var(--r-resident)"><span class="tag">Scenario</span>
+  <div class="who-line"><div class="avatar">R</div><div><h4>Riley and the grocery bags</h4><span class="small">Resident</span></div></div>
+  <p>Riley arrives home with six bags of shopping and no free hands. Elbow-tap on the LockGuard icon, <b>Unlock Front Door</b>, confirm. The card shows <span class="pill info">Unlocking…</span> and then <span class="pill warn">Unlocked</span> once the lock reports in. Later, on the sofa, Riley wonders whether they locked up. One look at Home: <span class="pill ok">Locked</span>, reported by the lock 2 minutes ago. Riley stays on the sofa.</p>
+</div>
+
+<figure class="photo"><img src="img/photos/opening-door.jpg" alt="A person opening a wooden door into a room" loading="lazy"></figure>
+<figcaption>Home, with no keys to dig out of a bag. <span class="small">Photo: Caroline Badran on Unsplash</span></figcaption>
+
+<div class="grid g2" style="align-items:start">
+  <div>
+    <h4>How to: lock a door</h4>
+    <ol class="steps">
+      <li><strong>Home</strong> → find the door's card.</li>
+      <li><strong>Tap "Lock Front Door".</strong> It shows <span class="pill info">Locking…</span>; the old state stays until the lock reports.</li>
+      <li><strong>Wait for <span class="pill ok">Confirmed</span></strong> and the big green <b>Locked</b>.</li>
+    </ol>
+    <h4>How to: unlock a door</h4>
+    <ol class="steps">
+      <li><strong>Tap "Unlock Front Door".</strong></li>
+      <li><strong>Read the warning and tap Unlock.</strong> Anyone at the door can open it until it's locked again.</li>
+      <li><strong>Confirm it's you</strong> if asked (password or code). This lasts about 10 minutes.</li>
+    </ol>
+  </div>
+  <div class="phones">
+    <x-shot src="mobile-locking.png" frame="tall" caption="Locking… on its way"/>
+    <x-shot src="mobile-unlock-confirm.png" frame="tall" caption="The unlock check"/>
+  </div>
+</div>
+<h4>How to: see who came and went</h4>
+<p>Tap <b>Activity</b> on the bottom bar. Each line shows the door, the action, who did it, and the result.</p>
+<x-shot src="mobile-activity.png" frame="tall" caption="<b>Activity</b>: the history of your doors."/>
+<x-alert title="Never share your phone or password">LockGuard ties your access to <b>your</b> phone. Lending it to someone is lending them your key, and everything they do is recorded under your name.</x-alert>
+<x-joke>Why did the smartphone go to therapy? It had too many unresolved locks.</x-joke>
+
+<!-- ======================= TEMPORARY GUEST ======================= -->
+<h3 id="role-guest">Temporary Guest</h3>
+<div class="role-hero" style="--rc:var(--r-guest)">
+  <div class="top">{i:calendar-clock}<div><h4>Temporary Guest</h4><p>Time-limited access to assigned doors.</p></div></div>
+  <div class="facts"><div><b>3</b>permissions</div><div><b>One phone</b>device binding applies</div><div><b>Time-boxed</b>access has an end date</div><div><b>Focus</b>a short visit</div></div>
+</div>
+<div class="grid g2">
+  <div class="card can"><h4>{i:circle-check} Can</h4><ul class="ticks">
+    <li>See the status of the doors they were given</li>
+    <li><b>Lock</b> those doors</li>
+    <li>Unlock them, once an administrator adds the remote-unlock override</li>
+    <li>Manage their own account and phone</li>
+  </ul></div>
+  <div class="card cant"><h4>{i:circle-x} Cannot</h4><ul class="crosses">
+    <li>Use any door outside their time window (<code>outside_access_window</code>)</li>
+    <li>See door history (no Activity tab)</li>
+    <li>Share location, see other people, or manage anything</li>
+    <li>Keep access after the end date. It stops on its own.</li>
+  </ul></div>
+</div>
+<p><b>Relationships:</b> created by a Property Manager or Super Administrator, usually with a <b>From/Until</b> window on each lock. Exactly like a Service Provider in permissions; the different name just makes lists and reports easier to read.</p>
+<div class="scenario" style="--rc:var(--r-guest)"><span class="tag">Scenario</span>
+  <div class="who-line"><div class="avatar">G</div><div><h4>Gale visits for the weekend</h4><span class="small">Temporary Guest</span></div></div>
+  <p>Gale is staying with Riley from Friday to Sunday. Marcus invites Gale and gives the Front Door access from Friday 15:00 to Sunday 18:00. Gale does Pip's training on the train. All weekend Gale can see the Front Door and lock it behind them. From Sunday 18:00, LockGuard refuses Gale's requests with "Your access to this lock has ended." No "can I have the key back?" text needed.</p>
+</div>
+<div class="grid g2" style="align-items:start">
+  <x-shot src="mobile-guest-home.png" frame="tall" caption="A guest's Home: one door, and a Lock button. Unlock appears once the override is added."/>
+  <div>
+    <h4>How to: use your guest access</h4>
+    <ol class="steps">
+      <li><strong>Accept the invitation</strong> and finish Pip's training on the phone you'll use.</li>
+      <li><strong>Open LockGuard</strong> to see the door(s) you were given and when your access ends.</li>
+      <li><strong>Lock the door</strong> whenever you leave, and check it says <b>Locked</b>.</li>
+    </ol>
+    <x-tip>If you see "Your access to this lock has not started yet" or "has ended", that's the time window working. Contact whoever invited you to change it.</x-tip>
+  </div>
+</div>
+<x-joke>Guest access is like a library book: lovely while you have it, and it goes back on time whether you remember or not.</x-joke>
+
+<!-- ======================= SERVICE PROVIDER ======================= -->
+<h3 id="role-service-provider">Service Provider</h3>
+<div class="role-hero" style="--rc:var(--r-service)">
+  <div class="top">{i:hard-hat}<div><h4>Service Provider</h4><p>Scheduled access for contractors and service staff.</p></div></div>
+  <div class="facts"><div><b>3</b>permissions</div><div><b>One phone</b>device binding applies</div><div><b>Scheduled</b>by visit or by day</div><div><b>Focus</b>do the job, leave</div></div>
+</div>
+<div class="grid g2">
+  <div class="card can"><h4>{i:circle-check} Can</h4><ul class="ticks">
+    <li>See the status of the doors needed for the job</li>
+    <li><b>Lock</b> them when finished</li>
+    <li>Unlock them, once an administrator adds the remote-unlock override</li>
+  </ul></div>
+  <div class="card cant"><h4>{i:circle-x} Cannot</h4><ul class="crosses">
+    <li>Use doors outside the scheduled window</li>
+    <li>See history, other people, or any admin screens</li>
+    <li>Pass access on to a colleague. Each worker needs their own account.</li>
+  </ul></div>
+</div>
+<p><b>Relationships:</b> set up by the Property Manager, usually with access only for the visit. The Security Administrator can cut access instantly if something seems wrong. Every entry is visible to the Auditor.</p>
+<div class="scenario" style="--rc:var(--r-service)"><span class="tag">Scenario</span>
+  <div class="who-line"><div class="avatar">P</div><div><h4>Pat the plumber</h4><span class="small">Service Provider</span></div></div>
+  <p>Pat fixes the boiler at Maple Court every few months. Marcus gave Pat a Service Provider account last year. Each time a job is booked, Marcus gives the Back Door access for that morning only. Pat arrives, gets in, fixes the boiler, taps <b>Lock Back Door</b> on the way out, and sees <b>Confirmed</b>. Marcus can see exactly when Pat came and went, and so can Pat if anyone ever asks.</p>
+</div>
+<figure class="photo"><img src="img/photos/door-lever.jpg" alt="A hand holding a door lever" loading="lazy"></figure>
+<figcaption>Get in, do the job, lock up, leave. <span class="small">Photo: Maria Ziegler on Unsplash</span></figcaption>
+<x-tip>Service companies: give every worker their own account. Shared accounts make the audit log useless ("who was 'PlumbingCo' at 9:14?") and break device binding.</x-tip>
+<x-joke>The contractor asked for a key. LockGuard said, "How about a Tuesday instead?"</x-joke>
+
+<!-- ======================= READ-ONLY AUDITOR ======================= -->
+<h3 id="role-auditor">Read-Only Auditor</h3>
+<div class="role-hero" style="--rc:var(--r-auditor)">
+  <div class="top">{i:eye}<div><h4>Read-Only Auditor</h4><p>Reviews history, incidents and audit records without changing anything.</p></div></div>
+  <div class="facts"><div><b>5</b>permissions</div><div><b>One phone</b>device binding applies</div><div><b>Look, don't touch</b>no buttons that change things</div><div><b>Focus</b>checking the checkers</div></div>
+</div>
+<div class="grid g2">
+  <div class="card can"><h4>{i:circle-check} Can</h4><ul class="ticks">
+    <li>See door status and full door history (for doors they have access to)</li>
+    <li>See alerts, incidents and the <b>audit log</b></li>
+    <li>Review who viewed location data</li>
+    <li>Export reports</li>
+  </ul></div>
+  <div class="card cant"><h4>{i:circle-x} Cannot</h4><ul class="crosses">
+    <li>Lock or unlock anything</li>
+    <li>Change people, access, devices or settings</li>
+    <li>Acknowledge or resolve alerts</li>
+    <li>See the location history map itself</li>
+  </ul></div>
+</div>
+<p><b>Relationships:</b> independent on purpose. The Auditor watches what <em>everyone</em> does, including the administrators, and can't be "managed around" because the audit log can't be edited by anyone.</p>
+<div class="scenario" style="--rc:var(--r-auditor)"><span class="tag">Scenario</span>
+  <div class="who-line"><div class="avatar">A</div><div><h4>Avery's quarterly check</h4><span class="small">Read-Only Auditor</span></div></div>
+  <p>Avery works for the insurance company. Every three months Avery signs in, filters the audit log to "permission changes" and "unlocks after midnight", and exports a report. One quarter Avery spots that a contractor kept access for two extra weeks, and flags it to Marcus. Avery fixed nothing personally, and couldn't have, but made sure it got fixed.</p>
+</div>
+<x-shot src="desk-auditor-audit.png" url="lockguard.example.com/audit" caption="<b>The audit log</b>, as the Auditor sees it: read-only, filterable, exportable."/>
+<h4>How to: review the audit log</h4>
+<ol class="steps">
+  <li><strong>Security → Audit log.</strong></li>
+  <li><strong>Filter</strong> by category, outcome (success, denied, failed…), lock, and a From/To date range.</li>
+  <li><strong>Open an event</strong> to see every detail: who, what, when, from which device and network address.</li>
+  <li><strong>Export</strong> what you need for your report. The export itself is recorded in the audit log too.</li>
+</ol>
+<x-term word="Audit trail (hash chain)" tech="An append-only log in which each record includes a cryptographic hash of the previous record, so altering or deleting any entry breaks the chain and is detectable.">A diary where every page includes a fingerprint of the page before. Rip a page out or change a word, and the fingerprints stop matching.</x-term>
+<x-joke>An auditor's favourite exercise? Checking the treadmill's step count. Twice.</x-joke>
+
+</x-chapter>

@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="DM LockGuard app icon">
+  <title>DM LockGuard</title>
+  <defs>
+    <linearGradient id="lg-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#11263f"/>
+      <stop offset="1" stop-color="#050b14"/>
+    </linearGradient>
+    <linearGradient id="lg-blue" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#087fff"/>
+      <stop offset="1" stop-color="#20b8ff"/>
+    </linearGradient>
+    <linearGradient id="lg-red" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff6275"/>
+      <stop offset="1" stop-color="#d92d44"/>
+    </linearGradient>
+    <linearGradient id="lg-metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eef4fb"/>
+      <stop offset="0.5" stop-color="#b9c8d8"/>
+      <stop offset="1" stop-color="#6f8aa6"/>
+    </linearGradient>
+    <linearGradient id="lg-shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="lg-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="9" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#lg-bg)"/>
+
+  <!-- The guard ring: blue (access) sweeping over the top, red (alert) closing the bottom -->
+  <g fill="none" stroke-width="24" stroke-linecap="round" filter="url(#lg-glow)">
+    <path d="M87 318 A180 180 0 0 1 412 166" stroke="url(#lg-blue)"/>
+    <path d="M433 225 A180 180 0 0 1 140 394" stroke="url(#lg-red)"/>
+  </g>
+
+  <!-- The shield -->
+  <path d="M256 112 L370 154 V256 C370 330 320 380 256 404 C192 380 142 330 142 256 V154 Z" fill="url(#lg-metal)" stroke="#0b1726" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M256 128 L356 165 V200 C300 188 220 196 156 222 V165 Z" fill="url(#lg-shine)"/>
+
+  <!-- The keyhole, glowing like a lit lock -->
+  <g filter="url(#lg-glow)">
+    <circle cx="256" cy="232" r="38" fill="#087fff"/>
+    <path d="M236 252 L222 330 H290 L276 252 Z" fill="#087fff"/>
+  </g>
+  <circle cx="256" cy="232" r="22" fill="#9fd8ff"/>
+  <path d="M248 248 L240 314 H272 L264 248 Z" fill="#9fd8ff"/>
+</svg>

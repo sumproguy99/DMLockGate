@@ -1,0 +1,58 @@
+<div class="cover">
+  <div class="page">
+    <div>
+      <div class="kicker">Official user manual · Edition 1 · November 2026</div>
+      <h1>DM LockGuard<br><span>The friendly guide.</span></h1>
+      <p>Everything you need to set up DM LockGuard and use it every day: written for real people, with pictures, step-by-step instructions, a few jokes, and zero "just read the source code."</p>
+      <div class="meta"><span>{i:book-open} 15 chapters</span><span>{i:users} 7 roles explained</span><span>{i:terminal} Copy-ready commands</span><span>{i:circle-alert} Every error code</span></div>
+      <div class="who">
+        <a href="#role-super-admin"><i style="background:#a98bff"></i>I'm the Super Administrator</a>
+        <a href="#role-security-admin"><i style="background:#ff6275"></i>I'm the Security Administrator</a>
+        <a href="#role-property-manager"><i style="background:#559dff"></i>I'm a Property Manager</a>
+        <a href="#role-resident"><i style="background:#20d990"></i>I'm a Resident</a>
+        <a href="#role-guest"><i style="background:#ffb547"></i>I'm a Guest</a>
+        <a href="#role-service-provider"><i style="background:#ff8a4c"></i>I'm a Service Provider</a>
+        <a href="#role-auditor"><i style="background:#a8b7c9"></i>I'm an Auditor</a>
+        <a href="#setup"><i style="background:#20b8ff"></i>I'm installing it</a>
+      </div>
+    </div>
+    <div class="art">
+      <img class="photo" src="img/photos/phone-door.jpg" alt="A hand holding a phone next to a smart lock on a white door">
+      <img class="logo" src="../brand/dmlockguard-icon.svg" alt="">
+      <div class="credit">Photo: Sebastian Scholz (Nuki) on Unsplash. Shown for illustration; LockGuard works with the Eufy Smart Lock C30.</div>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+<x-chapter n="0" id="how-to-read" title="How to read this manual" sub="A two-minute map of the map." ico="book-marked" c1="#334a66" c2="#0d1f35">
+
+<p class="lead">This manual is long because it covers <em>everybody</em>: the person installing LockGuard, the people running it, and the people simply opening doors. You don't need to read all of it. Find your role, read your chapter, and come back when something puzzles you.</p>
+
+<h3 id="font-legend">The secret code of fonts and colours</h3>
+<p>Different kinds of information wear different "outfits", so you can tell at a glance what you're looking at:</p>
+
+<div class="legend">
+  <div><b>Everyday reading</b><div class="sample">Like this sentence.</div><div class="what">Atkinson Hyperlegible: a font designed to be easy to read, even for tired eyes.</div></div>
+  <div><b>Syntax (code you read)</b><div class="sample"><code>LOCKGUARD_LOCK_DRIVER</code></div><div class="what">JetBrains Mono: setting names, file names, error codes. Copy these exactly; capitals matter.</div></div>
+  <div><b>Commands (things you run)</b><div class="sample" style="font-family:var(--f-cmd);background:var(--term);color:var(--term-ink);padding:6px 10px;border-radius:8px"><span style="color:#20d990">PS&gt;</span> php artisan migrate</div><div class="what">Fira Code in a dark "terminal" box with a <b>Copy</b> button. The <code>PS&gt;</code> or <code>$</code> at the start is the prompt; it is <em>not</em> copied.</div></div>
+  <div><b>Alerts &amp; cautions</b><div class="sample" style="font-family:var(--f-alert-title);font-weight:700;letter-spacing:.04em;color:var(--red)">STOP AND READ THIS</div><div class="what">Barlow Condensed with a red stop sign or amber triangle. These protect your doors and your data.</div></div>
+  <div><b>Jokes</b><div class="sample" style="font-family:var(--f-fun);font-size:24px">Why was the lock so calm? It had closure.</div><div class="what">Patrick Hand. Totally optional. Mostly groan-worthy.</div></div>
+  <div><b>Headings</b><div class="sample" style="font-family:var(--f-head);font-weight:700">Chapter titles</div><div class="what">Lexend: clean and wide, so you can scan quickly.</div></div>
+</div>
+
+<h3 id="box-types">The five kinds of boxes</h3>
+<x-tip>A <b>Tech tip</b> is a shortcut or a smarter way of doing something. Nice to know, never required.</x-tip>
+<x-note>A <b>Good to know</b> box explains <em>why</em> something works the way it does.</x-note>
+<x-caution title="Caution boxes">Something could go a bit wrong here: a step that is easy to miss, or a setting that surprises people.</x-caution>
+<x-alert title="Alert boxes">This one matters for safety or security. Doors, passwords, or your audit trail could be affected. Read it fully.</x-alert>
+<x-joke>Why do programmers prefer dark mode? Because light attracts bugs.</x-joke>
+
+<p>You'll also meet <b>Jargon busters</b>, which put the technical word next to a plain-English explanation, so you learn the real term <em>and</em> understand it:</p>
+<x-term word="Jargon" tech="Specialised vocabulary used by a particular group, such as IT people, that outsiders often don't understand.">Words nerds use. This manual always translates them for you.</x-term>
+
+<h3 id="toc-page">Table of contents</h3>
+<p>The contents are also in the left sidebar (tap {i:menu} on a phone). Press <kbd>/</kbd> anywhere to search.</p>
+<!--TOC-->
+</x-chapter>

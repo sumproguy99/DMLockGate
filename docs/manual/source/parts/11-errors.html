@@ -1,0 +1,190 @@
+<x-chapter n="11" id="errors" title="Error codes explained" sub="When LockGuard says no, it always says why." ico="circle-alert" c1="#b0263a" c2="#0d1f35">
+
+<p class="lead">Every refusal comes with a short <b>code</b> (like <code>no_lock_access</code>) and a human message. The message is for you; the code is for searching this table, and for telling support exactly what you saw.</p>
+
+<h3 id="errors-http">First, the number family</h3>
+<p>Each error also has a three-digit <b>HTTP status</b>. You rarely see it, but it tells you what <em>kind</em> of no it is:</p>
+<div class="grid g4">
+  <div class="card"><h4><code>400</code></h4><p>Bad request: the app sent something odd.</p></div>
+  <div class="card"><h4><code>401</code></h4><p>Not signed in (or the sign-in expired).</p></div>
+  <div class="card"><h4><code>403</code></h4><p>Signed in, but not allowed.</p></div>
+  <div class="card"><h4><code>404</code></h4><p>Not found.</p></div>
+  <div class="card"><h4><code>409</code></h4><p>Conflict: not possible right now, in this state.</p></div>
+  <div class="card"><h4><code>410</code></h4><p>Gone: it existed, but is finished for good.</p></div>
+  <div class="card"><h4><code>419 / 422</code></h4><p>Session expired / some fields need fixing.</p></div>
+  <div class="card"><h4><code>429 / 500</code></h4><p>Too many tries, slow down / the server tripped.</p></div>
+</div>
+<x-term word="HTTP status code" tech="A three-digit number in every web response: 2xx success, 4xx client-side problem (the request), 5xx server-side problem.">The web's traffic light. 200s are green, 400s mean "you can't do that", 500s mean "oops, our fault".</x-term>
+
+<h3 id="errors-table">Every code, A to Z</h3>
+<div class="filter"><input type="search" data-filter="#error-table" placeholder="Type a code or a word from the message, e.g. device, expired…" aria-label="Filter error codes"></div>
+<div class="table-wrap" style="max-height:85vh"><table class="errors" id="error-table">
+<thead><tr><th>Code</th><th>HTTP</th><th>What it means (plain talk)</th><th>What to do</th></tr></thead>
+<tbody>
+<tr><td><code>account_inactive</code></td><td>403/409</td><td>The account is suspended, revoked or expired.</td><td>Ask an administrator to reactivate it.</td></tr>
+<tr><td><code>account_revoked</code></td><td>403</td><td>This account was revoked. That's permanent.</td><td>A new account is needed.</td></tr>
+<tr><td><code>address_not_allowed</code></td><td>403</td><td>This account only works from one approved network address (e.g. a lobby kiosk).</td><td>Use it from the approved place.</td></tr>
+<tr><td><code>alert_not_open</code></td><td>409</td><td>The alert was already acknowledged or resolved.</td><td>Refresh; someone beat you to it.</td></tr>
+<tr><td><code>alert_resolved</code></td><td>409</td><td>The alert is already resolved.</td><td>Nothing to do.</td></tr>
+<tr><td><code>alert_resolves_itself</code></td><td>409</td><td>This kind of alert clears itself when the problem is fixed.</td><td>Acknowledge it; fix the cause.</td></tr>
+<tr><td><code>csrf_token_mismatch</code></td><td>419</td><td>Your page was open so long the session's safety token expired.</td><td>Reload the page and try again.</td></tr>
+<tr><td><code>device_already_revoked</code></td><td>409</td><td>That device is already switched off.</td><td>Nothing to do.</td></tr>
+<tr><td><code>device_already_trusted</code></td><td>409</td><td>That device is already trusted.</td><td>Nothing to do.</td></tr>
+<tr><td><code>device_belongs_to_other</code></td><td>403</td><td>This phone is registered to someone else.</td><td>Use your own phone.</td></tr>
+<tr><td><code>device_binding_not_required</code></td><td>409</td><td>This person isn't tied to one phone, so needs no code.</td><td>Just sign in.</td></tr>
+<tr><td><code>device_code_expired</code></td><td>409</td><td>The registration code was used, cancelled or expired.</td><td>Ask for a new code, or a resent invitation.</td></tr>
+<tr><td><code>device_is_current</code></td><td>409</td><td>You tried to revoke the device you're using.</td><td>Do it from another device, or sign out.</td></tr>
+<tr><td><code>device_not_trusted</code></td><td>403</td><td>Unlocking needs a trusted device here.</td><td>Devices → Trust this device (if it's yours).</td></tr>
+<tr><td><code>device_registration_required</code></td><td>403</td><td>This device isn't your registered one.</td><td>Enter a registration code, or use your registered phone.</td></tr>
+<tr><td><code>device_revoked</code></td><td>403/409</td><td>This device was removed from your account.</td><td>Sign in on another device, or ask an administrator.</td></tr>
+<tr><td><code>device_unknown</code></td><td>409</td><td>LockGuard doesn't recognise this browser.</td><td>Sign out, sign in again, retry.</td></tr>
+<tr><td><code>forbidden</code></td><td>403</td><td>You don't have permission for this.</td><td>Ask an administrator if you need it.</td></tr>
+<tr><td><code>http_error</code></td><td>varies</td><td>A general web error.</td><td>Retry; report the message if it persists.</td></tr>
+<tr><td><code>idempotency_conflict</code></td><td>409</td><td>The same request is already being processed (double tap).</td><td>Wait for the first one.</td></tr>
+<tr><td><code>idempotency_key_reused</code></td><td>409</td><td>An old request ID was reused for a different request.</td><td>Reload the page.</td></tr>
+<tr><td><code>incident_closed</code></td><td>409</td><td>Closed incidents can't change.</td><td>Open a new incident.</td></tr>
+<tr><td><code>incident_status_unchanged</code></td><td>409</td><td>The incident already has that status.</td><td>Choose a different status.</td></tr>
+<tr><td><code>invitation_cancelled</code></td><td>410</td><td>The invitation was cancelled.</td><td>Ask for a new one.</td></tr>
+<tr><td><code>invitation_completed</code></td><td>410</td><td>The invitation was already used.</td><td>Sign in with your email and password.</td></tr>
+<tr><td><code>invitation_expired</code></td><td>410</td><td>The 7 days ran out.</td><td>Ask the sender to press Resend.</td></tr>
+<tr><td><code>invitation_not_found</code></td><td>404</td><td>The link is wrong or incomplete.</td><td>Open the whole link from the email.</td></tr>
+<tr><td><code>invitation_wrong_step</code></td><td>409</td><td>You skipped ahead.</td><td>Finish the earlier steps first.</td></tr>
+<tr><td><code>lesson_out_of_order</code></td><td>409</td><td>Lessons must be done in order.</td><td>Finish the earlier lessons.</td></tr>
+<tr><td><code>lessons_incomplete</code></td><td>409</td><td>The quiz unlocks after all 7 lessons.</td><td>Finish every lesson.</td></tr>
+<tr><td><code>location_already_recorded</code></td><td>409</td><td>This request already has a location.</td><td>Nothing to do.</td></tr>
+<tr><td><code>location_request_closed</code></td><td>409</td><td>The location request was answered or expired.</td><td>Ask again if needed.</td></tr>
+<tr><td><code>location_unavailable</code></td><td>denied</td><td>The policy needs a recent location, and location-aware access isn't available yet.</td><td>An administrator should pick another remote-unlock policy.</td></tr>
+<tr><td><code>location_window_closed</code></td><td>409</td><td>Too late to add a location to that request.</td><td>Nothing to do.</td></tr>
+<tr><td><code>lock_busy</code></td><td>denied</td><td>Another command for this lock is still running.</td><td>Wait a few seconds.</td></tr>
+<tr><td><code>lock_commands_disabled</code></td><td>denied</td><td>Commands are switched off for this lock.</td><td>An administrator turns them on in Locks.</td></tr>
+<tr><td><code>lock_not_registered</code></td><td>denied</td><td>The lock isn't registered for use.</td><td>An administrator registers it.</td></tr>
+<tr><td><code>mfa_already_enabled</code></td><td>409</td><td>An authenticator app is already set up.</td><td>Remove it first to add a new one.</td></tr>
+<tr><td><code>mfa_enrollment_not_started</code></td><td>409</td><td>You confirmed before starting setup.</td><td>Start two-step setup again.</td></tr>
+<tr><td><code>mfa_session_expired</code></td><td>401</td><td>Too slow typing the 6-digit code.</td><td>Enter email and password again.</td></tr>
+<tr><td><code>no_lock_access</code></td><td>denied</td><td>You haven't been given this door.</td><td>Ask a Property Manager for access.</td></tr>
+<tr><td><code>not_found</code></td><td>404</td><td>That thing doesn't exist (or was removed).</td><td>Check the link; refresh.</td></tr>
+<tr><td><code>outside_access_window</code></td><td>denied</td><td>Your access hasn't started yet, or has ended.</td><td>Check your times with whoever invited you.</td></tr>
+<tr><td><code>permission_denied</code></td><td>denied</td><td>Your role lacks the needed permission (the message names it).</td><td>Ask for the permission, e.g. remote unlocking.</td></tr>
+<tr><td><code>proximity_unavailable</code></td><td>denied</td><td>Walk-up unlocking isn't available yet.</td><td>Use the Unlock button.</td></tr>
+<tr><td><code>remote_unlock_disabled</code></td><td>denied</td><td>Remote unlocking is switched off by policy.</td><td>Use a key or keypad; ask an administrator.</td></tr>
+<tr><td><code>remote_unlock_policy_invalid</code></td><td>denied</td><td>The remote-unlock setting is misconfigured, so LockGuard plays safe.</td><td>Administrator: fix <code>LOCKGUARD_REMOTE_UNLOCK_POLICY</code>.</td></tr>
+<tr><td><code>self_modification_forbidden</code></td><td>403</td><td>You can't change your own account here.</td><td>Ask another administrator.</td></tr>
+<tr><td><code>server_error</code></td><td>500</td><td>Something broke on the server. It was logged.</td><td>Retry later; tell your administrator.</td></tr>
+<tr><td><code>stateful_client_required</code></td><td>400</td><td>Use the LockGuard web or phone app, not another tool.</td><td>Open LockGuard in a browser.</td></tr>
+<tr><td><code>step_up_required</code></td><td>403</td><td>Confirm it's you first.</td><td>Re-enter your password or code.</td></tr>
+<tr><td><code>target_outranks_actor</code></td><td>403</td><td>That person has powers you don't, so you can't manage them.</td><td>Ask a more senior administrator.</td></tr>
+<tr><td><code>too_many_requests</code></td><td>429</td><td>Too many tries in a short time.</td><td>Wait a few minutes.</td></tr>
+<tr><td><code>training_required</code></td><td>403</td><td>Finish Pip's training before signing in.</td><td>Open the invitation email → Accept Invitation.</td></tr>
+<tr><td><code>unauthenticated</code></td><td>401</td><td>You're not signed in.</td><td>Sign in again.</td></tr>
+<tr><td><code>validation_failed</code></td><td>422</td><td>Some fields need attention (they're highlighted).</td><td>Fix the red fields and resend.</td></tr>
+</tbody></table></div>
+<x-note>"denied" in the HTTP column means the lock request itself was recorded as <span class="pill bad">Not allowed</span> with that reason, which you'll see on the lock card and in the audit log.</x-note>
+<x-joke>Error 418: I'm a teapot. (It's a real joke code from 1998. LockGuard doesn't use it. Its locks are not teapots.)</x-joke>
+</x-chapter>
+
+<x-chapter n="12" id="trouble" title="Troubleshooting" sub="Something's wrong? Start here." ico="bug" c1="#c27c00" c2="#0d1f35">
+<p class="lead">Click a problem to open it. Each one lists the likely causes, most common first, and the fixes.</p>
+
+<figure class="photo"><img src="img/photos/padlock-open.jpg" alt="An unlocked padlock on a teal wooden surface" loading="lazy"></figure>
+<figcaption>Most problems have a simple answer. <span class="small">Photo: Mary Borozdina on Unsplash</span></figcaption>
+
+<h3 id="trouble-users">For everyone</h3>
+<details class="trouble" id="t-unknown"><summary>{i:triangle-alert} The door says "State unknown" or "State stale"</summary><div class="inner">
+<h5>Likely causes</h5><ul><li>The lock hasn't reported in for a while (weak Wi-Fi, low batteries).</li><li>The Eufy "Locked/Unlocked" notifications are off, so LockGuard never hears about changes.</li></ul>
+<h5>Fixes</h5><ol><li>Look at the door. Safety first.</li><li>Tap <b>Refresh</b>.</li><li>Tell your administrator if it keeps happening; they'll check batteries, Wi-Fi and the Eufy notifications.</li></ol></div></details>
+
+<details class="trouble" id="t-unavailable"><summary>{i:triangle-alert} "Device unavailable" or "Eufy connection degraded"</summary><div class="inner">
+<h5>Likely causes</h5><ul><li>The lock is offline (batteries, Wi-Fi).</li><li>The bridge on the server stopped, or the Eufy cloud is having a bad day.</li></ul>
+<h5>Fixes</h5><ol><li>Use your physical key or keypad if you need to get in.</li><li>Administrators: open <b>System health</b> and see which part is red.</li><li>Restart the bridge (below) and check its window for errors.</li></ol>
+<x-cmd shell="PowerShell" where="D:\lockguard\integrations\eufy">
+npm run bridge
+</x-cmd></div></details>
+
+<details class="trouble" id="t-nounlock"><summary>{i:triangle-alert} I can't see an Unlock button</summary><div class="inner">
+<h5>Likely causes</h5><ul><li>Your role (Property Manager, Temporary Guest, Service Provider) doesn't include remote unlocking by default.</li><li>You haven't been given access to that door, or your time window isn't open.</li><li>Commands are switched off for the lock.</li></ul>
+<h5>Fixes</h5><ol><li>Ask an administrator to add the <b>Request remote unlocking</b> override (<a href="#howto-override">how</a>).</li><li>Check your access times with whoever gave you access.</li></ol></div></details>
+
+<details class="trouble" id="t-regcode"><summary>{i:triangle-alert} It asks me for a registration code</summary><div class="inner">
+<p>You're signing in on a device that isn't your registered one, or your browser forgot LockGuard (cleared data, private mode, different browser).</p>
+<h5>Fixes</h5><ol><li>Use your registered phone, in the same browser as before.</li><li>Or ask an administrator for a new registration code and type it in.</li></ol>
+<x-caution title="Private browsing forgets you">Private or incognito tabs throw away LockGuard's device cookie when closed, so you'd need a new code every time. Use a normal tab.</x-caution></div></details>
+
+<details class="trouble" id="t-training"><summary>{i:triangle-alert} "Finish the LockGuard training" when I sign in</summary><div class="inner">
+<p>You were invited and haven't finished Pip's lessons and quiz yet (<code>training_required</code>). Open the invitation email and tap <b>Accept Invitation</b>; you'll continue where you left off. Link expired? Ask for a resend.</p></div></details>
+
+<details class="trouble" id="t-noemail"><summary>{i:triangle-alert} The invitation email never arrived</summary><div class="inner">
+<h5>Fixes</h5><ol><li>Check spam / junk / "Promotions".</li><li>Administrator: look at the invitation in the list. A warning means sending failed; check <b>Settings → Email settings</b>, send a test email, then <b>Resend</b>.</li><li>Gmail users: the password must be an <b>App Password</b>, not your normal one.</li></ol></div></details>
+
+<details class="trouble" id="t-location"><summary>{i:triangle-alert} "This address cannot share your location"</summary><div class="inner">
+<p>Browsers only share location with <code>https://</code> sites. Use the HTTPS address of LockGuard, and allow location when the browser asks (Settings → Safari/Chrome → Location if you said no before).</p></div></details>
+
+<details class="trouble" id="t-slow"><summary>{i:triangle-alert} "Too many attempts. Wait a few minutes"</summary><div class="inner">
+<p>A safety brake after several wrong passwords, codes or registration codes. Wait the time shown (usually up to 15 minutes), then try carefully. Forgot your password? Ask an administrator.</p></div></details>
+
+<h3 id="trouble-admins">For administrators</h3>
+<details class="trouble" id="t-commands"><summary>{i:triangle-alert} Commands are refused: "Commands are turned off for this lock"</summary><div class="inner">
+<p>New locks start with commands off. Open <b>Locks → the lock</b> and turn <b>Commands</b> on (you'll confirm your password).</p></div></details>
+
+<details class="trouble" id="t-notsent"><summary>{i:triangle-alert} Commands say "Failed" or "Unknown result" all the time</summary><div class="inner">
+<h5>Checklist</h5><ol><li>Is the bridge running, and does its window show errors?</li><li>Are <code>LOCKGUARD_BRIDGE_SECRET</code> values identical in <b>both</b> <code>.env</code> files?</li><li>Is the queue worker running? Restart it after updates.</li><li>Is <code>EUFY_MQTT_BROKER_IP</code> set? Commands sent through the wrong Eufy server are accepted and silently dropped. See <code>docs\EUFY_BRIDGE.md</code>.</li><li>Lock Wi-Fi and batteries.</li></ol>
+<x-cmd shell="PowerShell" where="D:\lockguard\backend">
+php artisan queue:restart
+php artisan queue:work --tries=1
+</x-cmd></div></details>
+
+<details class="trouble" id="t-lockstate"><summary>{i:triangle-alert} The lock state is old or never updates</summary><div class="inner">
+<ol><li>Make sure the <b>scheduler</b> is running (it syncs every 5 minutes).</li><li>In the Eufy app, turn on <b>Locked</b> and <b>Unlocked</b> notifications for the lock.</li><li>Sync by hand:</li></ol>
+<x-cmd shell="PowerShell" where="D:\lockguard\backend">
+php artisan lockguard:sync-locks
+</x-cmd></div></details>
+
+<details class="trouble" id="t-signin419"><summary>{i:triangle-alert} Nobody can sign in through the domain ("session expired" or 401)</summary><div class="inner">
+<p>The domain must be listed in <code>SANCTUM_STATEFUL_DOMAINS</code>, and the web app must be told its public host name. Update <code>backend\.env</code>, then clear the cached settings:</p>
+<x-cmd shell="PowerShell" where="D:\lockguard\backend">
+php artisan config:clear
+</x-cmd>
+<p>Then restart the API and, for the web app, set the host before starting it:</p>
+<x-cmd shell="PowerShell" where="D:\lockguard\frontend">
+$env:LOCKGUARD_PUBLIC_HOSTS = "lockguard.example.com"
+npx vite preview
+</x-cmd></div></details>
+
+<details class="trouble" id="t-admin-access"><summary>{i:triangle-alert} I'm the only administrator and "You have not been given access to this lock"</summary><div class="inner">
+<p>Nobody can give themselves access through the website. Do it at the server:</p>
+<x-cmd shell="PowerShell" where="D:\lockguard\backend">
+php artisan lockguard:grant-lock-access you@example.com 1
+</x-cmd></div></details>
+
+<details class="trouble" id="t-locked-out"><summary>{i:triangle-alert} The only Super Administrator is locked out</summary><div class="inner">
+<p>Create a second Super Administrator at the server, sign in as them, and fix the first account (reactivate, sign out everywhere, or issue a device code).</p>
+<x-cmd shell="PowerShell" where="D:\lockguard\backend">
+php artisan lockguard:create-admin --name="Backup Admin" --email=backup@example.com
+</x-cmd>
+<x-tip>Always keep two Super Administrators. One is a single point of failure, and the rules stop people editing themselves.</x-tip></div></details>
+
+<details class="trouble" id="t-500"><summary>{i:triangle-alert} "Something went wrong on the server"</summary><div class="inner">
+<p>Read the newest lines of the log for the real reason:</p>
+<x-cmd shell="PowerShell" where="D:\lockguard\backend">
+Get-Content storage\logs\laravel.log -Tail 60
+</x-cmd>
+<p>Common causes: the database is down (start MySQL), a migration wasn't run after an update (<code>php artisan migrate --force</code>), or the disk is full.</p></div></details>
+
+<details class="trouble" id="t-update"><summary>{i:triangle-alert} How do I update LockGuard safely?</summary><div class="inner">
+<x-cmd shell="PowerShell" where="D:\lockguard">
+git pull
+cd backend; composer install --no-dev --optimize-autoloader; php artisan migrate --force; php artisan config:clear; cd ..
+cd frontend; npm ci; npm run build; cd ..
+cd integrations\eufy; npm ci; cd ..\..
+</x-cmd>
+<p>Then restart all four windows (API, queue worker, scheduler, web app) and the bridge.</p>
+<x-alert title="Back up the database first">Before updating, back up MySQL. If something goes wrong, you can roll back instead of rebuilding by hand.</x-alert></div></details>
+
+<details class="trouble" id="t-ports"><summary>{i:triangle-alert} "Port already in use" when starting something</summary><div class="inner">
+<p>Something else is using that number. Find out what:</p>
+<x-cmd shell="PowerShell">
+Get-NetTCPConnection -State Listen -LocalPort 8100,8788,4173 | Select-Object LocalPort, OwningProcess
+</x-cmd>
+<p>Either stop the other program or move LockGuard's part to another port (e.g. <code>BRIDGE_PORT</code> and <code>LOCKGUARD_BRIDGE_URL</code> together).</p></div></details>
+
+<x-joke>"It works on my machine." "Great, then we'll ship your machine."</x-joke>
+</x-chapter>

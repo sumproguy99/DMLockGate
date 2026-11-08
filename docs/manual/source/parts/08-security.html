@@ -1,0 +1,203 @@
+<x-chapter n="8" id="security" title="Security &amp; privacy, explained" sub="The invisible guards, and what they protect." ico="fingerprint-pattern" c1="#d92d44" c2="#0d1f35">
+
+<figure class="photo"><img src="img/photos/padlock-dark.jpg" alt="A closed padlock on a dark surface" loading="lazy"></figure>
+<figcaption>Layers of protection, one inside the other. <span class="small">Photo: Kedibone Isaac Makhumisane on Unsplash</span></figcaption>
+
+<p class="lead">LockGuard stacks several protections, so that if one fails, the next one catches it. Security people call this <b>defence in depth</b>.</p>
+<x-term word="Defence in depth" tech="A security strategy that layers multiple independent controls so that the failure of one control does not compromise the system.">Castle thinking: moat, wall, gate, guards, locked tower. A burglar has to beat all of them, not just one.</x-term>
+
+<h3 id="sec-layers">The layers, from the outside in</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Layer</th><th>What it stops</th><th>Plain talk</th></tr></thead>
+<tbody>
+<tr><td>{i:lock} HTTPS</td><td>Eavesdropping and tampering on the network</td><td>Nobody on the café Wi-Fi can read your password.</td></tr>
+<tr><td>{i:key-round} Password + rate limits</td><td>Guessing passwords</td><td>Too many wrong tries and LockGuard makes you wait.</td></tr>
+<tr><td>{i:shield-check} Two-step sign-in</td><td>Stolen passwords</td><td>The thief also needs your phone.</td></tr>
+<tr><td id="sec-binding">{i:smartphone} Device binding</td><td>Logging in from someone else's phone</td><td>Your account only works on your registered phone.</td></tr>
+<tr><td>{i:fingerprint-pattern} Step-up checks</td><td>A borrowed, unlocked phone</td><td>Risky actions ask "is it really you?" again.</td></tr>
+<tr><td>{i:users} Roles + lock access + schedules</td><td>People doing more than they should</td><td>The right door, for the right person, at the right time.</td></tr>
+<tr><td>{i:ban} Anti-escalation rules</td><td>Insiders promoting themselves</td><td>Nobody hands out powers they don't have, or changes their own.</td></tr>
+<tr><td>{i:timer} Command expiry</td><td>Old taps opening the door later</td><td>An unlock that couldn't be sent within 30 seconds is cancelled.</td></tr>
+<tr><td>{i:scroll-text} Tamper-evident audit</td><td>Covering your tracks</td><td>Every action is written down, and edits show.</td></tr>
+<tr><td>{i:siren} Alerts &amp; incidents</td><td>Problems nobody noticed</td><td>LockGuard taps the Security Administrator on the shoulder.</td></tr>
+</tbody></table></div>
+
+<h3 id="sec-binding-detail">Device binding, in detail</h3>
+<p>When binding is on, each person (except Super and Security Administrators) gets <b>one</b> registered device. LockGuard recognises a device by a long random cookie it stores in that browser. Signing in elsewhere triggers <code>device_registration_required</code>: you need a one-time <b>registration code</b> from an administrator to move to a new phone.</p>
+<x-term word="Cookie" tech="A small piece of data a website stores in your browser and receives back on every request; LockGuard's device cookie is HTTP-only, so page scripts cannot read it.">A name tag the website sticks on your browser so it recognises it next time. You can't see it, and other websites can't read it.</x-term>
+<x-caution title="Clearing your browser data = a new device">If you clear cookies or "website data" on your phone, LockGuard won't recognise it any more, and you'll need a new registration code. Same if you switch from Safari to Chrome.</x-caution>
+
+<h3 id="sec-remote">Remote unlocking and its policy</h3>
+<p>The Super Administrator chooses one policy for unlocking from the app:</p>
+<div class="grid g2">
+  <div class="card"><h4><span class="pill ok">standard</span></h4><p>Signed in + allowed = unlock. Simplest.</p></div>
+  <div class="card"><h4><span class="pill info">step_up</span> (default)</h4><p>Also re-confirm your password or code (valid ~10 minutes). Recommended.</p></div>
+  <div class="card"><h4><span class="pill warn">location_required</span></h4><p>Also needs a recent location report. Location-aware access isn't finished yet, so this currently refuses remote unlocks.</p></div>
+  <div class="card"><h4><span class="pill bad">disabled</span></h4><p>No remote unlocking at all. Locking still works.</p></div>
+</div>
+
+<h3 id="sec-audit">The audit log</h3>
+<p>Every sign-in, lock command, permission change, export and setting change creates an audit record: who, what, which door or person, when, from which device and address, and whether it succeeded, was denied, or failed. Records are chained with fingerprints (hashes). The database protection script (<code>scripts\protect-audit-log.ps1</code>) can additionally stop the app's own database user from editing or deleting them.</p>
+<x-cmd shell="PowerShell" where="D:\lockguard">
+pwsh -File scripts\protect-audit-log.ps1
+</x-cmd>
+<x-alert title="If you see &quot;Audit protection missing&quot; or &quot;Audit record could not be written&quot;">These are <b>critical</b> alerts. The diary might not be recording, or might be editable. Fix them before anything else: run the protection script above, check the database is up and the disk isn't full, then run <code>php artisan lockguard:audit-verify</code>.</x-alert>
+
+<h3 id="sec-alerts">Every security alert, explained</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Alert</th><th>Severity</th><th>What happened</th><th>What to do</th></tr></thead>
+<tbody>
+<tr><td>Repeated failed sign-ins</td><td><span class="pill bad">High</span></td><td>5+ wrong passwords in 15 minutes for one account</td><td>Check with the person; suspend if it wasn't them</td></tr>
+<tr><td>Repeated denied lock requests</td><td><span class="pill warn">Medium</span></td><td>3+ refused lock requests in 15 minutes</td><td>Someone is trying doors they shouldn't, or their access expired</td></tr>
+<tr><td>Repeated lock command failures</td><td><span class="pill bad">High</span></td><td>3+ commands couldn't reach a lock in 30 minutes</td><td>Check the lock's Wi-Fi, batteries and the bridge</td></tr>
+<tr><td>Lock command outcome unknown</td><td><span class="pill warn">Medium</span></td><td>A command was sent but the lock never confirmed</td><td>Check the door physically</td></tr>
+<tr><td>Administrative permission granted</td><td><span class="pill warn">Medium</span></td><td>Someone received admin powers</td><td>Confirm it was intended</td></tr>
+<tr><td>Two-step sign-in turned off</td><td><span class="pill warn">Medium</span></td><td>An account lost its second factor</td><td>Ask why; turn it back on</td></tr>
+<tr><td>Recovery code used</td><td><span class="pill info">Low</span></td><td>Someone signed in with a backup code</td><td>Make sure it was the owner (lost phone?)</td></tr>
+<tr><td>Sign-in from a new device</td><td><span class="pill info">Low</span></td><td>An account signed in on a device it never used before</td><td>The owner is told; investigate if they say "not me"</td></tr>
+<tr><td>Revoked device used</td><td><span class="pill bad">High</span></td><td>A switched-off device tried to get in</td><td>Possible theft; the device stays blocked</td></tr>
+<tr><td>Device reported lost</td><td><span class="pill bad">High</span></td><td>A device was reported lost</td><td>Confirm it's revoked; issue a new code</td></tr>
+<tr><td>Lock integration unavailable</td><td><span class="pill bad">High</span>–<span class="pill bad">Critical</span></td><td>The bridge or Eufy cloud is down or needs a new login</td><td>See <a href="#trouble">Troubleshooting</a></td></tr>
+<tr><td>Lock offline</td><td><span class="pill bad">High</span></td><td>A lock stopped talking</td><td>Batteries, Wi-Fi, distance to the router</td></tr>
+<tr><td>Lock jammed</td><td><span class="pill bad">High</span></td><td>The bolt couldn't move</td><td>Check the door frame and bolt</td></tr>
+<tr><td>Lock state not confirmed</td><td><span class="pill warn">Medium</span></td><td>No trustworthy state report for a while</td><td>Check the door</td></tr>
+<tr><td>Lock battery low</td><td><span class="pill warn">Medium</span>–<span class="pill bad">High</span></td><td>Battery at 25% or less (High at 10% or less)</td><td>Replace the batteries soon (or now)</td></tr>
+<tr><td>Audit record could not be written</td><td><span class="pill bad">Critical</span></td><td>The diary failed to save an entry</td><td>Fix the database immediately</td></tr>
+<tr><td>Audit protection missing</td><td><span class="pill bad">Critical</span></td><td>Audit records could be edited</td><td>Run <code>protect-audit-log.ps1</code></td></tr>
+</tbody></table></div>
+<x-note>"Condition" alerts (lock offline, jammed, state not confirmed, low battery, integration down, audit protection) <b>resolve themselves</b> when the problem goes away. High and critical alerts are attached to an <b>incident</b> automatically, so they can't be forgotten.</x-note>
+
+<h3 id="sec-privacy">Your privacy</h3>
+<ul class="ticks">
+  <li>Passwords are stored as one-way scrambles (hashes), never as plain text. Nobody can read yours, not even the Super Administrator.</li>
+  <li>Two-step sign-in keys and the email password are stored encrypted.</li>
+  <li>Location is only recorded at lock/unlock time or when an administrator asks while the app is open, is kept 30 days by default, and every view of it is audited.</li>
+  <li>The Eufy password lives only on the server (in the bridge). Phones never see it.</li>
+</ul>
+<x-term word="Hash" tech="A one-way cryptographic function (LockGuard uses bcrypt for passwords) that turns input into a fixed-length fingerprint which cannot feasibly be reversed.">A blender for text. You can turn a strawberry into a smoothie, but you can't turn the smoothie back into the strawberry. To check a password, LockGuard blends what you typed and compares smoothies.</x-term>
+<x-joke>I told my password it was too weak. It said, "Sorry, I'll try harder." Now it's <code>Sorry,I'llTryHarder1!</code> and it's still not great.</x-joke>
+</x-chapter>
+
+<x-chapter n="9" id="icons" title="Icons explained" sub="Every little picture in LockGuard, and what it means." ico="sparkles" c1="#0b7a8f" c2="#0d1f35">
+<p class="lead">LockGuard uses simple line icons. Colours add meaning: <span class="pill ok">green = good / locked</span> <span class="pill warn">amber = attention / unlocked</span> <span class="pill bad">red = problem / danger</span> <span class="pill grey">grey = unknown</span> <span class="pill info">blue = information / in progress</span>.</p>
+
+<h3 id="icons-locks">Locks and doors</h3>
+<div class="icons">
+  <div class="ok"><svg class="i"><use href="#i-lock"/></svg><span><b>Locked</b>The lock reported locked. Also the Lock button.</span></div>
+  <div class="warn"><svg class="i"><use href="#i-lock-open"/></svg><span><b>Unlocked</b>The lock reported unlocked. Also the Unlock button.</span></div>
+  <div class="grey"><svg class="i"><use href="#i-shield-alert"/></svg><span><b>State unknown / stale</b>No trustworthy report. Check the door.</span></div>
+  <div class="bad"><svg class="i"><use href="#i-wifi-off"/></svg><span><b>Device unavailable</b>The lock or the connection to it is offline.</span></div>
+  <div class="ok"><svg class="i"><use href="#i-wifi"/></svg><span><b>Connected</b>The lock (or Eufy) is reachable.</span></div>
+  <div class="ok"><svg class="i"><use href="#i-battery-full"/></svg><span><b>Battery full</b>Plenty of power.</span></div>
+  <div><svg class="i"><use href="#i-battery-medium"/></svg><span><b>Battery medium</b>Fine for now.</span></div>
+  <div class="warn"><svg class="i"><use href="#i-battery-low"/></svg><span><b>Battery low</b>Under 25%. Buy batteries.</span></div>
+  <div class="bad"><svg class="i"><use href="#i-battery-warning"/></svg><span><b>Battery critical</b>Under 10%. Replace now.</span></div>
+  <div><svg class="i"><use href="#i-key-round"/></svg><span><b>Devices / access</b>Doors you can use (phone bottom bar).</span></div>
+  <div><svg class="i"><use href="#i-building-2"/></svg><span><b>Property</b>A building or home that groups locks.</span></div>
+  <div><svg class="i"><use href="#i-refresh-cw"/></svg><span><b>Refresh</b>Fetch the latest state now.</span></div>
+</div>
+
+<h3 id="icons-status">Results and messages</h3>
+<div class="icons">
+  <div class="ok"><svg class="i"><use href="#i-circle-check"/></svg><span><b>Confirmed / success</b>Done, and verified.</span></div>
+  <div class="ok"><svg class="i"><use href="#i-check"/></svg><span><b>Step complete</b>A ticked stage in a command's receipt.</span></div>
+  <div class="ok"><svg class="i"><use href="#i-check-check"/></svg><span><b>Mark all read</b>Clear the notification list.</span></div>
+  <div class="bad"><svg class="i"><use href="#i-circle-alert"/></svg><span><b>Failed / error</b>Something didn't work. Read the message.</span></div>
+  <div class="bad"><svg class="i"><use href="#i-circle-x"/></svg><span><b>Denied / cancel</b>Not allowed, or cancel this.</span></div>
+  <div class="warn"><svg class="i"><use href="#i-triangle-alert"/></svg><span><b>Warning</b>Not broken, but pay attention.</span></div>
+  <div><svg class="i"><use href="#i-info"/></svg><span><b>Information</b>Useful context.</span></div>
+  <div><svg class="i"><use href="#i-circle-help"/></svg><span><b>Help</b>Explanations and answers.</span></div>
+  <div class="bad"><svg class="i"><use href="#i-ban"/></svg><span><b>Revoke</b>Permanently switch off an account or device.</span></div>
+  <div class="grey"><svg class="i"><use href="#i-circle-slash"/></svg><span><b>Not available</b>Feature off or not possible here.</span></div>
+  <div class="bad"><svg class="i"><use href="#i-siren"/></svg><span><b>Incident</b>A security problem being handled.</span></div>
+  <div class="bad"><svg class="i"><use href="#i-shield-x"/></svg><span><b>Security failure</b>A security check failed.</span></div>
+</div>
+
+<h3 id="icons-nav">Navigation and screens</h3>
+<div class="icons">
+  <div><svg class="i"><use href="#i-layout-dashboard"/></svg><span><b>Dashboard</b>The overview page.</span></div>
+  <div><svg class="i"><use href="#i-house"/></svg><span><b>Home</b>Phone home screen.</span></div>
+  <div><svg class="i"><use href="#i-bell"/></svg><span><b>Notifications</b>A number means unread messages.</span></div>
+  <div class="grey"><svg class="i"><use href="#i-bell-off"/></svg><span><b>No notifications</b>All quiet.</span></div>
+  <div><svg class="i"><use href="#i-users"/></svg><span><b>Users</b>People and accounts.</span></div>
+  <div><svg class="i"><use href="#i-user-plus"/></svg><span><b>Add user</b>Create an account.</span></div>
+  <div><svg class="i"><use href="#i-mail-plus"/></svg><span><b>Invitations</b>Invite by email.</span></div>
+  <div><svg class="i"><use href="#i-send"/></svg><span><b>Send / resend</b>Send the invitation or email.</span></div>
+  <div><svg class="i"><use href="#i-mail"/></svg><span><b>Email settings</b>The mail server.</span></div>
+  <div><svg class="i"><use href="#i-shield-check"/></svg><span><b>Roles and permissions</b>Also "trusted" and "two-step on".</span></div>
+  <div><svg class="i"><use href="#i-monitor-smartphone"/></svg><span><b>Devices</b>Phones and browsers.</span></div>
+  <div><svg class="i"><use href="#i-smartphone"/></svg><span><b>A phone</b>Also "Device locations".</span></div>
+  <div><svg class="i"><use href="#i-monitor"/></svg><span><b>A computer</b>A desktop browser.</span></div>
+  <div class="bad"><svg class="i"><use href="#i-shield-alert"/></svg><span><b>Security center</b>Alerts and incidents.</span></div>
+  <div><svg class="i"><use href="#i-map-pinned"/></svg><span><b>Location map</b>Where locations were reported.</span></div>
+  <div><svg class="i"><use href="#i-map-pin"/></svg><span><b>A location</b>One reported position.</span></div>
+  <div><svg class="i"><use href="#i-radar"/></svg><span><b>Request location</b>Ask a phone where it is.</span></div>
+  <div><svg class="i"><use href="#i-scroll-text"/></svg><span><b>Audit log</b>The diary of everything.</span></div>
+  <div><svg class="i"><use href="#i-activity"/></svg><span><b>Activity / System health</b>History, or how the system is doing.</span></div>
+  <div><svg class="i"><use href="#i-ellipsis"/></svg><span><b>More</b>Extra options.</span></div>
+  <div><svg class="i"><use href="#i-life-buoy"/></svg><span><b>Help</b>The built-in help page.</span></div>
+  <div><svg class="i"><use href="#i-log-out"/></svg><span><b>Sign out</b>End your session.</span></div>
+</div>
+
+<h3 id="icons-actions">Actions</h3>
+<div class="icons">
+  <div><svg class="i"><use href="#i-pencil"/></svg><span><b>Edit / rename</b>Change a name or detail.</span></div>
+  <div class="bad"><svg class="i"><use href="#i-trash-2"/></svg><span><b>Remove</b>Remove access or an item.</span></div>
+  <div><svg class="i"><use href="#i-save"/></svg><span><b>Save</b>Keep your changes.</span></div>
+  <div><svg class="i"><use href="#i-plus"/></svg><span><b>Add</b>Add something new.</span></div>
+  <div><svg class="i"><use href="#i-search"/></svg><span><b>Search</b>Find people or devices.</span></div>
+  <div><svg class="i"><use href="#i-filter"/></svg><span><b>Filter</b>Narrow a list.</span></div>
+  <div><svg class="i"><use href="#i-download"/></svg><span><b>Export</b>Download a report (it's audited).</span></div>
+  <div><svg class="i"><use href="#i-eye"/></svg><span><b>Show / view</b>Reveal a password or open details.</span></div>
+  <div><svg class="i"><use href="#i-eye-off"/></svg><span><b>Hide</b>Hide the password again.</span></div>
+  <div><svg class="i"><use href="#i-pause"/></svg><span><b>Suspend</b>Pause an account.</span></div>
+  <div><svg class="i"><use href="#i-play"/></svg><span><b>Reactivate</b>Un-pause an account.</span></div>
+  <div><svg class="i"><use href="#i-undo-2"/></svg><span><b>Undo</b>Go back a step.</span></div>
+  <div><svg class="i"><use href="#i-external-link"/></svg><span><b>Opens elsewhere</b>A link to another page or site.</span></div>
+  <div><svg class="i"><use href="#i-chevron-right"/></svg><span><b>Details</b>Open the next page.</span></div>
+  <div><svg class="i"><use href="#i-panel-left-close"/></svg><span><b>Collapse sidebar</b>More room on screen.</span></div>
+  <div><svg class="i"><use href="#i-plug-zap"/></svg><span><b>Integration</b>The Eufy connection.</span></div>
+  <div class="bad"><svg class="i"><use href="#i-unplug"/></svg><span><b>Disconnected</b>The integration is unplugged.</span></div>
+  <div><svg class="i"><use href="#i-lightbulb"/></svg><span><b>Food for thought</b>In Pip's lessons.</span></div>
+  <div><svg class="i"><use href="#i-laugh"/></svg><span><b>Pip's joke</b>In Pip's lessons.</span></div>
+</div>
+<x-joke>Why did the icon go to art school? It wanted to be more than just a pretty face. It wanted to be a pretty interface.</x-joke>
+</x-chapter>
+
+<x-chapter n="10" id="lifecycle" title="The life of a lock command" sub="What really happens between your tap and the click of the bolt." ico="route" c1="#1d4f8f" c2="#0d1f35">
+<p class="lead">Each tap becomes an <b>access request</b> that moves through stages. The receipt under the lock card shows them as ticks.</p>
+<div class="diagram" role="img" aria-label="Command stages: received, authenticating, authorized, queued, submitted, then confirmed success, or failed, unknown result, denied, expired, cancelled, already in state.">
+<svg viewBox="0 0 980 250"><defs><marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#087fff"/></marker></defs>
+<g font-size="14" text-anchor="middle">
+  <rect x="5" y="20" width="135" height="50" rx="12" fill="#56677c"/><text x="72" y="50" fill="#fff" font-weight="700">Received</text>
+  <rect x="165" y="20" width="135" height="50" rx="12" fill="#56677c"/><text x="232" y="50" fill="#fff" font-weight="700">Authenticating</text>
+  <rect x="325" y="20" width="135" height="50" rx="12" fill="#0a6fe0"/><text x="392" y="50" fill="#fff" font-weight="700">Authorized</text>
+  <rect x="485" y="20" width="135" height="50" rx="12" fill="#0a6fe0"/><text x="552" y="50" fill="#fff" font-weight="700">Queued</text>
+  <rect x="645" y="20" width="135" height="50" rx="12" fill="#0a6fe0"/><text x="712" y="50" fill="#fff" font-weight="700">Submitted</text>
+  <rect x="820" y="20" width="155" height="50" rx="12" fill="#0f8a5a"/><text x="897" y="50" fill="#fff" font-weight="800">✓ Confirmed</text>
+  <g stroke="#087fff" stroke-width="2.5" fill="none" marker-end="url(#ah3)"><path d="M141 45 H162"/><path d="M301 45 H322"/><path d="M461 45 H482"/><path d="M621 45 H642"/><path d="M781 45 H817"/></g>
+  <rect x="245" y="150" width="140" height="44" rx="12" fill="#d92d44"/><text x="315" y="177" fill="#fff" font-weight="700">✗ Denied</text>
+  <rect x="440" y="150" width="140" height="44" rx="12" fill="#56677c"/><text x="510" y="177" fill="#fff" font-weight="700">Expired / Cancelled</text>
+  <rect x="640" y="150" width="140" height="44" rx="12" fill="#d92d44"/><text x="710" y="177" fill="#fff" font-weight="700">Failed</text>
+  <rect x="820" y="150" width="155" height="44" rx="12" fill="#c27c00"/><text x="897" y="177" fill="#fff" font-weight="700">? Unknown result</text>
+  <g stroke="#8a9bb0" stroke-width="2" fill="none" stroke-dasharray="5 5" marker-end="url(#ah3)"><path d="M232 72 L300 148"/><path d="M552 72 L515 148"/><path d="M712 72 L712 148"/><path d="M790 60 L880 148"/></g>
+  <text x="490" y="232" class="muted" font-size="13">"Already in that state": the lock just reported it, so nothing is sent at all.</text>
+</g></svg></div>
+<div class="table-wrap"><table>
+<thead><tr><th>Stage</th><th>What LockGuard says</th><th>Plain talk</th></tr></thead>
+<tbody>
+<tr><td><code>received</code> / <code>authenticating</code></td><td>Checking your request.</td><td>"Who's there?"</td></tr>
+<tr><td><code>authorized</code> / <code>queued</code></td><td>Approved. Sending to the lock.</td><td>"You're on the list."</td></tr>
+<tr><td><code>submitted</code></td><td>Sent. Waiting for the lock to report its new state.</td><td>The message is on its way to the door.</td></tr>
+<tr><td><code>confirmed_success</code></td><td>Confirmed by the lock.</td><td>The bolt moved, and the lock says so.</td></tr>
+<tr><td><code>denied</code></td><td>Not allowed.</td><td>A rule said no. The reason is shown (see <a href="#errors">error codes</a>).</td></tr>
+<tr><td><code>failed</code></td><td>The command could not be delivered to the lock.</td><td>It never got there. The door didn't change.</td></tr>
+<tr><td><code>unknown_result</code></td><td>The lock did not confirm in time. Check the door before trying again.</td><td>Maybe it worked, maybe not. Look.</td></tr>
+<tr><td><code>already_in_state</code></td><td>The lock already reported that state just now. Nothing was sent.</td><td>It's already locked, silly.</td></tr>
+<tr><td><code>expired</code></td><td>The request expired before it could be sent. Nothing was sent.</td><td>Too slow; cancelled for safety.</td></tr>
+<tr><td><code>cancelled</code></td><td>Cancelled. Nothing was sent to the lock.</td><td>Called off.</td></tr>
+</tbody></table></div>
+<p>Before any command is sent, LockGuard runs its checks in order: account active → device allowed → lock registered and commands on → permission → lock access → time window → remote-unlock policy → identity confirmed → location (if required) → lock not busy. The first "no" wins, and its reason is what you see.</p>
+<x-caution title="Never hammer the button after &quot;Unknown result&quot;">If the result is unknown, the lock might have already moved. Pressing Unlock five more times won't help and will trip the "repeated lock requests" alarms. Check the door first.</x-caution>
+<x-joke>A TCP packet walks into a bar and says, "I'd like a beer." The bartender says, "You'd like a beer?" The packet says, "Yes, a beer." That's basically the lock confirming your command.</x-joke>
+</x-chapter>

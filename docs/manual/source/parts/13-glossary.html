@@ -1,0 +1,71 @@
+<x-chapter n="13" id="glossary" title="Glossary" sub="Every techie word in this manual, in plain English." ico="book-open" c1="#334a66" c2="#0d1f35">
+<p class="lead">Each entry gives the proper meaning first, then <span style="color:var(--green);font-weight:700">Plain talk</span>, the way you'd explain it to a friend.</p>
+<div class="filter"><input type="search" data-filter="#gloss" placeholder="Filter the glossary…" aria-label="Filter the glossary"></div>
+<dl class="glossary" id="gloss">
+<div class="entry" id="g-access-grant"><dt>Access grant <small>lock access</small></dt><dd>A record that lets one person use one lock, optionally between a start and end time. <span class="plain">Plain talk:</span> a named key to one door, possibly with an expiry date.</dd></div>
+<div class="entry" id="g-access-request"><dt>Access request</dt><dd>One lock or unlock attempt, tracked through stages from "received" to a result. <span class="plain">Plain talk:</span> a single tap of the button, and its receipt.</dd></div>
+<div class="entry" id="g-api"><dt>API <small>Application Programming Interface</small></dt><dd>A defined set of web addresses through which programs exchange data. <span class="plain">Plain talk:</span> the hatch between the front desk (the app) and the back office (the server).</dd></div>
+<div class="entry" id="g-alert"><dt>Alert</dt><dd>An automatic warning raised when a security rule matches, such as five failed sign-ins. <span class="plain">Plain talk:</span> LockGuard tapping someone on the shoulder.</dd></div>
+<div class="entry" id="g-audit"><dt>Audit log</dt><dd>An append-only, hash-chained record of every significant action. <span class="plain">Plain talk:</span> a diary nobody can secretly edit.</dd></div>
+<div class="entry" id="g-authenticator"><dt>Authenticator app</dt><dd>A phone app that generates time-based one-time passwords (TOTP). <span class="plain">Plain talk:</span> the app that shows a new 6-digit code every 30 seconds.</dd></div>
+<div class="entry" id="g-backend"><dt>Backend</dt><dd>The server-side part of the software that stores data and makes decisions. <span class="plain">Plain talk:</span> the brain you never see.</dd></div>
+<div class="entry" id="g-bridge"><dt>Bridge <small>Eufy bridge</small></dt><dd>A Node.js service that holds the Eufy session and relays commands and events. <span class="plain">Plain talk:</span> the translator between LockGuard and Eufy.</dd></div>
+<div class="entry" id="g-cli"><dt>Command line / terminal</dt><dd>A text interface where you type commands for the computer to run. <span class="plain">Plain talk:</span> the black window with the blinking cursor where you type instead of click.</dd></div>
+<div class="entry" id="g-cloud"><dt>Cloud</dt><dd>Computing services run on a provider's servers over the internet. <span class="plain">Plain talk:</span> someone else's computers, far away.</dd></div>
+<div class="entry" id="g-cookie"><dt>Cookie</dt><dd>Small data stored by a website in your browser and sent back with each request. <span class="plain">Plain talk:</span> a name tag the website sticks on your browser.</dd></div>
+<div class="entry" id="g-database"><dt>Database <small>MySQL</small></dt><dd>Organised, structured data storage queried with SQL. <span class="plain">Plain talk:</span> a giant, very tidy filing cabinet.</dd></div>
+<div class="entry" id="g-dependency"><dt>Dependency</dt><dd>An external software package a program needs, installed by Composer or npm. <span class="plain">Plain talk:</span> a ready-made part you don't build yourself.</dd></div>
+<div class="entry" id="g-binding"><dt>Device binding</dt><dd>Restricting an account to one registered browser or phone, identified by an HTTP-only cookie. <span class="plain">Plain talk:</span> your account only works on your phone.</dd></div>
+<div class="entry" id="g-encryption"><dt>Encryption</dt><dd>Scrambling data so only holders of the key can unscramble it. <span class="plain">Plain talk:</span> a secret code only LockGuard's key can read.</dd></div>
+<div class="entry" id="g-env"><dt>Environment file <small>.env</small></dt><dd>A text file of settings and secrets read when the app starts; never committed to version control. <span class="plain">Plain talk:</span> the settings sheet, kept in the safe.</dd></div>
+<div class="entry" id="g-eufy"><dt>Eufy Smart Lock C30 <small>T85D0</small></dt><dd>The Wi-Fi smart deadbolt LockGuard controls. <span class="plain">Plain talk:</span> the actual lock on the actual door.</dd></div>
+<div class="entry" id="g-frontend"><dt>Frontend</dt><dd>The part of the software that runs in the browser and draws the screens (here React + TypeScript). <span class="plain">Plain talk:</span> everything you can see and tap.</dd></div>
+<div class="entry" id="g-geofence"><dt>Geofence</dt><dd>A virtual boundary around a location. <span class="plain">Plain talk:</span> an invisible circle on the map.</dd></div>
+<div class="entry" id="g-git"><dt>Git / GitHub</dt><dd>A version-control system / a website hosting Git repositories. <span class="plain">Plain talk:</span> a time machine for code, and the library where it's kept.</dd></div>
+<div class="entry" id="g-hash"><dt>Hash</dt><dd>A one-way function producing a fixed-size fingerprint of data. <span class="plain">Plain talk:</span> a smoothie: easy to make, impossible to un-make.</dd></div>
+<div class="entry" id="g-https"><dt>HTTPS / TLS</dt><dd>Web traffic encrypted with Transport Layer Security and verified by a certificate. <span class="plain">Plain talk:</span> the padlock in the address bar.</dd></div>
+<div class="entry" id="g-http"><dt>HTTP status code</dt><dd>A three-digit result number on every web response (e.g. 403 Forbidden). <span class="plain">Plain talk:</span> the web's traffic light.</dd></div>
+<div class="entry" id="g-idempotency"><dt>Idempotency key</dt><dd>A unique ID attached to a request so retries don't execute it twice. <span class="plain">Plain talk:</span> a ticket number, so a double tap only counts once.</dd></div>
+<div class="entry" id="g-incident"><dt>Incident</dt><dd>A tracked security event handled through stages from New to Closed. <span class="plain">Plain talk:</span> a case file for something that went wrong.</dd></div>
+<div class="entry" id="g-invitation"><dt>Invitation</dt><dd>An emailed, time-limited link that lets a person create their account, train and register a phone. <span class="plain">Plain talk:</span> a welcome letter with a magic link.</dd></div>
+<div class="entry" id="g-migration"><dt>Migration</dt><dd>A versioned script that changes the database structure. <span class="plain">Plain talk:</span> building instructions for the filing cabinet.</dd></div>
+<div class="entry" id="g-mfa"><dt>MFA / 2FA <small>two-step sign-in</small></dt><dd>Authentication requiring two independent factors. <span class="plain">Plain talk:</span> password plus phone code.</dd></div>
+<div class="entry" id="g-mqtt"><dt>MQTT</dt><dd>A lightweight messaging protocol used by many smart-home devices, including Eufy. <span class="plain">Plain talk:</span> the walkie-talkie channel the lock listens on.</dd></div>
+<div class="entry" id="g-node"><dt>Node.js / npm</dt><dd>A JavaScript runtime for servers / its package manager. <span class="plain">Plain talk:</span> the engine the bridge and build tools run on, and its parts shop.</dd></div>
+<div class="entry" id="g-override"><dt>Permission override</dt><dd>An allow or deny on one permission for one user, on top of their roles. <span class="plain">Plain talk:</span> one extra key (or one confiscated key) for one person.</dd></div>
+<div class="entry" id="g-permission"><dt>Permission</dt><dd>A named capability checked by the server on every request; anything not allowed is denied. <span class="plain">Plain talk:</span> one "you may" switch.</dd></div>
+<div class="entry" id="g-php"><dt>PHP / Laravel / Composer</dt><dd>The backend language / the framework built on it / its package manager. <span class="plain">Plain talk:</span> the language the brain thinks in, its toolkit, and its parts shop.</dd></div>
+<div class="entry" id="g-port"><dt>Port</dt><dd>A numbered network endpoint a service listens on. <span class="plain">Plain talk:</span> an apartment number inside one computer.</dd></div>
+<div class="entry" id="g-escalation"><dt>Privilege escalation</dt><dd>Gaining more permissions than intended. <span class="plain">Plain talk:</span> sneaking yourself a bigger key ring. LockGuard blocks it.</dd></div>
+<div class="entry" id="g-property"><dt>Property</dt><dd>A building or site that groups locks and sets their time zone. <span class="plain">Plain talk:</span> "Maple Court" or "Mum's house".</dd></div>
+<div class="entry" id="g-proximity"><dt>Proximity unlock</dt><dd>Unlocking automatically when a phone is detected near the door. Not available yet and in no role. <span class="plain">Plain talk:</span> walk up and it opens. One day.</dd></div>
+<div class="entry" id="g-queue"><dt>Queue worker</dt><dd>A background process that runs queued jobs (lock commands, emails). <span class="plain">Plain talk:</span> the runner who carries messages so the receptionist doesn't have to leave the desk.</dd></div>
+<div class="entry" id="g-ratelimit"><dt>Rate limit</dt><dd>A cap on how many attempts are allowed in a time window. <span class="plain">Plain talk:</span> "Slow down, try again in a few minutes."</dd></div>
+<div class="entry" id="g-recovery"><dt>Recovery code</dt><dd>A single-use backup code for signing in without the authenticator app. <span class="plain">Plain talk:</span> the spare key for your account, use once.</dd></div>
+<div class="entry" id="g-regcode"><dt>Registration code</dt><dd>A one-time code (like <code>ABCD-1234</code>) that registers a new device to an account. <span class="plain">Plain talk:</span> a pass that lets one new phone join.</dd></div>
+<div class="entry" id="g-remote"><dt>Remote unlock</dt><dd>Unlocking through LockGuard rather than at the lock; governed by the remote-unlock policy. Every app unlock counts as remote. <span class="plain">Plain talk:</span> opening the door from your phone, wherever you are.</dd></div>
+<div class="entry" id="g-proxy"><dt>Reverse proxy</dt><dd>A server that receives public web traffic, handles HTTPS, and forwards it to an internal service. <span class="plain">Plain talk:</span> the doorman who greets visitors and walks them to the right office.</dd></div>
+<div class="entry" id="g-role"><dt>Role / RBAC</dt><dd>A named bundle of permissions; role-based access control assigns permissions through roles. <span class="plain">Plain talk:</span> a key ring.</dd></div>
+<div class="entry" id="g-scheduler"><dt>Scheduler</dt><dd>A process that runs maintenance tasks on a timetable. <span class="plain">Plain talk:</span> the alarm clock that reminds LockGuard to tidy up.</dd></div>
+<div class="entry" id="g-server"><dt>Server</dt><dd>A computer providing services to clients over a network. <span class="plain">Plain talk:</span> the always-on computer running LockGuard.</dd></div>
+<div class="entry" id="g-session"><dt>Session</dt><dd>The signed-in state kept between your browser and the server. <span class="plain">Plain talk:</span> "I'm still me, still signed in."</dd></div>
+<div class="entry" id="g-smtp"><dt>SMTP</dt><dd>The protocol for sending email to a mail server. <span class="plain">Plain talk:</span> the post office counter for email.</dd></div>
+<div class="entry" id="g-stepup"><dt>Step-up authentication</dt><dd>Re-checking identity right before a sensitive action. <span class="plain">Plain talk:</span> "Just making sure it's really you."</dd></div>
+<div class="entry" id="g-suspend"><dt>Suspend vs revoke</dt><dd>Suspend blocks new requests and can be undone (Reactivate); revoke is permanent. <span class="plain">Plain talk:</span> pause button vs. off switch.</dd></div>
+<div class="entry" id="g-trusted"><dt>Trusted device</dt><dd>A device its owner marked as personally kept; can be required for unlocking. <span class="plain">Plain talk:</span> "this phone lives in my pocket."</dd></div>
+<div class="entry" id="g-vite"><dt>Vite / build</dt><dd>The tool that bundles the frontend into optimised files; "building" produces <code>frontend\dist</code>. <span class="plain">Plain talk:</span> packing the app into a neat suitcase so it travels fast.</dd></div>
+</dl>
+<x-joke>Why did the glossary break up with the index? It found someone with more definition.</x-joke>
+</x-chapter>
+
+<x-chapter n="14" id="about" title="About this manual" sub="Credits, sources and how to get the latest version." ico="info" c1="#334a66" c2="#0d1f35">
+<div class="grid g2">
+  <div class="card"><h4>{i:book-open} Edition</h4><p>Edition 1, November 2026, written for the LockGuard version in the <a href="https://github.com/sumproguy99/DMLockGate">DMLockGate repository</a>. Screenshots come from a test copy of LockGuard with made-up people (Ada, Riley, Gale, Avery, Morgan, Sam, Pat) and a pretend lock, so no real data appears.</p></div>
+  <div class="card"><h4>{i:sparkles} Pictures</h4><p>Photos are from <a href="https://unsplash.com/license">Unsplash</a> (free licence): Sebastian Scholz (Nuki), benjamin lehman, İsmail Enes Ayhan, Maria Ziegler, Kedibone Isaac Makhumisane, Mary Borozdina, Caroline Badran. Icons are the same <a href="https://lucide.dev">Lucide</a> icons LockGuard uses (ISC licence).</p></div>
+  <div class="card"><h4>{i:file-code} Fonts</h4><p>Atkinson Hyperlegible (reading), Lexend (headings), JetBrains Mono (syntax), Fira Code (commands), Barlow and Barlow Condensed (alerts), Patrick Hand (jokes). All from Google Fonts.</p></div>
+  <div class="card"><h4>{i:life-buoy} Getting help</h4><p>Inside the app: <b>More → Help</b>. For a problem with LockGuard itself, open an issue on GitHub with the <b>error code</b> you saw and what you were doing.</p></div>
+</div>
+<x-note>This manual describes LockGuard as built. Where a feature is planned but not finished (proximity unlocking, lockdown holds, location-aware remote unlock), the manual says so instead of pretending.</x-note>
+<x-joke>This manual was proofread by a paperclip. Any remaining errors are Pip's fault.</x-joke>
+</x-chapter>
+</div><!-- /.page -->

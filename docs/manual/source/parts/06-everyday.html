@@ -1,0 +1,148 @@
+<x-chapter n="6" id="everyday" title="Everyday how-tos" sub="Things everybody does, whatever their role." ico="hand" c1="#0f8a5a" c2="#0d1f35">
+
+<h3 id="howto-signin">Sign in (and sign out)</h3>
+<ol class="steps">
+  <li><strong>Open LockGuard</strong> at your building's address (for example <code>https://lockguard.example.com</code>).</li>
+  <li><strong>Enter your email and password</strong> and tap <b>Sign in</b>.</li>
+  <li><strong>If asked, type the 6-digit code</strong> from your authenticator app.</li>
+  <li><strong>To sign out:</strong> on a phone, <b>More → Sign out</b>; on a computer, click your name (top right) → <b>Sign out</b>.</li>
+</ol>
+<x-caution title="Five wrong passwords = a short wait">After too many wrong attempts LockGuard makes you wait a few minutes (<code>too_many_requests</code>) and the Security Administrator gets an alert. That's to stop password-guessing robots, not to punish you.</x-caution>
+
+<h3 id="howto-2fa">Turn on two-step sign-in</h3>
+<p>Two-step sign-in means a thief needs your password <em>and</em> your phone. It takes two minutes.</p>
+<ol class="steps">
+  <li><strong>Install an authenticator app</strong> on your phone: Google Authenticator, Microsoft Authenticator, 1Password, Authy… any will do.</li>
+  <li><strong>In LockGuard, open the Account page</strong> (phone: <b>More → Account</b>) and choose <b>Two-step verification</b>.</li>
+  <li><strong>Scan the QR code</strong> with the authenticator app, or type the key shown under it.</li>
+  <li><strong>Type the 6-digit code</strong> the app shows, and confirm your password.</li>
+  <li><strong>Save your recovery codes</strong> somewhere safe (a password manager or printed in a drawer). Each one works once if you lose your phone. They're shown only once.</li>
+</ol>
+<x-term word="Two-factor authentication (2FA / MFA)" tech="Authentication using two independent factors: something you know (password) and something you have (a device generating time-based one-time passwords, TOTP).">A second lock on your account. Even if someone learns your password, they still need the code that only your phone can make, and it changes every 30 seconds.</x-term>
+<x-alert title="Recovery codes are as powerful as your password">Don't screenshot them into your photo album, and don't email them to yourself. If you use one, the Security Administrator is told, in case it wasn't you.</x-alert>
+
+<h3 id="howto-stepup">"Confirm it's you" (step-up)</h3>
+<p>Before risky actions (unlocking remotely, sending an invitation, changing settings) LockGuard may ask for your password or code again, even though you're already signed in. That proof lasts about 10 minutes.</p>
+<x-term word="Step-up authentication" tech="Re-verifying a signed-in user's identity immediately before a sensitive operation, raising the session's assurance level for a short period.">Like a cashier asking for ID only when you buy something expensive. You're already in the shop; this is just for the big stuff.</x-term>
+
+<h3 id="howto-devices">Your phone and other devices</h3>
+<p>Open <b>Devices</b> to see every phone and browser signed in to your account.</p>
+<div class="grid g2">
+  <div class="card"><h4>{i:shield-check} Trust this device</h4><p>Marks a device as one you keep with you. Your administrator can require a <b>trusted</b> device for unlocking. Only trust your own phone, never a shared or work computer.</p></div>
+  <div class="card"><h4>{i:log-out} Sign out everywhere else</h4><p>Ends every other session at once, while keeping this one signed in. Use it if you signed in on a friend's laptop and forgot to sign out.</p></div>
+  <div class="card"><h4>{i:pencil} Rename</h4><p>Give devices names you'll recognise: "Riley's iPhone" beats "Safari on iOS 19".</p></div>
+  <div class="card"><h4>{i:smartphone} Registered phone</h4><p>With device binding on, one phone is <em>the</em> phone for your account. A new phone needs a new registration code.</p></div>
+</div>
+<x-shot src="mobile-devices.png" frame="tall" caption="<b>Devices</b> on a phone."/>
+
+<h3 id="howto-newphone">Got a new phone?</h3>
+<ol class="steps">
+  <li><strong>Ask your administrator for a registration code.</strong> They get one from your user page (Devices), or at the server with <code>lockguard:device-code</code>.</li>
+  <li><strong>On the new phone</strong>, open LockGuard, sign in, and type the code when asked (it looks like <code>ABCD-1234</code>).</li>
+  <li><strong>Done.</strong> Ask for the old phone to be revoked if you're giving it away.</li>
+</ol>
+<x-cmd shell="PowerShell" where="backend (administrators only)">
+php artisan lockguard:device-code riley@example.com
+</x-cmd>
+
+<h3 id="howto-lost">Lost your phone? Do this right away</h3>
+<x-alert title="Act fast: your phone is your key">
+<ol style="margin:6px 0 0;padding-left:20px">
+<li>From any computer, sign in and use <b>Sign out everywhere else</b>, or call your Property Manager or Security Administrator.</li>
+<li>Ask them to <b>Report lost</b> / <b>Revoke device</b> on that phone. It stops working immediately, and any attempt to use it raises an alert.</li>
+<li>Change your password (ask your administrator) if the phone wasn't locked with a PIN.</li>
+<li>Get a registration code for your new phone.</li>
+</ol>
+</x-alert>
+<x-joke>I lost my phone, so I called it. It was in "Do Not Disturb" mode. Rude.</x-joke>
+
+<h3 id="howto-location">Location sharing</h3>
+<p>Some setups use your phone's location for access decisions or safety. Here's exactly what happens:</p>
+<div class="grid g2">
+  <div class="card"><h4>{i:map-pin} What is recorded</h4><p>Where your phone is <b>when you press Lock or Unlock</b> in the app, and, if an administrator asks, your current location <b>while LockGuard is open</b> on your phone. Nothing is tracked in the background.</p></div>
+  <div class="card"><h4>{i:eye} Who can see it</h4><p>Administrators with the location-history permission (by default only the Super Administrator). <b>Every look is itself recorded</b>, and Auditors can check who looked.</p></div>
+  <div class="card"><h4>{i:history} How long it's kept</h4><p>30 days by default, then deleted automatically every night.</p></div>
+  <div class="card"><h4>{i:list} Your own history</h4><p><b>More → Location and proximity</b> shows each time your location was shared. You can always see your own record.</p></div>
+</div>
+<x-note>Your browser asks permission the first time. Location only works on secure (<code>https://</code>) addresses; that's a browser rule, not a LockGuard one.</x-note>
+<x-term word="Geofence" tech="A virtual geographic boundary (a radius around a point) used to trigger or allow actions when a device's reported location is inside it.">An invisible circle drawn on the map around the building. Inside the circle: "near the door". Outside: "away".</x-term>
+
+<h3 id="howto-notifications">Notifications</h3>
+<p>The {i:bell} bell shows a number when something needs your attention: an alert, an invitation update, a lock that went offline. Open <b>Notifications</b> to read them and mark them read. Security Administrators always receive security notifications. LockGuard caps notifications at 20 per hour per person, so a broken lock can't bury you.</p>
+<x-shot src="desk-notifications.png" url="lockguard.example.com/notifications" caption="<b>Notifications</b> on a computer."/>
+
+<h3 id="howto-profile">Change your name, email or password</h3>
+<p>For safety, people can't change these themselves. Ask your Property Manager or Super Administrator. (This stops someone who borrows your unlocked phone from taking over your account.)</p>
+<x-tip>A good password is long rather than complicated. Four random words, like <code>correct-horse-battery-staple</code>, is easier to remember and harder to crack than <code>P@ssw0rd!</code>.</x-tip>
+</x-chapter>
+
+<x-chapter n="7" id="invitations" title="Invitations &amp; Pip's training" sub="How new people join: by email, with a paperclip for a teacher." ico="graduation-cap" c1="#c27c00" c2="#0d1f35">
+
+<p class="lead">An invitation is the friendliest way to add someone. They get an email, create their own account, learn how LockGuard works with <b>Pip the paperclip</b>, pass a short quiz, and only then can their phone open a door.</p>
+
+<div class="diagram" role="img" aria-label="Invitation journey: administrator sends invite, person accepts, creates account, does 7 lessons, passes 5-question quiz, registers phone, done.">
+<svg viewBox="0 0 980 150"><g font-size="14" text-anchor="middle">
+  <g><rect x="5" y="30" width="120" height="70" rx="14" fill="#0a6fe0"/><text x="65" y="60" fill="#fff" font-weight="700">✉️ Invite</text><text x="65" y="80" fill="#dbeaff" font-size="12">admin sends</text></g>
+  <g><rect x="147" y="30" width="120" height="70" rx="14" fill="#1d4f8f"/><text x="207" y="60" fill="#fff" font-weight="700">👆 Accept</text><text x="207" y="80" fill="#dbeaff" font-size="12">tap the button</text></g>
+  <g><rect x="289" y="30" width="120" height="70" rx="14" fill="#0b7a8f"/><text x="349" y="60" fill="#fff" font-weight="700">👤 Account</text><text x="349" y="80" fill="#d6f4f8" font-size="12">name + password</text></g>
+  <g><rect x="431" y="30" width="120" height="70" rx="14" fill="#c27c00"/><text x="491" y="60" fill="#fff" font-weight="700">📎 Lessons</text><text x="491" y="80" fill="#fff3d9" font-size="12">7 with Pip</text></g>
+  <g><rect x="573" y="30" width="120" height="70" rx="14" fill="#6d3fd8"/><text x="633" y="60" fill="#fff" font-weight="700">📝 Quiz</text><text x="633" y="80" fill="#ece5ff" font-size="12">5 of 5 right</text></g>
+  <g><rect x="715" y="30" width="120" height="70" rx="14" fill="#d9580b"/><text x="775" y="60" fill="#fff" font-weight="700">📱 Phone</text><text x="775" y="80" fill="#ffe6d6" font-size="12">registered</text></g>
+  <g><rect x="857" y="30" width="118" height="70" rx="14" fill="#0f8a5a"/><text x="916" y="60" fill="#fff" font-weight="700">🎉 Done</text><text x="916" y="80" fill="#d8f7ea" font-size="12">signed in</text></g>
+  <text x="490" y="132" class="muted" font-size="13">The phone can't be registered until the lessons and quiz are complete. Signing in is blocked until then, too.</text>
+</g></svg></div>
+
+<h3 id="inv-admin">For the person sending it</h3>
+<ol class="steps">
+  <li><strong>Access management → Invitations → Invite someone.</strong> Enter email, name, roles (if you may assign roles) and an optional personal note.</li>
+  <li><strong>Send</strong> and confirm your password. LockGuard emails a link that works for <b>7 days</b>, and holds a <b>registration code</b> for that email address.</li>
+  <li><strong>Track progress</strong> in the list. <b>Resend</b> makes a fresh link (the old one stops working) and gives 7 more days. <b>Cancel</b> kills the link and the held code.</li>
+  <li><strong>After they finish</strong>, give them lock access on their user page. Invitations carry roles, not door access.</li>
+</ol>
+<x-shot src="desk-invitations.png" url="lockguard.example.com/invitations" caption="<b>The invitations list</b> shows where each person is in the journey."/>
+<x-caution title="No email arriving?">If email isn't set up yet, the invitation is still created, but LockGuard shows a warning with a link to <b>Email settings</b>. Fix the settings, then press <b>Resend</b>. Also ask the person to check their spam folder.</x-caution>
+<div class="table-wrap"><table>
+<thead><tr><th>Status in the list</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><span class="pill info">Waiting to accept</span></td><td>Email sent; they haven't created their account yet.</td></tr>
+<tr><td><span class="pill info">In training</span></td><td>Account created; working through the lessons or the quiz (e.g. "3 of 7 lessons done").</td></tr>
+<tr><td><span class="pill warn">Phone not registered</span></td><td>Training passed; registering the phone is the last step.</td></tr>
+<tr><td><span class="pill ok">Completed</span></td><td>All done; the phone is registered.</td></tr>
+<tr><td><span class="pill grey">Expired</span> / <span class="pill grey">Cancelled</span></td><td>The link no longer works. Resend or send a new invitation.</td></tr>
+</tbody></table></div>
+
+<h3 id="inv-person">For the person receiving it</h3>
+<div class="grid g2" style="align-items:start">
+  <div>
+    <p>Meet <b>Pip</b>, a cartoon paperclip in a security guard's cap. Pip waves, points, thinks, cheers and occasionally looks very surprised. Pip will:</p>
+    <ul class="ticks">
+      <li>walk you through creating your account</li>
+      <li>teach 7 short lessons, one small part at a time</li>
+      <li>give you a "Your turn" task in every part: tap, sort, put in order, or try the <b>practice door</b></li>
+      <li>share a <b>Food for thought</b> idea and a joke after each task</li>
+      <li>give you a 5-question quiz (all answers must be right; hints if not)</li>
+      <li>register your phone at the end</li>
+    </ul>
+    <x-tip>Stopped halfway? Just open the invitation email and tap <b>Accept Invitation</b> again. You'll continue where you left off.</x-tip>
+  </div>
+  <x-shot src="invite-3-lesson-cards-390.png" frame="tall" caption="A lesson part with Pip and a &quot;Your turn&quot; task."/>
+</div>
+<h4>The seven lessons</h4>
+<div class="table-wrap"><table>
+<thead><tr><th>#</th><th>Lesson</th><th>You'll learn</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Meet LockGuard</td><td>What LockGuard is and who Pip is</td></tr>
+<tr><td>2</td><td>One phone, one you</td><td>One device per person; never share your password</td></tr>
+<tr><td>3</td><td>Reading the door card</td><td>Locked, Unlocked and Unknown, and what to do with each</td></tr>
+<tr><td>4</td><td>Locking and unlocking</td><td>Practise on a pretend door; wait for the confirmation</td></tr>
+<tr><td>5</td><td>Your location</td><td>When location is shared and who can see it</td></tr>
+<tr><td>6</td><td>Door safety</td><td>Strangers, tailgating, and leaving properly</td></tr>
+<tr><td>7</td><td>Getting help</td><td>Where help lives, and what to do if a phone is lost</td></tr>
+</tbody></table></div>
+<div class="phones">
+  <x-shot src="invite-4-practice-390.png" frame="tall" caption="The practice door"/>
+  <x-shot src="invite-5-quiz-390.png" frame="tall" caption="The quiz, with a hint"/>
+  <x-shot src="invite-6-done-390.png" frame="tall" caption="Finished!"/>
+</div>
+<x-joke>Pip applied to be a stapler once. Didn't get the job. Couldn't commit.</x-joke>
+</x-chapter>

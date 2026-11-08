@@ -1,0 +1,77 @@
+<x-chapter n="4" id="tour" title="A tour of the screens" sub="Where everything lives, on a computer and on a phone." ico="monitor-smartphone" c1="#0b7a8f" c2="#0d1f35">
+
+<p class="lead">LockGuard has two faces. On a <b>computer</b> you get the full control centre with a sidebar. On a <b>phone</b> you get a simple app with big buttons and a bar along the bottom. Same LockGuard, same rules, same account.</p>
+
+<h3 id="tour-signin">Signing in</h3>
+<x-shot src="login-desktop.png" url="lockguard.example.com/login" caption="<b>The sign-in page.</b> Email and password, then a 6-digit code if you've turned on two-step sign-in."/>
+<p>If you're bound to one phone and sign in on a different device, LockGuard asks for a <b>registration code</b> instead of letting you in. That's device binding doing its job (see <a href="#sec-binding">Chapter 8</a>).</p>
+
+<h3 id="tour-desktop">The computer layout</h3>
+<x-shot src="desk-dashboard.png" url="lockguard.example.com/" caption="<b>The Dashboard</b>, here as a Super Administrator. Your sidebar only shows what your role can open."/>
+<div class="grid g2">
+  <div class="card"><h4>{i:layout-dashboard} Left: the sidebar</h4><p>Grouped into <b>Overview</b>, <b>Access management</b>, <b>Security</b> and <b>Settings</b>. Items you're not allowed to use are hidden, so a Resident's sidebar is short and an administrator's is long.</p></div>
+  <div class="card"><h4>{i:wifi} Top: status bar</h4><p>Breadcrumbs (where you are), the <span class="pill ok">{i:wifi} Eufy connected</span> badge, the {i:bell} notifications bell, and your name and role. Click your name to sign out.</p></div>
+</div>
+<div class="table-wrap"><table>
+<thead><tr><th>Sidebar item</th><th>What's there</th><th>Who sees it</th></tr></thead>
+<tbody>
+<tr><td>{i:layout-dashboard} Dashboard</td><td>Your locks, the Eufy connection and security counts</td><td>Everyone</td></tr>
+<tr><td>{i:bell} Notifications</td><td>Messages and alerts addressed to you</td><td>Everyone</td></tr>
+<tr><td>{i:users} Users</td><td>Everyone's accounts: create, edit, suspend, roles, lock access</td><td>Anyone with a user-management permission</td></tr>
+<tr><td>{i:mail-plus} Invitations</td><td>Send, resend and cancel email invitations</td><td>Can create users</td></tr>
+<tr><td>{i:shield-check} Roles and permissions</td><td>What each role includes</td><td>Anyone with a user-management permission</td></tr>
+<tr><td>{i:building-2} Properties</td><td>Buildings or homes that group locks</td><td>Integration settings (Super Administrator)</td></tr>
+<tr><td>{i:lock} Locks</td><td>Every lock: state, battery, connection, commands on/off, who has access</td><td>Can view lock status or devices</td></tr>
+<tr><td>{i:monitor-smartphone} Devices</td><td>Your phones and browsers; with permission, everyone's</td><td>Everyone</td></tr>
+<tr><td>{i:shield-alert} Security center</td><td>Alerts and incidents</td><td>Can view incidents</td></tr>
+<tr><td>{i:map-pinned} Location map</td><td>Where shared locations were reported</td><td>Can view location history</td></tr>
+<tr><td>{i:smartphone} Device locations</td><td>Locations per device, and silent location requests</td><td>Can view location history</td></tr>
+<tr><td>{i:scroll-text} Audit log</td><td>The tamper-evident diary of everything</td><td>Can view incidents</td></tr>
+<tr><td>{i:activity} System health</td><td>Is the bridge, Eufy cloud and database OK?</td><td>Integration settings or view incidents</td></tr>
+<tr><td>{i:mail} Email settings</td><td>The mail server used for invitations</td><td>Configure notifications</td></tr>
+</tbody></table></div>
+
+<h3 id="tour-phone">The phone layout</h3>
+<p>Open LockGuard on a phone and it switches to the mobile app automatically (the address ends in <code>/m</code>). The bottom bar has four buttons:</p>
+<div class="icons">
+  <div><svg class="i"><use href="#i-house"/></svg><span><b>Home</b>Your doors, with big Lock/Unlock buttons.</span></div>
+  <div><svg class="i"><use href="#i-activity"/></svg><span><b>Activity</b>Who opened what, and when (if you may view history).</span></div>
+  <div><svg class="i"><use href="#i-key-round"/></svg><span><b>Devices</b>Your doors' details and your registered phone.</span></div>
+  <div><svg class="i"><use href="#i-ellipsis"/></svg><span><b>More</b>Account, location sharing, notifications, help, sign out.</span></div>
+</div>
+<div class="phones" style="margin-top:20px">
+  <x-shot src="mobile-home.png" frame="tall" caption="<b>Home.</b> One card per door."/>
+  <x-shot src="mobile-more.png" frame="tall" caption="<b>More.</b> Settings and help."/>
+  <x-shot src="mobile-help.png" frame="tall" caption="<b>Help.</b> Built-in answers."/>
+</div>
+<x-tip>On iPhone, tap Share → <b>Add to Home Screen</b>; on Android, tap ⋮ → <b>Add to Home screen</b>. LockGuard then opens like a normal app, full-screen, with its own icon.</x-tip>
+
+<h3 id="tour-lockcard">Anatomy of a lock card</h3>
+<div class="grid g2" style="align-items:center">
+  <x-shot src="mobile-locked.png" frame="tall" caption="A lock card right after a confirmed lock."/>
+  <div>
+    <ol class="steps">
+      <li><strong>Name and place</strong>: "Front Door · E2E Home · T85D0" (door, property, lock model). Tap <b>Details</b> for more.</li>
+      <li><strong>The big status</strong>: what the lock <em>itself</em> last reported, and how long ago.</li>
+      <li><strong>Health badges</strong>: <span class="pill ok">{i:wifi} Connected</span> and <span class="pill ok">{i:battery-medium} Battery 80%</span>, plus when the lock last checked in.</li>
+      <li><strong>Buttons</strong>: <b>Lock</b> and <b>Unlock</b>. You only see the ones your role allows.</li>
+      <li><strong>The receipt</strong>: after a command, a checklist shows each stage: Request received → Authorization completed → Command submitted → Integration response received → <b>Physical state confirmed</b>.</li>
+    </ol>
+  </div>
+</div>
+
+<h3 id="tour-states">What the big status words mean</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>You see</th><th>It means</th><th>What to do</th></tr></thead>
+<tbody>
+<tr><td><span class="pill ok">{i:lock} Locked</span></td><td>The lock reported it's locked.</td><td>Nothing. Relax.</td></tr>
+<tr><td><span class="pill warn">{i:lock-open} Unlocked</span></td><td>The lock reported it's unlocked.</td><td>Lock it when you're done.</td></tr>
+<tr><td><span class="pill info">Locking…</span> / <span class="pill info">Unlocking…</span></td><td>Your command is travelling. The door hasn't changed <em>yet</em>.</td><td>Wait a few seconds.</td></tr>
+<tr><td><span class="pill grey">{i:shield-alert} State unknown</span></td><td>The lock hasn't said anything LockGuard can trust.</td><td>Check the door with your eyes.</td></tr>
+<tr><td><span class="pill grey">{i:shield-alert} State stale</span></td><td>The last report is old (15+ minutes).</td><td>Tap Refresh; check the door if it matters.</td></tr>
+<tr><td><span class="pill bad">{i:wifi-off} Device unavailable</span></td><td>The lock is offline (Wi-Fi, batteries, or the Eufy cloud).</td><td>See <a href="#trouble">Troubleshooting</a>.</td></tr>
+<tr><td><span class="pill bad">Jammed</span></td><td>The bolt couldn't move. Something's in the way.</td><td>Check the door frame and bolt by hand.</td></tr>
+</tbody></table></div>
+
+<x-joke>The lock and the door had an argument. The lock wanted closure; the door just wanted to be left ajar.</x-joke>
+</x-chapter>

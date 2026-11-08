@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DM LockGuard Docs</title>
+<meta name="description" content="DM LockGuard: user manual, launch campaign and brand files.">
+<link rel="icon" href="brand/dmlockguard-icon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lexend:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050b14;--card:#0d1f35;--ink:#f4f7fc;--muted:#a8b7c9;--line:#243b52;--blue:#087fff}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 80% 0%,#174a82 0,transparent 50%),radial-gradient(circle at 0% 100%,#4a0f1c 0,transparent 40%),var(--bg);color:var(--ink);font:18px/1.6 'Atkinson Hyperlegible',system-ui,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:56px 16px}
+header img{width:min(520px,100%)}
+p.lead{color:var(--muted);font-size:20px;max-width:60ch}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:34px}
+a.card{display:block;text-decoration:none;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;transition:transform .15s,border-color .15s}
+a.card:hover{transform:translateY(-3px);border-color:var(--blue)}
+a.card img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;object-position:top}
+a.card div{padding:16px 18px}
+a.card h2{font:700 22px Lexend,sans-serif;margin:0 0 4px}
+a.card p{margin:0;color:var(--muted);font-size:16px}
+footer{margin-top:48px;color:var(--muted);font-size:14px}
+footer a{color:#6fb1ff}
+</style>
+</head>
+<body>
+<main>
+  <header><img src="brand/dmlockguard-logo.svg" alt="DM LockGuard: smart access, real control"></header>
+  <p class="lead">Secure, honest access control for Eufy smart locks. Start with the user manual, or browse the launch campaign and brand files.</p>
+  <div class="cards">
+    <a class="card" href="manual/"><img src="manual/img/app/desk-dashboard.png" alt=""><div><h2>User manual</h2><p>Setup, every role, how-tos, error codes, troubleshooting and glossary.</p></div></a>
+    <a class="card" href="marketing/"><img src="marketing/mockups/social-key.png" alt=""><div><h2>Launch campaign</h2><p>Strategy, audiences, copy bank, timeline and mockups.</p></div></a>
+    <a class="card" href="brand/dmlockguard-icon-1024.png"><img src="brand/dmlockguard-icon-512.png" alt="" style="object-fit:contain;background:#050b14;padding:20px"><div><h2>Brand files</h2><p>App icon and logo as SVG and PNG.</p></div></a>
+  </div>
+  <footer>Source code: <a href="https://github.com/sumproguy99/DMLockGate">github.com/sumproguy99/DMLockGate</a></footer>
+</main>
+</body>
+</html>

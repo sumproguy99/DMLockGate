@@ -1,0 +1,229 @@
+<x-chapter n="3" id="setup" title="Installation &amp; setup" sub="For the person installing LockGuard on a server. Grab a coffee." ico="wrench" c1="#1d4f8f" c2="#050b14">
+
+<p class="lead">This chapter takes you from an empty computer to a working LockGuard that people can reach from their phones. Every command has a <b>Copy</b> button. Run them in order.</p>
+
+<figure class="photo"><img src="img/photos/server-room.jpg" alt="A server room aisle lined with equipment racks" loading="lazy"></figure>
+<figcaption>Your server doesn't need to look like this. A small, always-on PC is plenty. <span class="small">Photo: İsmail Enes Ayhan on Unsplash</span></figcaption>
+
+<x-note>The commands below use <b>PowerShell</b> on Windows (the prompt looks like <code>PS&gt;</code>). On Linux or macOS, the same commands work in a normal terminal (prompt <code>$</code>); only the setup script in step 3.3 is Windows-specific.</x-note>
+
+<h3 id="setup-requirements">3.1 What you need</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Thing</th><th>Version / detail</th><th>What it's for (plain talk)</th></tr></thead>
+<tbody>
+<tr><td><b>A server</b></td><td>Windows 10/11 or Linux, always on, 4 GB RAM or more</td><td>The computer that runs LockGuard 24/7.</td></tr>
+<tr><td><b>PHP</b></td><td>8.x (developed on 8.5) with <code>pdo_mysql</code>, <code>mbstring</code>, <code>openssl</code></td><td>The language the backend is written in.</td></tr>
+<tr><td><b>Composer</b></td><td>2.x</td><td>Downloads the PHP building blocks LockGuard uses.</td></tr>
+<tr><td><b>MySQL</b></td><td>8.x or newer</td><td>The database: LockGuard's filing cabinet.</td></tr>
+<tr><td><b>Node.js</b></td><td>20 or newer (developed on 24)</td><td>Builds the web app and runs the Eufy bridge.</td></tr>
+<tr><td><b>Git</b></td><td>Any recent version</td><td>Downloads the LockGuard code.</td></tr>
+<tr><td><b>Eufy account</b></td><td>A <em>second</em> account that your main Eufy account has shared the lock with</td><td>So LockGuard doesn't log your phone's Eufy app out.</td></tr>
+<tr><td><b>Eufy Smart Lock C30</b></td><td>Model T85D0, set up in the Eufy app</td><td>The actual lock on the actual door.</td></tr>
+<tr><td><b>A domain + HTTPS</b> (optional)</td><td>e.g. <code>lockguard.example.com</code> behind a reverse proxy</td><td>So phones can reach LockGuard from anywhere, securely.</td></tr>
+</tbody></table></div>
+
+<x-term word="Dependency" tech="An external software package that a program needs in order to run, installed by a package manager (Composer for PHP, npm for Node.js).">A ready-made part. Like buying wheels instead of inventing the wheel.</x-term>
+
+<x-caution title="Use a separate Eufy account for LockGuard">If LockGuard signs in with the same Eufy account as your phone, Eufy may sign your phone out. Create a second Eufy account, then in the Eufy app share the lock with it. In the Eufy app also turn on <b>both</b> the "Locked" and "Unlocked" notifications for each lock, or LockGuard will never hear that the door locked.</x-caution>
+
+<h3 id="setup-get-code">3.2 Get the code</h3>
+<p>Pick a folder (we'll use <code>D:\lockguard</code>) and download LockGuard into it:</p>
+<x-cmd shell="PowerShell">
+git clone https://github.com/sumproguy99/DMLockGate.git D:\lockguard
+cd D:\lockguard
+</x-cmd>
+<p>Then install the building blocks for each of the three parts:</p>
+<x-cmd shell="PowerShell" where="D:\lockguard">
+cd backend; composer install --no-dev --optimize-autoloader; cd ..
+cd frontend; npm ci; cd ..
+cd integrations\eufy; npm ci; cd ..\..
+</x-cmd>
+<x-tip>The project has three folders that matter: <code>backend</code> (the brain, PHP), <code>frontend</code> (the screens, React) and <code>integrations\eufy</code> (the bridge, Node.js). Most problems are solved by running a command in the right folder.</x-tip>
+
+<h3 id="setup-database">3.3 Create the database</h3>
+<p>First create the settings file from the example, then run the database helper. It creates a <code>lockguard</code> database and user with a strong random password, and writes the connection details into <code>backend\.env</code> for you. It asks for your MySQL <b>root</b> password once and never stores it.</p>
+<x-cmd shell="PowerShell" where="D:\lockguard">
+Copy-Item backend\.env.example backend\.env
+pwsh -File scripts\setup-mysql.ps1
+</x-cmd>
+<x-note>If MySQL is installed somewhere unusual, tell the script where: <code>-MySqlExe "C:\path\to\mysql.exe"</code>. Using an admin account other than root? Add <code>-AdminUser yourname</code>. It's safe to run again; it just rotates the password.</x-note>
+
+<h3 id="setup-backend">3.4 Configure the backend</h3>
+<p>Open <code>backend\.env</code> in a text editor (Notepad is fine). These are the settings you must look at. Lines starting with <code>#</code> are comments.</p>
+<x-code lang="dotenv" where="backend\.env">
+APP_NAME="DM LockGuard"
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://lockguard.example.com
+# The address people use in their browser. Invitation links point here.
+LOCKGUARD_PUBLIC_URL=https://lockguard.example.com
+# Which addresses may sign in with cookies (add your domain).
+SANCTUM_STATEFUL_DOMAINS=lockguard.example.com,localhost,127.0.0.1
+# How LockGuard talks to locks: unconfigured (sends nothing), fake (pretend lock), eufy_bridge (real)
+LOCKGUARD_LOCK_DRIVER=unconfigured
+# Unlocking away from the property: standard, step_up, location_required or disabled
+LOCKGUARD_REMOTE_UNLOCK_POLICY=step_up
+# One registered phone per person (recommended)
+LOCKGUARD_DEVICE_BINDING=true
+LOCKGUARD_DEVICE_BINDING_EXEMPT_ROLES=super_administrator,security_administrator
+</x-code>
+<p>Now generate the app's secret key, build the database tables, and load the built-in roles and permissions:</p>
+<x-cmd shell="PowerShell" where="D:\lockguard\backend">
+php artisan key:generate
+php artisan migrate --seed --force
+</x-cmd>
+<x-term word="Migration" tech="A versioned script that creates or changes database tables, so every installation's schema matches the code.">Building instructions for the filing cabinet. "Migrate" means "build or update the drawers."</x-term>
+<x-term word="Seeding" tech="Loading initial reference data into the database, here the permission catalog and the seven role templates.">Putting the first labelled folders into the new cabinet.</x-term>
+<x-alert title="Guard the APP_KEY and the .env file">The <code>APP_KEY</code> encrypts secrets such as two-step sign-in keys and the email password. If you lose it, those can't be decrypted. If someone else gets it, they could read them. Back up <code>.env</code> somewhere safe and <b>never</b> commit it to Git or share it in chat.</x-alert>
+
+<h3 id="setup-admin">3.5 Create the first Super Administrator</h3>
+<p>The first account must be made at the server. Nobody can create it from the website, and that's on purpose.</p>
+<x-cmd shell="PowerShell" where="D:\lockguard\backend">
+php artisan lockguard:create-admin --name="Your Name" --email=you@example.com
+</x-cmd>
+<p>It asks for a password twice (at least 12 characters, with letters and numbers). Typing doesn't show on screen. That's normal, not broken.</p>
+<x-joke>My password is "incorrect". That way, when I forget it, the computer reminds me: "Your password is incorrect."</x-joke>
+
+<h3 id="setup-frontend">3.6 Build the web app</h3>
+<x-cmd shell="PowerShell" where="D:\lockguard\frontend">
+npm run build
+</x-cmd>
+<p>This turns the source code into fast, compact files in <code>frontend\dist</code>. Run it again every time you update LockGuard.</p>
+
+<h3 id="setup-bridge">3.7 Connect your Eufy locks</h3>
+<p><b>Step A: configure the bridge.</b> Create its settings file and fill it in:</p>
+<x-cmd shell="PowerShell" where="D:\lockguard\integrations\eufy">
+Copy-Item .env.example .env
+notepad .env
+</x-cmd>
+<x-code lang="dotenv" where="integrations\eufy\.env">
+EUFY_USERNAME=lockguard-account@example.com
+EUFY_PASSWORD=the-second-accounts-password
+EUFY_COUNTRY=US
+# Shared secret: at least 32 random characters, the SAME value in backend\.env
+LOCKGUARD_BRIDGE_SECRET=paste-a-long-random-secret-here
+BRIDGE_HOST=127.0.0.1
+BRIDGE_PORT=8788
+# Where the bridge reports lock events (your API address)
+LOCKGUARD_EVENTS_URL=http://127.0.0.1:8100/api/internal/eufy/events
+</x-code>
+<p>Make a good random secret with this one-liner and paste it in <b>both</b> files:</p>
+<x-cmd shell="PowerShell">
+-join ((48..57)+(65..90)+(97..122) | Get-Random -Count 48 | ForEach-Object {[char]$_})
+</x-cmd>
+<p><b>Step B: tell the backend to use the bridge.</b> In <code>backend\.env</code>:</p>
+<x-code lang="dotenv" where="backend\.env">
+LOCKGUARD_LOCK_DRIVER=eufy_bridge
+LOCKGUARD_BRIDGE_URL=http://127.0.0.1:8788
+LOCKGUARD_BRIDGE_SECRET=the-same-long-random-secret
+</x-code>
+<p><b>Step C: start the bridge</b> (leave this window open):</p>
+<x-cmd shell="PowerShell" where="D:\lockguard\integrations\eufy">
+npm run bridge
+</x-cmd>
+<p><b>Step D: find and register your locks.</b> First add a property (a building or home) in the web app under <b>Properties</b>, note its number (ID), then:</p>
+<x-cmd shell="PowerShell" where="D:\lockguard\backend">
+php artisan lockguard:sync-locks --register --property=1
+</x-cmd>
+<p>New locks arrive with commands <b>switched off</b>, for safety. Open <b>Locks</b>, choose a lock, and turn <b>Commands</b> on when you're ready.</p>
+<p><b>Step E: give yourself access.</b> LockGuard never lets anyone change their <em>own</em> access from the website (so no one can quietly promote themselves). If you're the only administrator, do it at the server:</p>
+<x-cmd shell="PowerShell" where="D:\lockguard\backend">
+php artisan lockguard:grant-lock-access you@example.com 1
+</x-cmd>
+<x-tip>Add <code>--until="2026-12-31 18:00"</code> for access that ends on its own, or <code>--revoke</code> to remove it. Lock numbers (IDs) are shown on the Locks page.</x-tip>
+
+<h3 id="setup-workers">3.8 Start the background workers</h3>
+<p>LockGuard has three jobs that must keep running. Each gets its own window (or Windows service):</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Job</th><th>Command</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><b>API</b></td><td><code>php artisan serve --host=127.0.0.1 --port=8100</code></td><td>Answers the app's questions.</td></tr>
+<tr><td><b>Queue worker</b></td><td><code>php artisan queue:work --tries=1</code></td><td>Delivers lock commands and emails in the background.</td></tr>
+<tr><td><b>Scheduler</b></td><td><code>php artisan schedule:work</code></td><td>Every minute: expires stale commands and checks alerts. Every 5 minutes: syncs lock states. Daily: deletes old location data.</td></tr>
+<tr><td><b>Web app</b></td><td><code>npx vite preview</code> (in <code>frontend</code>)</td><td>Serves the built screens on port 4173 and passes <code>/api</code> to the API.</td></tr>
+</tbody></table></div>
+<x-cmd shell="PowerShell" where="D:\lockguard\backend">
+# Window 1
+php artisan serve --host=127.0.0.1 --port=8100
+# Window 2
+php artisan queue:work --tries=1
+# Window 3
+php artisan schedule:work
+</x-cmd>
+<x-cmd shell="PowerShell" where="D:\lockguard\frontend">
+# Window 4
+npx vite preview
+</x-cmd>
+<x-caution title="Restart the queue worker after updates">The queue worker keeps the old code in memory. After you update LockGuard, stop it (<kbd>Ctrl</kbd>+<kbd>C</kbd>) and start it again, or lock commands may behave like the old version.</x-caution>
+<x-term word="Port" tech="A numbered endpoint (0–65535) on a host that a network service listens on, e.g. 8100 for the API.">Like apartment numbers in one building. The computer is the building; each program lives at its own number.</x-term>
+
+<h3 id="setup-email">3.9 Set up email</h3>
+<p>Invitations are emails, so LockGuard needs an email account to send from. Sign in as Super Administrator and open <b>Settings → Email settings</b>.</p>
+<x-shot src="desk-email-settings.png" url="lockguard.example.com/settings/email" caption="<b>Email settings.</b> The Gmail button fills in the server, port and security for you."/>
+<ol class="steps">
+  <li><strong>Click a provider button</strong> (Gmail, Outlook / Microsoft 365 or SendGrid) to fill in the technical bits.</li>
+  <li><strong>Enter the username</strong> (usually your full email address) <strong>and password.</strong> For Gmail, use an <b>App Password</b>: Google Account → Security → 2-Step Verification → App passwords. Your normal Gmail password won't work.</li>
+  <li><strong>Enter the "From" address and name</strong> people will see, e.g. <code>DM LockGuard</code>.</li>
+  <li><strong>Tick "Send email through this server"</strong> and click <b>Save</b>. LockGuard asks for your password again to confirm it's you.</li>
+  <li><strong>Click "Send test email"</strong> and check your inbox (and spam folder).</li>
+</ol>
+<x-note>The email password is stored encrypted and is never shown again, not even to you. To change it, type a new one. To keep it, leave the box empty.</x-note>
+<x-term word="SMTP" tech="Simple Mail Transfer Protocol: the standard way programs hand outgoing email to a mail server, usually on port 587 (STARTTLS) or 465 (TLS).">The post office counter for email. LockGuard walks up, hands over the letter, and the mail server delivers it.</x-term>
+
+<h3 id="setup-https">3.10 Put it online (HTTPS)</h3>
+<p>To use LockGuard from phones outside your network, point a domain name at your server and put a <b>reverse proxy</b> with a free HTTPS certificate in front of port 4173. (The original installation uses Nginx Proxy Manager with Let's Encrypt.)</p>
+<ol class="steps">
+  <li><strong>DNS:</strong> create a record for <code>lockguard.example.com</code> pointing at your server's public address.</li>
+  <li><strong>Proxy:</strong> forward <code>https://lockguard.example.com</code> to <code>http://127.0.0.1:4173</code>, with a Let's Encrypt certificate and "Force SSL" on.</li>
+  <li><strong>Tell LockGuard its name:</strong> set <code>LOCKGUARD_PUBLIC_URL</code> and add the domain to <code>SANCTUM_STATEFUL_DOMAINS</code> in <code>backend\.env</code>. For the web app, set <code>LOCKGUARD_PUBLIC_HOSTS=lockguard.example.com</code> before running <code>npx vite preview</code>.</li>
+  <li><strong>Trust the proxy:</strong> list its address in <code>LOCKGUARD_TRUSTED_PROXIES</code> so LockGuard sees visitors' real addresses.</li>
+</ol>
+<x-term word="HTTPS / TLS certificate" tech="HTTP over TLS: traffic is encrypted, and a certificate signed by a trusted authority proves the server's identity.">The padlock in your browser bar. It means nobody in between can read or change what you send, and you're really talking to your server.</x-term>
+<x-alert title="Never expose the API or the bridge directly">Only the web app (port 4173, through the proxy) should face the internet. Keep the API (8100) and especially the bridge (8788) on <code>127.0.0.1</code>. The bridge can move real locks.</x-alert>
+
+<h3 id="setup-checklist">3.11 Launch checklist</h3>
+<p>Tick these off as you go. Your ticks are remembered on this computer.</p>
+<ul class="checklist">
+  <li><label><input type="checkbox"><span>PHP, Composer, MySQL, Node.js and Git installed</span></label></li>
+  <li><label><input type="checkbox"><span>Code downloaded and building blocks installed in all three folders</span></label></li>
+  <li><label><input type="checkbox"><span>Database created (<code>setup-mysql.ps1</code>) and <code>.env</code> reviewed</span></label></li>
+  <li><label><input type="checkbox"><span><code>key:generate</code> and <code>migrate --seed</code> run; <code>.env</code> backed up safely</span></label></li>
+  <li><label><input type="checkbox"><span>First Super Administrator created</span></label></li>
+  <li><label><input type="checkbox"><span>Web app built (<code>npm run build</code>)</span></label></li>
+  <li><label><input type="checkbox"><span>Second Eufy account shares the lock; Locked + Unlocked notifications on</span></label></li>
+  <li><label><input type="checkbox"><span>Bridge configured, same secret in both <code>.env</code> files, bridge running</span></label></li>
+  <li><label><input type="checkbox"><span>Property added, locks registered, commands turned on</span></label></li>
+  <li><label><input type="checkbox"><span>API, queue worker, scheduler and web app running</span></label></li>
+  <li><label><input type="checkbox"><span>Email settings saved and test email received</span></label></li>
+  <li><label><input type="checkbox"><span>Domain + HTTPS working from a phone on mobile data</span></label></li>
+  <li><label><input type="checkbox"><span>Two-step sign-in turned on for every administrator</span></label></li>
+  <li><label><input type="checkbox"><span>First test: lock and unlock while standing at the door</span></label></li>
+</ul>
+
+<h3 id="setup-settings">3.12 Settings reference</h3>
+<p>All in <code>backend\.env</code>. Change one, then restart the API and queue worker.</p>
+<div class="filter"><input type="search" data-filter="#settings-table" placeholder="Filter settings…" aria-label="Filter settings"></div>
+<div class="table-wrap"><table id="settings-table">
+<thead><tr><th>Setting</th><th>Default</th><th>What it controls</th></tr></thead>
+<tbody>
+<tr><td><code>LOCKGUARD_LOCK_DRIVER</code></td><td><code>unconfigured</code></td><td>How commands reach locks. <code>unconfigured</code> sends nothing (safe default), <code>fake</code> is a pretend lock for testing, <code>eufy_bridge</code> is real.</td></tr>
+<tr><td><code>LOCKGUARD_REMOTE_UNLOCK_POLICY</code></td><td><code>step_up</code></td><td>Remote unlocking: <code>standard</code>, <code>step_up</code> (re-enter password), <code>location_required</code>, or <code>disabled</code>.</td></tr>
+<tr><td><code>LOCKGUARD_STEP_UP_SECONDS</code></td><td><code>600</code></td><td>How long a "confirm it's you" check lasts (10 minutes).</td></tr>
+<tr><td><code>LOCKGUARD_CONFIRM_TIMEOUT_SECONDS</code></td><td><code>45</code></td><td>How long LockGuard waits for the lock to confirm before saying "unknown".</td></tr>
+<tr><td><code>LOCKGUARD_COMMAND_TTL_SECONDS</code></td><td><code>30</code></td><td>A command not sent within this time expires, so an old tap can't open the door later.</td></tr>
+<tr><td><code>LOCKGUARD_STATE_STALE_SECONDS</code></td><td><code>900</code></td><td>After 15 minutes without news, a lock's state is shown as "stale".</td></tr>
+<tr><td><code>LOCKGUARD_DEVICE_BINDING</code></td><td><code>true</code></td><td>One registered phone per person.</td></tr>
+<tr><td><code>LOCKGUARD_DEVICE_BINDING_EXEMPT_ROLES</code></td><td><code>super_administrator, security_administrator</code></td><td>Roles that may sign in from any device.</td></tr>
+<tr><td><code>LOCKGUARD_UNLOCK_REQUIRES_TRUSTED_DEVICE</code></td><td><code>false</code></td><td>If true, unlocking needs a device marked "Trusted". Locking never does.</td></tr>
+<tr><td><code>LOCKGUARD_INVITATION_DAYS</code></td><td><code>7</code></td><td>How long an invitation link works.</td></tr>
+<tr><td><code>LOCKGUARD_PUBLIC_URL</code></td><td>(your domain)</td><td>The address used in invitation emails.</td></tr>
+<tr><td><code>LOCKGUARD_LOCATION_RETENTION_DAYS</code></td><td><code>30</code></td><td>Location records older than this are deleted daily.</td></tr>
+<tr><td><code>LOCKGUARD_ALERT_FAILED_SIGN_INS</code></td><td><code>5</code> in <code>15</code> min</td><td>Wrong-password attempts that raise an alert.</td></tr>
+<tr><td><code>LOCKGUARD_ALERT_DENIED_REQUESTS</code></td><td><code>3</code> in <code>15</code> min</td><td>Refused lock requests that raise an alert.</td></tr>
+<tr><td><code>LOCKGUARD_ALERT_BATTERY_LOW_PERCENT</code></td><td><code>25</code> (critical <code>10</code>)</td><td>Battery levels that raise low and critical alerts.</td></tr>
+<tr><td><code>LOCKGUARD_NOTIFICATIONS_PER_HOUR</code></td><td><code>20</code></td><td>Cap on notifications per person per hour, so nobody gets spammed.</td></tr>
+<tr><td><code>LOCKGUARD_TRUSTED_PROXIES</code></td><td><code>127.0.0.1,::1</code></td><td>Proxies whose "real visitor address" header LockGuard believes.</td></tr>
+</tbody></table></div>
+
+<x-joke>There are 10 types of people in the world: those who understand binary, and those who don't.</x-joke>
+</x-chapter>

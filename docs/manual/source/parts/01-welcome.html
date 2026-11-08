@@ -1,0 +1,119 @@
+<x-chapter n="1" id="welcome" title="Welcome to DM LockGuard" sub="What it is, how it works, and the one promise it never breaks." ico="shield-check" c1="#0a6fe0" c2="#0d1f35">
+
+<p class="lead">DM LockGuard is a website and phone app that lets a building's owner decide <b>who</b> can open <b>which</b> door, <b>when</b>, and from <b>which phone</b>, and it writes down every single attempt.</p>
+
+<p>Think of it as a very organised, very honest security guard who never sleeps. The guard holds the master list of who's allowed in, checks every request, passes approved ones to the lock, and keeps a diary of everything that happened.</p>
+
+<h3 id="what-it-does">What LockGuard does</h3>
+<div class="grid g3">
+  <div class="card"><h4>{i:lock} Locks &amp; unlocks</h4><p>Open or lock your doors from a phone or computer. Works with the <b>Eufy Smart Lock C30</b> (model T85D0).</p></div>
+  <div class="card"><h4>{i:users} Manages people</h4><p>Seven ready-made roles, from the all-powerful Super Administrator to a cleaner who only gets Tuesdays.</p></div>
+  <div class="card"><h4>{i:smartphone} Ties people to phones</h4><p>Each person registers <b>one</b> phone. A stolen password alone can't open your door.</p></div>
+  <div class="card"><h4>{i:mail-plus} Invites &amp; trains</h4><p>Send an email invitation; Pip the paperclip teaches the newcomer before their phone works.</p></div>
+  <div class="card"><h4>{i:siren} Watches for trouble</h4><p>Repeated wrong passwords, jammed locks, low batteries and lost phones raise alerts.</p></div>
+  <div class="card"><h4>{i:scroll-text} Keeps a diary</h4><p>A tamper-evident audit log records who did what, when, and from where.</p></div>
+</div>
+
+<figure class="photo"><img src="img/photos/building.jpg" alt="A building entrance with glass doors at sunset" loading="lazy"></figure>
+<figcaption>One building, many doors, many people: exactly the job LockGuard was made for. <span class="small">Photo: benjamin lehman on Unsplash</span></figcaption>
+
+<h3 id="how-it-works">How it works: the big picture</h3>
+<p>When you tap <b>Unlock</b> on your phone, the request takes a short trip. Your phone never talks to the lock directly, and it never sees the Eufy password. Everything goes through LockGuard, which checks you first.</p>
+
+<div class="diagram" role="img" aria-label="Diagram: your phone sends a request to the LockGuard server, which checks it, then passes it to the Eufy bridge, the Eufy cloud and finally the lock. The lock reports back the same way.">
+<svg viewBox="0 0 980 330">
+  <defs>
+    <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#087fff"/></marker>
+    <marker id="arrowhead-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#20d990"/></marker>
+  </defs>
+  <g font-size="15">
+    <rect class="box" x="10" y="90" width="150" height="120" rx="16"/>
+    <text x="85" y="135" text-anchor="middle" font-weight="700">📱 Your phone</text>
+    <text x="85" y="160" text-anchor="middle" class="muted" font-size="13">or computer</text>
+    <text x="85" y="182" text-anchor="middle" class="muted" font-size="13">(the "client")</text>
+
+    <rect x="215" y="40" width="250" height="220" rx="18" fill="#087fff" opacity=".12" stroke="#087fff"/>
+    <text x="340" y="72" text-anchor="middle" font-weight="800" fill="#087fff">🛡️ LockGuard server</text>
+    <text x="340" y="104" text-anchor="middle" font-size="14">1. Who are you? (sign-in)</text>
+    <text x="340" y="132" text-anchor="middle" font-size="14">2. Right phone? (device)</text>
+    <text x="340" y="160" text-anchor="middle" font-size="14">3. Allowed? (role + access)</text>
+    <text x="340" y="188" text-anchor="middle" font-size="14">4. Right time? (schedule)</text>
+    <text x="340" y="216" text-anchor="middle" font-size="14">5. Write it in the diary</text>
+    <text x="340" y="244" text-anchor="middle" font-size="12" class="muted">the "backend" + "API"</text>
+
+    <rect class="box" x="520" y="90" width="130" height="120" rx="16"/>
+    <text x="585" y="135" text-anchor="middle" font-weight="700">🌉 Eufy bridge</text>
+    <text x="585" y="160" text-anchor="middle" class="muted" font-size="13">translator</text>
+    <text x="585" y="180" text-anchor="middle" class="muted" font-size="13">(on the server)</text>
+
+    <rect class="box" x="700" y="90" width="120" height="120" rx="16"/>
+    <text x="760" y="135" text-anchor="middle" font-weight="700">☁️ Eufy cloud</text>
+    <text x="760" y="160" text-anchor="middle" class="muted" font-size="13">on the internet</text>
+
+    <rect class="box" x="860" y="90" width="110" height="120" rx="16"/>
+    <text x="915" y="135" text-anchor="middle" font-weight="700">🔒 Lock</text>
+    <text x="915" y="160" text-anchor="middle" class="muted" font-size="13">on your door</text>
+
+    <path class="arrow" d="M162 130 H212"/>
+    <path class="arrow" d="M468 130 H517"/>
+    <path class="arrow" d="M653 130 H697"/>
+    <path class="arrow" d="M823 130 H857"/>
+    <path d="M915 214 V300 H85 V214" fill="none" stroke="#20d990" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#arrowhead-red)"/>
+    <text x="500" y="292" text-anchor="middle" font-size="14" fill="#0f8a5a" font-weight="700">The lock reports back: "I'm locked now." Only then does your screen say Locked.</text>
+    <text x="187" y="118" text-anchor="middle" font-size="12" class="muted">request</text>
+  </g>
+</svg>
+</div>
+
+<x-term word="Server" tech="A computer that runs software 24/7 and answers requests from other devices (clients) over a network.">The always-on computer that runs LockGuard. Your phone asks it questions; it answers.</x-term>
+<x-term word="Backend / API" tech="The server-side application logic, exposed through an Application Programming Interface: a set of web addresses (endpoints) that accept requests and return JSON data.">The "brain" in the back room. The app you see is the front desk; the backend is where decisions are made. The API is the hatch they pass notes through.</x-term>
+<x-term word="Bridge" tech="A small Node.js service that holds the Eufy account session and translates LockGuard's commands into the Eufy cloud protocol (MQTT/HTTP).">A translator. LockGuard speaks "LockGuard", Eufy speaks "Eufy". The bridge speaks both.</x-term>
+<x-term word="Cloud" tech="Servers operated by a provider (here, Eufy/Anker) and reached over the internet.">Someone else's computer, far away. The Eufy cloud relays messages to your lock.</x-term>
+
+<h3 id="honest-promise">The one promise: LockGuard never fibs about your door</h3>
+<p>A lot of apps show "Unlocked!" the moment you tap the button. LockGuard doesn't. It shows <span class="pill info">Unlocking…</span> while the command travels, and switches to <span class="pill warn">{i:lock-open} Unlocked</span> <b>only after the lock itself reports it</b>. If the lock goes quiet, LockGuard says <span class="pill grey">{i:shield-alert} State unknown</span> rather than guessing.</p>
+
+<x-alert title="If it says &quot;unknown&quot;, check the door with your eyes">"Unknown" means the lock hasn't confirmed anything recently. It might be locked, it might not. Never assume. Go and look, or ask someone nearby. Then try again.</x-alert>
+
+<x-joke>I asked the lock if it was open. It said, "I'd rather not disclose that until I've confirmed it." Very secure. Very annoying at parties.</x-joke>
+
+<h3 id="what-it-doesnt">What LockGuard does <em>not</em> do (yet)</h3>
+<div class="card cant"><ul class="crosses">
+  <li>It doesn't work with other lock brands. Today it supports the Eufy Smart Lock C30 (T85D0).</li>
+  <li>It doesn't manage the keypad codes stored <em>inside</em> the lock. It keeps records about codes, but changing the real code is done in the Eufy app.</li>
+  <li>Proximity ("walk up and it opens") unlocking isn't available yet, and no role includes it.</li>
+  <li>Building-wide "lockdown" holds are not implemented yet.</li>
+</ul></div>
+
+</x-chapter>
+
+<x-chapter n="2" id="quick-start" title="Quick start" sub="Up and running in about ten minutes." ico="sparkles" c1="#0f8a5a" c2="#0d1f35">
+
+<p class="lead">Pick the path that matches you.</p>
+
+<h3 id="quick-user">If someone invited you</h3>
+<ol class="steps">
+  <li><strong>Open the email</strong> called "You're invited to DM LockGuard" and tap <b>Accept Invitation</b>. Use the phone you'll open doors with.</li>
+  <li><strong>Create your account.</strong> Your email is already filled in. Choose a password of at least 12 characters with letters and numbers.</li>
+  <li><strong>Do the training with Pip.</strong> Seven short lessons. Each one has a "Your turn" task; the Next button wakes up when you finish it.</li>
+  <li><strong>Pass the quiz.</strong> Five questions, and you need all five right. Miss one? Pip gives a hint and you try again. No limit, no shame.</li>
+  <li><strong>Register your phone.</strong> Enter your password once more. Done. Your phone is now your key.</li>
+</ol>
+<div class="phones">
+  <x-shot src="invite-1-welcome-390.png" frame="tall" caption="Step 1: Pip says hello"/>
+  <x-shot src="invite-4-practice-390.png" frame="tall" caption="Step 3: practise on a pretend door"/>
+  <x-shot src="invite-6-done-390.png" frame="tall" caption="Step 5: you did it!"/>
+</div>
+<x-tip>If you were given a <b>registration code</b> instead of an email (it looks like <code>PZZE-R4CQ</code>), sign in on your phone and type it when asked. It works once and expires.</x-tip>
+
+<h3 id="quick-admin">If you're setting LockGuard up</h3>
+<ol class="steps">
+  <li><strong>Install it</strong> on a Windows or Linux server: see <a href="#setup">Chapter 3</a>. Allow an afternoon the first time.</li>
+  <li><strong>Create the first Super Administrator</strong> with <code>php artisan lockguard:create-admin</code>.</li>
+  <li><strong>Connect your Eufy account</strong> through the bridge and register your locks.</li>
+  <li><strong>Set up email</strong> under <b>Settings → Email settings</b> so invitations can be delivered.</li>
+  <li><strong>Invite people</strong> under <b>Access management → Invitations</b>, then give each person access to the right locks on their user page.</li>
+</ol>
+
+<x-joke>Setting up a security system is like making a sandwich. Skip a layer and things get messy, and somebody else ends up eating it.</x-joke>
+</x-chapter>
