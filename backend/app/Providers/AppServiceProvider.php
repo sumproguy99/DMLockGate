@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -43,6 +44,12 @@ class AppServiceProvider extends ServiceProvider
         TrustProxies::withHeaders(Request::HEADER_X_FORWARDED_FOR);
 
         RateLimiter::for('lock-commands', fn (Request $request): Limit => Limit::perMinute(10)->by((string) ($request->user()?->id ?? $request->ip())));
+        // Asking for reset links: a few a minute from one address, and a few an hour for one email,
+        // so nobody can flood a mailbox or use LockGuard to spam someone.
+        RateLimiter::for('password-reset-request', fn (Request $request): array => [
+            Limit::perMinute(5)->by('ip:'.$request->ip()),
+            Limit::perHour(5)->by('email:'.Str::lower(trim((string) $request->input('email')))),
+        ]);
 
         foreach (PermissionKey::cases() as $permission) {
             Gate::define(

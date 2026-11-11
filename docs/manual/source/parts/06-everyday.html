@@ -21,6 +21,15 @@
 <x-term word="Two-factor authentication (2FA / MFA)" tech="Authentication using two independent factors: something you know (password) and something you have (a device generating time-based one-time passwords, TOTP).">A second lock on your account. Even if someone learns your password, they still need the code that only your phone can make, and it changes every 30 seconds.</x-term>
 <x-alert title="Recovery codes are as powerful as your password">Don't screenshot them into your photo album, and don't email them to yourself. If you use one, the Security Administrator is told, in case it wasn't you.</x-alert>
 
+<h3 id="howto-forgot">Forgot your password?</h3>
+<ol class="steps">
+  <li><strong>On the sign-in page, tap "Forgot your password?"</strong> and type the email of your LockGuard account.</li>
+  <li><strong>Open the email</strong> "Reset your DM LockGuard password" and tap <b>Choose a new password</b>. The link works once, for an hour. Check spam if it isn't there after a few minutes.</li>
+  <li><strong>Pick a new password</strong>: at least 12 characters, with letters and numbers, and not the one you had.</li>
+  <li><strong>Sign in again</strong> on your registered phone. A reset signs you out everywhere, and you get a "password was changed" email.</li>
+</ol>
+<x-note>The page always says a link is on its way, even for an address LockGuard doesn't know, so nobody can use it to find out who has an account. A reset never skips the other locks: you still need your registered phone and, if you use it, your authenticator code. Suspended accounts, accounts still doing their invitation training, and the kiosk account can't reset this way: ask your administrator. Got a "password was changed" email you didn't expect? Tell your administrator straight away.</x-note>
+
 <h3 id="howto-stepup">"Confirm it's you" (step-up)</h3>
 <p>Before risky actions (unlocking remotely, sending an invitation, changing settings) LockGuard may ask for your password or code again, even though you're already signed in. That proof lasts about 10 minutes.</p>
 <x-term word="Step-up authentication" tech="Re-verifying a signed-in user's identity immediately before a sensitive operation, raising the session's assurance level for a short period.">Like a cashier asking for ID only when you buy something expensive. You're already in the shop; this is just for the big stuff.</x-term>
@@ -50,7 +59,7 @@ php artisan lockguard:device-code riley@example.com
 <ol style="margin:6px 0 0;padding-left:20px">
 <li>From any computer, sign in and use <b>Sign out everywhere else</b>, or call your Property Manager or Security Administrator.</li>
 <li>Ask them to <b>Report lost</b> / <b>Revoke device</b> on that phone. It stops working immediately, and any attempt to use it raises an alert.</li>
-<li>Change your password (ask your administrator) if the phone wasn't locked with a PIN.</li>
+<li>Change your password with <a href="#howto-forgot">Forgot your password?</a> on the sign-in page if the phone wasn't locked with a PIN.</li>
 <li>Get a registration code for your new phone.</li>
 </ol>
 </x-alert>

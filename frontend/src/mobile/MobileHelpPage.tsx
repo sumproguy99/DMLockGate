@@ -84,7 +84,8 @@ export function MobileHelpPage() {
           </details>
         ))}
         <p className="mt-2 text-caption text-text-muted">
-          Forgot your password or lost your authenticator? Ask your LockGuard administrator.
+          Forgot your password? Use "Forgot your password?" on the sign-in page to get a reset link by email. Lost your
+          authenticator? Ask your LockGuard administrator.
         </p>
       </div>
     </>

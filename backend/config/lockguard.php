@@ -202,6 +202,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Password reset
+    |--------------------------------------------------------------------------
+    |
+    | minutes: how long an emailed reset link works. Each link works once, and asking again
+    | replaces the earlier link. The link is {invitations.public_url}/reset-password#...
+    |
+    */
+
+    'password_reset' => [
+        'minutes' => (int) env('LOCKGUARD_PASSWORD_RESET_MINUTES', 60),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Trusted proxies
     |--------------------------------------------------------------------------
     |

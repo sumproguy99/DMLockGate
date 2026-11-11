@@ -1,6 +1,6 @@
 import { LogIn } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
-import { Navigate, useLocation } from 'react-router'
+import { Link, Navigate, useLocation } from 'react-router'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/auth-context'
 import { BrandLogo } from '../components/brand/BrandLogo'
@@ -47,7 +47,10 @@ export function LoginPage() {
           {state.status === 'mfa_required' ? <MfaStep /> : <PasswordStep notice={state.status === 'signed_out' ? state.notice : undefined} />}
         </div>
         <p className="mt-6 text-center text-caption text-text-muted">
-          Forgot your password or lost your authenticator? Ask your LockGuard administrator.
+          <Link to="/forgot-password" className="font-semibold text-primary-text hover:underline">
+            Forgot your password?
+          </Link>{' '}
+          Lost your authenticator? Ask your LockGuard administrator.
         </p>
       </div>
     </main>

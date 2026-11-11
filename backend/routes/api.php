@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\Auth\MfaChallengeController;
 use App\Http\Controllers\Api\V1\Auth\MfaController;
 use App\Http\Controllers\Api\V1\Auth\OwnDeviceController;
 use App\Http\Controllers\Api\V1\Auth\OwnSessionController;
+use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
 use App\Http\Controllers\Api\V1\Location\LocationMapController;
 use App\Http\Controllers\Api\V1\Location\LocationRequestController;
@@ -39,6 +40,10 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::post('auth/login', [SessionController::class, 'store'])->name('auth.login');
     Route::post('auth/mfa/verify', MfaChallengeController::class)->name('auth.mfa.verify');
+
+    // Forgotten password, signed out: an emailed one-time link, then a new password.
+    Route::post('auth/password/forgot', [PasswordResetController::class, 'request'])->middleware('throttle:password-reset-request')->name('auth.password.forgot');
+    Route::post('auth/password/reset', [PasswordResetController::class, 'reset'])->middleware('throttle:10,1')->name('auth.password.reset');
 
     // Accepting an invitation, signed out: the link's token is the credential. Creating the account,
     // the training lessons, the quiz, then registering the device (which needs the password and signs in).

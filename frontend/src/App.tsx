@@ -15,6 +15,7 @@ import { LockDetailPage } from './pages/locks/LockDetailPage'
 import { LocksPage } from './pages/locks/LocksPage'
 import { PropertiesPage } from './pages/locks/PropertiesPage'
 import { LoginPage } from './pages/LoginPage'
+import { ForgotPasswordPage, ResetPasswordPage } from './pages/PasswordResetPages'
 import { MobileAccountPage } from './mobile/MobileAccountPage'
 import { MobileActivityPage } from './mobile/MobileActivityPage'
 import { MobileDevicesPage } from './mobile/MobileDevicesPage'
@@ -103,6 +104,9 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      {/* Forgotten password, signed out: the emailed link's token is the credential. */}
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       {/* Accepting an invitation works signed out: the link's token is the credential. */}
       <Route path="/invite/:token" element={<InvitationPage />} />
       {ComponentGallery && (

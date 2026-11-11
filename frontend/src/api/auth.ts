@@ -45,6 +45,25 @@ export async function confirmIdentity(input: { password: string; code?: string }
   await api<unknown>('/auth/confirm', { method: 'POST', body: input })
 }
 
+/** Forgotten password: the answer is the same whether or not the account exists. */
+export async function requestPasswordReset(email: string): Promise<{ message: string }> {
+  const { data } = await api<{ data: { status: 'requested'; message: string } }>('/auth/password/forgot', {
+    method: 'POST',
+    body: { email },
+  })
+  return data
+}
+
+/** Sets a new password with the emailed link. It signs out everywhere and does not sign in. */
+export async function resetPassword(input: {
+  email: string
+  token: string
+  password: string
+  password_confirmation: string
+}): Promise<void> {
+  await api<unknown>('/auth/password/reset', { method: 'POST', body: input })
+}
+
 export async function logout(): Promise<void> {
   await api<void>('/auth/logout', { method: 'POST' })
 }

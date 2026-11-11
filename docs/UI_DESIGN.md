@@ -121,7 +121,7 @@ All in `frontend/src/components`. Presentation only: no component calls the API 
   - Empty fields are caught before anything is sent.
   - The backend's field errors show under their fields.
   - Other errors (rate limit, inactive account, network) show in a banner.
-- **Account recovery:** there's no self-service recovery yet, and the page says to ask an administrator.
+- **Forgot password:** a link under the form opens `/forgot-password` (email in, the same answer for every address). The emailed link opens `/reset-password#token=…&email=…`; the page reads the token from the `#` part, removes it from the address bar, and sets the new password (12+ characters, letters and numbers, confirmed). Success says the person was signed out everywhere and links to sign-in. An expired or used link offers a new one. Lost authenticators still go to an administrator.
 
 **Session** (`src/auth/`, `src/api/client.ts`):
 - **Cookies only:** Sanctum's session cookie and its CSRF cookie. No token is stored in the browser.
@@ -357,7 +357,6 @@ Checked on 2026-10-21 against project.md 34.14 and 34.15:
 - Geofences and proximity detection. Locations are collected only for the location map (see Location map and location requests).
 - Push and email notifications, and per-person notification preferences (built since: Security Center, incidents, stored notifications with read status, the notification center; see Security alerts, incidents and notifications).
 - Global search, editable settings (they live in `.env`), role editing, lockdown, and dashboard widget customization.
-- Self-service password recovery; the sign-in page says to ask an administrator.
 
 **Other limitations:**
 - No transparent or vector logo exists; the blend mode stands in (see Branding assets).
