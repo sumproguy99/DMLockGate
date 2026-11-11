@@ -7,6 +7,7 @@ use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Services\Audit\AuditLogger;
 use App\Services\Auth\RecoveryCodes;
+use App\Services\Auth\SecurityPolicy;
 use App\Services\Auth\TotpAuthenticator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,6 +24,7 @@ class MfaController extends Controller
         private readonly TotpAuthenticator $totp,
         private readonly RecoveryCodes $recoveryCodes,
         private readonly AuditLogger $audit,
+        private readonly SecurityPolicy $policy,
     ) {}
 
     /**
@@ -78,20 +80,22 @@ class MfaController extends Controller
     }
 
     /**
-     * Remove the authenticator app.
+     * Remove the authenticator app, for example to move to a new phone. When the user's role must use
+     * two-step sign-in, they can do nothing else until they have set up a new one (EnsureMfaIsEnrolled).
      */
     public function destroy(Request $request): Response
     {
         $user = $request->user();
+        $required = $this->policy->requiresMfa($user);
 
-        DB::transaction(function () use ($user): void {
+        DB::transaction(function () use ($user, $required): void {
             $user->forceFill([
                 'mfa_secret' => null,
                 'mfa_confirmed_at' => null,
                 'mfa_recovery_codes' => null,
                 'mfa_last_used_step' => null,
             ])->save();
-            $this->audit->record('auth.mfa_disabled', AuditOutcome::Success, actor: $user, targets: ['user' => $user->id]);
+            $this->audit->record('auth.mfa_disabled', AuditOutcome::Success, actor: $user, targets: ['user' => $user->id], metadata: $required ? ['mfa_setup_required' => true] : []);
         });
 
         return response()->noContent();

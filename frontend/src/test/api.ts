@@ -44,6 +44,8 @@ export function makeUser(overrides: Partial<CurrentUser> = {}): CurrentUser {
     status: 'active',
     account_expires_at: null,
     mfa_enabled: false,
+    mfa_required: false,
+    mfa_setup_required: false,
     last_login_at: null,
     roles: [{ key: 'owner', name: 'Owner' }],
     permissions: [],

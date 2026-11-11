@@ -18,5 +18,7 @@ export LOCKGUARD_CONFIRM_TIMEOUT_SECONDS=8
 export LOCKGUARD_CONFIRM_POLL_SECONDS=1
 # The existing checks sign in residents and guests on fresh browsers; binding has its own tests.
 export LOCKGUARD_DEVICE_BINDING=false
+# The checks sign in the administrator without an authenticator; the policy has its own tests.
+export LOCKGUARD_MFA_REQUIRED_ROLES=
 export LOG_CHANNEL=stderr
 export LOG_STACK=stderr

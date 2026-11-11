@@ -39,6 +39,7 @@ import { SystemHealthPage } from './pages/security/SystemHealthPage'
 import { InvitationPage } from './pages/invitation/InvitationPage'
 import { EmailSettingsPage } from './pages/settings/EmailSettingsPage'
 import { NotificationSettingsPage } from './pages/settings/NotificationSettingsPage'
+import { SecurityPolicyPage } from './pages/settings/SecurityPolicyPage'
 import { InvitationsPage } from './pages/users/InvitationsPage'
 import { NewUserPage } from './pages/users/NewUserPage'
 import { RolesPage } from './pages/users/RolesPage'
@@ -233,6 +234,14 @@ export function AppRoutes() {
           element={
             <RequirePermission permissions={['admin.notifications']}>
               <NotificationSettingsPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="settings/security"
+          element={
+            <RequirePermission permissions={['admin.security_policies']}>
+              <SecurityPolicyPage />
             </RequirePermission>
           }
         />

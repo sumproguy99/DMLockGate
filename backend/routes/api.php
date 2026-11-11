@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\V1\Security\SecurityIncidentController;
 use App\Http\Controllers\Api\V1\System\DashboardController;
 use App\Http\Controllers\Api\V1\System\EmailSettingsController;
 use App\Http\Controllers\Api\V1\System\NotificationSettingsController;
+use App\Http\Controllers\Api\V1\System\SecurityPolicyController;
 use App\Http\Controllers\Api\V1\System\SystemHealthController;
 use App\Http\Controllers\Api\V1\Users\InvitationController;
 use App\Http\Controllers\Api\V1\Users\PermissionPreviewController;
@@ -58,7 +59,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('device', [AcceptInvitationController::class, 'device'])->name('device');
     });
 
-    Route::middleware(['auth:sanctum', 'active', 'device'])->group(function (): void {
+    Route::middleware(['auth:sanctum', 'active', 'device', 'mfa-enrolled'])->group(function (): void {
         Route::post('auth/logout', [SessionController::class, 'destroy'])->name('auth.logout');
         Route::get('auth/me', CurrentUserController::class)->name('auth.me');
         Route::post('auth/confirm', ConfirmIdentityController::class)->name('auth.confirm');
@@ -140,6 +141,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         // Notification settings: the limits for everyone's preferences, and recent alert email deliveries.
         Route::get('settings/notifications', [NotificationSettingsController::class, 'show'])->name('settings.notifications.show');
         Route::put('settings/notifications', [NotificationSettingsController::class, 'update'])->middleware('step-up')->name('settings.notifications.update');
+        // Security policy: which roles must use two-step sign-in (admin.security_policies).
+        Route::get('settings/security', [SecurityPolicyController::class, 'show'])->name('settings.security.show');
+        Route::put('settings/security', [SecurityPolicyController::class, 'update'])->middleware('step-up')->name('settings.security.update');
         Route::post('settings/email/test', [EmailSettingsController::class, 'test'])->middleware('throttle:6,1')->name('settings.email.test');
 
         // Suspension is deliberately not behind step-up so an administrator can cut off access at once.

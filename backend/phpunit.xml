@@ -38,5 +38,6 @@
         <env name="LOCKGUARD_BRIDGE_SECRET" value=""/>
         <!-- Device binding is covered by DeviceBindingTest, which turns it on. -->
         <env name="LOCKGUARD_DEVICE_BINDING" value="false"/>
+        <env name="LOCKGUARD_MFA_REQUIRED_ROLES" value=""/>
     </php>
 </phpunit>

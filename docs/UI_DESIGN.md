@@ -117,6 +117,8 @@ All in `frontend/src/components`. Presentation only: no component calls the API 
 **Sign-in** (`src/pages/LoginPage.tsx`, project.md 34.6 A):
 - **Fields:** email (the backend signs in by email only, not username) and password, with a show/hide toggle.
 - **Two-step verification:** when the account has MFA, the next step asks for the authenticator code, or a recovery code instead. "Start over" returns to the email and password step.
+- **Two-step sign-in required by role:** when `mfa_setup_required` is true (the user's role must use it and they have no authenticator), `RequireAuth` shows `MfaSetupRequired` instead of either shell, at any address: the logo, why, the shared `TwoStepCard` (identity check, `otpauth://` link and key, code, recovery codes) and Sign out. "I have saved them" re-reads the user and the app opens. A 403 `mfa_setup_required` on any request mid-session switches to the same screen (`onMfaSetupRequired` in the API client). For a required role, Account security offers **Move to a new phone** instead of **Remove authenticator app**; confirming removes it and goes straight to setup.
+- **Security policy** (`/settings/security`, Settings > Security policy, `admin.security_policies`): a checkbox per role with how many members have no authenticator yet, saved after an identity check. It warns when no administrator role is left required, says how many people will be asked to set it up, and when the change includes the signed-in administrator, the setup screen takes over after saving. The user list shows "Required, not set up" in the Two-step column, and the user page says when it is required for their role.
 - **Errors:**
   - Empty fields are caught before anything is sent.
   - The backend's field errors show under their fields.

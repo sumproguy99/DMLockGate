@@ -14,11 +14,12 @@
 <ol class="steps">
   <li><strong>Install an authenticator app</strong> on your phone: Google Authenticator, Microsoft Authenticator, 1Password, Authy… any will do.</li>
   <li><strong>In LockGuard, open the Account page</strong> (phone: <b>More → Account</b>) and choose <b>Two-step verification</b>.</li>
-  <li><strong>Scan the QR code</strong> with the authenticator app, or type the key shown under it.</li>
+  <li><strong>Tap Open in authenticator app</strong> on the phone, or type the key shown into the app.</li>
   <li><strong>Type the 6-digit code</strong> the app shows, and confirm your password.</li>
   <li><strong>Save your recovery codes</strong> somewhere safe (a password manager or printed in a drawer). Each one works once if you lose your phone. They're shown only once.</li>
 </ol>
 <x-term word="Two-factor authentication (2FA / MFA)" tech="Authentication using two independent factors: something you know (password) and something you have (a device generating time-based one-time passwords, TOTP).">A second lock on your account. Even if someone learns your password, they still need the code that only your phone can make, and it changes every 30 seconds.</x-term>
+<x-note>Some roles must use two-step sign-in (administrators, to start with). If yours does, LockGuard asks you to set it up straight after you sign in, and you can't remove it. Got a new phone? Choose <b>Move to a new phone</b> on the Account page, then set up the new phone straight away.</x-note>
 <x-alert title="Recovery codes are as powerful as your password">Don't screenshot them into your photo album, and don't email them to yourself. If you use one, the Security Administrator is told, in case it wasn't you.</x-alert>
 
 <h3 id="howto-forgot">Forgot your password?</h3>

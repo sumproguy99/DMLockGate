@@ -49,6 +49,17 @@ export function onUnauthenticated(listener: Listener): () => void {
   return () => unauthenticatedListeners.delete(listener)
 }
 
+const mfaSetupListeners = new Set<Listener>()
+
+/**
+ * Called when a request is refused because the account must set up two-step sign-in first
+ * (mfa_setup_required), for example after an administrator required it for the user's role.
+ */
+export function onMfaSetupRequired(listener: Listener): () => void {
+  mfaSetupListeners.add(listener)
+  return () => mfaSetupListeners.delete(listener)
+}
+
 function readCookie(name: string): string | null {
   const match = document.cookie.split('; ').find((part) => part.startsWith(`${name}=`))
   return match ? decodeURIComponent(match.slice(name.length + 1)) : null
@@ -141,6 +152,9 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     const error = await toError(response)
     if ((error.status === 401 && !options.quiet401) || SESSION_ENDING_CODES.has(error.code)) {
       unauthenticatedListeners.forEach((listener) => listener(error))
+    }
+    if (error.code === 'mfa_setup_required') {
+      mfaSetupListeners.forEach((listener) => listener(error))
     }
     throw error
   }

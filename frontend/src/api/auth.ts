@@ -9,6 +9,10 @@ export type CurrentUser = {
   status: string | null
   account_expires_at: string | null
   mfa_enabled: boolean
+  /** The user's role must use two-step sign-in (Settings > Security policy). */
+  mfa_required: boolean
+  /** Required but not set up yet: until it is, the server refuses everything but setting it up. */
+  mfa_setup_required: boolean
   last_login_at: string | null
   roles: Array<{ key: string; name: string }>
   permissions: string[]

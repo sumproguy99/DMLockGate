@@ -586,7 +586,14 @@
 
 <h4>How to: check the audit log hasn't been tampered with</h4>
 <div class="cmd"><div class="cmd-bar"><span class="dots"><i></i><i></i><i></i></span><span><svg class="i" aria-hidden="true"><use href="#i-terminal"/></svg> PowerShell</span><span class="where">in backend</span><button class="copy" type="button" aria-label="Copy command"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg><span>Copy</span></button></div><pre><code><span class="ln" data-p="PS>">php artisan lockguard:audit-verify</span></code></pre></div>
-<aside class="callout tip"><div class="ico"><svg class="i" aria-hidden="true"><use href="#i-lightbulb"/></svg></div><div class="label">Tech tip</div><div class="body">Turn on two-step sign-in for yourself first thing: open the Account page (on a phone <b>More → Account</b>; on a computer go to <code>/m/account</code>) and choose <b>Two-step verification</b>. A Super Administrator account without it is a very attractive target.</div></aside>
+<aside class="callout tip"><div class="ico"><svg class="i" aria-hidden="true"><use href="#i-lightbulb"/></svg></div><div class="label">Tech tip</div><div class="body">Super Administrators and Security Administrators must use two-step sign-in. The first time you sign in without it, LockGuard shows only <b>Set up two-step sign-in</b> until you have done it. A Super Administrator account without it is a very attractive target.</div></aside>
+<h4 id="howto-security-policy">How to: choose which roles need two-step sign-in</h4>
+<ol class="steps">
+  <li><strong>Open Settings → Security policy.</strong> Each role shows how many people have it and how many have not set up two-step sign-in.</li>
+  <li><strong>Tick the roles</strong> that must use it. Super Administrator and Security Administrator are ticked to start with.</li>
+  <li><strong>Save</strong> and confirm your identity. Anyone in a newly ticked role without an authenticator app is asked to set one up the next time they use LockGuard, and can do nothing else until they have.</li>
+</ol>
+<aside class="callout caution"><div class="ico"><svg class="i" aria-hidden="true"><use href="#i-triangle-alert"/></svg></div><div class="label">Caution</div><div class="body"><span class="title">Lost phone and lost recovery codes</span>An administrator can't reset someone else's authenticator from the app yet. If a person in a required role loses both their phone and their recovery codes, it has to be cleared in the database; they then set up a new one at their next sign-in.</div></aside>
 <aside class="callout joke"><div class="ico"><svg class="i" aria-hidden="true"><use href="#i-laugh"/></svg></div><div class="label">Byte-sized humor</div><div class="body">With great power comes great responsibility, and about 47 notification emails a day.</div></aside>
 
 <!-- ======================= SECURITY ADMINISTRATOR ======================= -->
@@ -884,11 +891,12 @@
 <ol class="steps">
   <li><strong>Install an authenticator app</strong> on your phone: Google Authenticator, Microsoft Authenticator, 1Password, Authy… any will do.</li>
   <li><strong>In LockGuard, open the Account page</strong> (phone: <b>More → Account</b>) and choose <b>Two-step verification</b>.</li>
-  <li><strong>Scan the QR code</strong> with the authenticator app, or type the key shown under it.</li>
+  <li><strong>Tap Open in authenticator app</strong> on the phone, or type the key shown into the app.</li>
   <li><strong>Type the 6-digit code</strong> the app shows, and confirm your password.</li>
   <li><strong>Save your recovery codes</strong> somewhere safe (a password manager or printed in a drawer). Each one works once if you lose your phone. They're shown only once.</li>
 </ol>
 <div class="term"><div class="tech"><b><svg class="i" aria-hidden="true"><use href="#i-cpu"/></svg> Tech talk</b><span class="word">Two-factor authentication (2FA / MFA)</span><p>Authentication using two independent factors: something you know (password) and something you have (a device generating time-based one-time passwords, TOTP).</p></div><div class="plain"><b><svg class="i" aria-hidden="true"><use href="#i-book-open"/></svg> Plain talk</b><p>A second lock on your account. Even if someone learns your password, they still need the code that only your phone can make, and it changes every 30 seconds.</p></div></div>
+<aside class="callout note"><div class="ico"><svg class="i" aria-hidden="true"><use href="#i-info"/></svg></div><div class="label">Good to know</div><div class="body">Some roles must use two-step sign-in (administrators, to start with). If yours does, LockGuard asks you to set it up straight after you sign in, and you can't remove it. Got a new phone? Choose <b>Move to a new phone</b> on the Account page, then set up the new phone straight away.</div></aside>
 <aside class="callout alert" role="note"><div class="ico"><svg class="i" aria-hidden="true"><use href="#i-octagon-alert"/></svg></div><div class="label">Alert</div><div class="body"><span class="title">Recovery codes are as powerful as your password</span>Don't screenshot them into your photo album, and don't email them to yourself. If you use one, the Security Administrator is told, in case it wasn't you.</div></aside>
 
 <h3 data-toc id="howto-forgot">Forgot your password?</h3>
@@ -1288,6 +1296,7 @@
 <tr><td><code>lock_not_registered</code></td><td>denied</td><td>The lock isn't registered for use.</td><td>An administrator registers it.</td></tr>
 <tr><td><code>mfa_already_enabled</code></td><td>409</td><td>An authenticator app is already set up.</td><td>Remove it first to add a new one.</td></tr>
 <tr><td><code>mfa_enrollment_not_started</code></td><td>409</td><td>You confirmed before starting setup.</td><td>Start two-step setup again.</td></tr>
+<tr><td><code>mfa_setup_required</code></td><td>403</td><td>Your role must use two-step sign-in and you haven't set it up.</td><td>Follow the Set up two-step sign-in screen.</td></tr>
 <tr><td><code>mfa_session_expired</code></td><td>401</td><td>Too slow typing the 6-digit code.</td><td>Enter email and password again.</td></tr>
 <tr><td><code>no_lock_access</code></td><td>denied</td><td>You haven't been given this door.</td><td>Ask a Property Manager for access.</td></tr>
 <tr><td><code>not_found</code></td><td>404</td><td>That thing doesn't exist (or was removed).</td><td>Check the link; refresh.</td></tr>

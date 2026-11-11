@@ -12,12 +12,17 @@ return [
     |
     | mfa_issuer: the name shown in authenticator apps next to the account.
     |
+    | mfa_required_roles: role keys whose holders must use two-step sign-in, until an
+    | administrator saves the security policy in the app (Settings > Security policy), which then
+    | wins. Such an account without an authenticator can only set one up until it has one.
+    |
     */
 
     'auth' => [
         'step_up_seconds' => (int) env('LOCKGUARD_STEP_UP_SECONDS', 600),
         'mfa_issuer' => env('LOCKGUARD_MFA_ISSUER', 'DM LockGuard'),
         'recovery_code_count' => 8,
+        'mfa_required_roles' => array_values(array_filter(array_map('trim', explode(',', (string) env('LOCKGUARD_MFA_REQUIRED_ROLES', 'super_administrator,security_administrator'))))),
     ],
 
     /*

@@ -87,3 +87,27 @@ export async function getNotificationSettings(signal?: AbortSignal): Promise<Not
 export async function saveNotificationSettings(input: NotificationSettingsInput): Promise<NotificationSettings> {
   return (await api<{ data: NotificationSettings }>('/settings/notifications', { method: 'PUT', body: input })).data
 }
+/** One role in the security policy, with how many of its members have no authenticator yet. */
+export type SecurityPolicyRole = {
+  key: string
+  name: string
+  mfa_required: boolean
+  members: number
+  members_without_mfa: number
+}
+
+/** The security policy: which roles must use two-step sign-in. */
+export type SecurityPolicy = {
+  mfa_required_roles: string[]
+  roles: SecurityPolicyRole[]
+  updated_at: string | null
+  updated_by: string | null
+}
+
+export async function getSecurityPolicy(signal?: AbortSignal): Promise<SecurityPolicy> {
+  return (await api<{ data: SecurityPolicy }>('/settings/security', { signal })).data
+}
+
+export async function saveSecurityPolicy(input: { mfa_required_roles: string[] }): Promise<SecurityPolicy> {
+  return (await api<{ data: SecurityPolicy }>('/settings/security', { method: 'PUT', body: input })).data
+}

@@ -101,6 +101,9 @@ class RouteAccessMatrixTest extends TestCase
         'api.v1.settings.email.test' => self::INCIDENT_HANDLERS,
         'api.v1.settings.notifications.show' => self::INCIDENT_HANDLERS,
         'api.v1.settings.notifications.update' => self::INCIDENT_HANDLERS,
+        // Security policy: admin.security_policies.
+        'api.v1.settings.security.show' => self::INCIDENT_HANDLERS,
+        'api.v1.settings.security.update' => self::INCIDENT_HANDLERS,
         'api.v1.users.roles.update' => ['super_administrator'],
         'api.v1.users.permissions.update' => ['super_administrator'],
         'api.v1.locks.index' => self::ALL,
@@ -291,6 +294,7 @@ class RouteAccessMatrixTest extends TestCase
             'api.v1.settings.email.update' => ['enabled' => false, 'host' => 'smtp.example.test', 'port' => 587, 'security' => 'starttls', 'from_address' => 'lockguard@example.test', 'from_name' => 'DM LockGuard'],
             'api.v1.settings.email.test' => ['to' => 'matrix@example.test'],
             'api.v1.settings.notifications.update' => ['email_enabled' => true, 'email_min_severity' => 'medium', 'required_categories' => ['security_incident']],
+            'api.v1.settings.security.update' => ['mfa_required_roles' => []],
             'api.v1.notifications.preferences.update' => ['preferences' => ['battery_warning' => ['in_app' => true, 'email' => false]]],
             default => [],
         };

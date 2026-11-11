@@ -86,7 +86,14 @@ export function UsersPage() {
     {
       key: 'mfa',
       header: 'Two-step',
-      cell: (user) => (user.mfa_enabled ? <StatusBadge tone="success" label="On" /> : <StatusBadge tone="warning" label="Off" />),
+      cell: (user) =>
+        user.mfa_enabled ? (
+          <StatusBadge tone="success" label="On" />
+        ) : user.mfa_required ? (
+          <StatusBadge tone="danger" label="Required, not set up" />
+        ) : (
+          <StatusBadge tone="warning" label="Off" />
+        ),
       className: 'hidden lg:table-cell',
     },
     {

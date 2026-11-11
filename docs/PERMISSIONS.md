@@ -111,8 +111,17 @@ Nothing is saved.
 | `user.permissions_changed` | Override set before/after |
 | `user.list`, `user.view`, `user.permission_preview`, `role.list`, `permission.list`, `user.security_history_viewed` | Written only when access is **denied** |
 
-## 7. Known gaps
+## 7. Two-step sign-in required by role
 
-- No policy yet forces MFA for administrators. It is planned as a security-policy setting (default on for admin roles).
-- Users created through the API get an administrator-chosen password. There is no forced password change or emailed invitation yet.
+The security policy (`SecurityPolicy`, stored in `app_settings` under `security`) lists the roles whose holders must use two-step sign-in. Until it is saved in the app, the roles come from `LOCKGUARD_MFA_REQUIRED_ROLES` (default `super_administrator,security_administrator`); once saved, the saved list wins, and an empty list turns the requirement off.
+
+- **Enforcement:** the `mfa-enrolled` middleware (`EnsureMfaIsEnrolled`) runs on every signed-in route, sessions and API tokens alike. An account that must use two-step sign-in but has no authenticator may only call `auth/me`, `auth/confirm`, `auth/mfa` (start), `auth/mfa/confirm` and `auth/logout`. Everything else answers 403 `mfa_setup_required`. Because it is checked on every request, a policy change or a new role takes effect on the account's next request.
+- **Sign-in:** the password (and device) checks are unchanged. The sign-in succeeds, the audit row `auth.login` records `mfa_setup_required: true`, and `auth/me` and the sign-in response carry `mfa_required` and `mfa_setup_required`. The app shows only the setup screen until it is done.
+- **Moving to a new phone:** removing the authenticator still works (it needs step-up with the password and a current code). For a required role the account is then back to setup-only until a new authenticator is confirmed; the audit row `auth.mfa_disabled` records `mfa_setup_required: true`.
+- **Settings:** `GET /api/v1/settings/security` and `PUT /api/v1/settings/security` (`admin.security_policies`; saving needs step-up), audited as `settings.security_updated` with the roles added and removed. The page is Settings > Security policy.
+- **Not covered:** an administrator cannot reset another person's authenticator yet. Someone who loses their phone and their recovery codes needs the database (clear `mfa_secret`, `mfa_confirmed_at` and `mfa_recovery_codes`), after which they set up a new one at their next sign-in.
+
+## 8. Known gaps
+
+- Users created directly through the API (not by invitation) keep the administrator-chosen password; there is no forced password change for them.
 - Creating custom roles through the API is not built yet. Custom roles can only come from the database for now.

@@ -47,6 +47,11 @@ class ApiException extends RuntimeException
         return new self(403, 'device_revoked', 'This device has been removed from your account. Sign in from another device, or ask an administrator.');
     }
 
+    public static function mfaSetupRequired(): self
+    {
+        return new self(403, 'mfa_setup_required', 'Your role must use two-step sign-in. Set up an authenticator app to carry on.');
+    }
+
     public static function trainingRequired(): self
     {
         return new self(403, 'training_required', 'Finish the LockGuard training from your invitation link before you sign in. Open the invitation email and tap Accept Invitation to carry on where you left off.');

@@ -1,4 +1,4 @@
-import { Activity, Bell, BellRing, Building2, LayoutDashboard, Lock, Mail, MailPlus, MapPinned, MonitorSmartphone, ScrollText, ShieldAlert, ShieldCheck, Smartphone, Users, type LucideIcon } from 'lucide-react'
+import { Activity, Bell, BellRing, Building2, KeyRound, LayoutDashboard, Lock, Mail, MailPlus, MapPinned, MonitorSmartphone, ScrollText, ShieldAlert, ShieldCheck, Smartphone, Users, type LucideIcon } from 'lucide-react'
 import type { CurrentUser } from '../api/auth'
 import { hasAnyPermission } from '../auth/auth-context'
 
@@ -69,6 +69,7 @@ export const navigation: readonly NavGroup[] = [
     items: [
       { label: 'Email settings', path: '/settings/email', icon: Mail, permissions: ['admin.notifications'] },
       { label: 'Notification settings', path: '/settings/notifications', icon: BellRing, permissions: ['admin.notifications'] },
+      { label: 'Security policy', path: '/settings/security', icon: KeyRound, permissions: ['admin.security_policies'] },
     ],
   },
 ]

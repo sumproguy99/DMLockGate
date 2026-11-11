@@ -51,6 +51,7 @@ function managed(overrides: Partial<ManagedUser> = {}): ManagedUser {
     account_expires_at: null,
     is_active: true,
     mfa_enabled: false,
+    mfa_required: false,
     created_at: '2026-10-01T10:00:00Z',
     last_login_at: null,
     last_access_event_at: null,

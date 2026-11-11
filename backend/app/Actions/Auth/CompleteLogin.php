@@ -7,6 +7,7 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use App\Services\Auth\DeviceRegistry;
+use App\Services\Auth\SecurityPolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,6 +31,7 @@ class CompleteLogin
     public function __construct(
         private readonly AuditLogger $audit,
         private readonly DeviceRegistry $devices,
+        private readonly SecurityPolicy $policy,
     ) {}
 
     public function handle(Request $request, User $user, string $method): JsonResponse
@@ -51,6 +53,7 @@ class CompleteLogin
             'method' => $method,
             'location_notice' => config('lockguard.location.notice_version'),
             'device' => $device->name,
+            ...($this->policy->owesMfaSetup($user) ? ['mfa_setup_required' => true] : []),
         ]);
 
         // A user's very first device is not news; any later new one is worth telling them about.

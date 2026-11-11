@@ -124,7 +124,10 @@ export function UserProfileTab({ user, editable, onSaved }: { user: ManagedUser;
 
       <Card title="Account">
         <dl className="flex flex-col gap-3 text-support">
-          <Detail label="Two-step verification">{user.mfa_enabled ? 'On' : 'Off'}</Detail>
+          <Detail label="Two-step verification">
+            {user.mfa_enabled ? 'On' : 'Off'}
+            {user.mfa_required && (user.mfa_enabled ? ' (required for their role)' : ' (required for their role: they set it up at their next sign-in)')}
+          </Detail>
           <Detail label="Last sign-in">{user.last_login_at ? <Timestamp iso={user.last_login_at} /> : 'Never'}</Detail>
           <Detail label="Status changed">{user.status_changed_at ? <Timestamp iso={user.status_changed_at} /> : 'Never'}</Detail>
           <Detail label="Created">{user.created_at ? <Timestamp iso={user.created_at} /> : 'Unknown'}</Detail>

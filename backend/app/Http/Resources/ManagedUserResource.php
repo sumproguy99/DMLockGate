@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\User;
+use App\Services\Auth\SecurityPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Carbon;
@@ -29,6 +30,7 @@ class ManagedUserResource extends JsonResource
             'account_expires_at' => $this->account_expires_at?->toIso8601String(),
             'is_active' => $this->isActive(),
             'mfa_enabled' => $this->mfa_confirmed_at !== null,
+            'mfa_required' => app(SecurityPolicy::class)->requiresMfa($this->resource->loadMissing('roles')),
             'created_at' => $this->created_at?->toIso8601String(),
             'last_login_at' => $this->last_login_at?->toIso8601String(),
             'last_access_event_at' => $this->last_access_event_at?->toIso8601String(),

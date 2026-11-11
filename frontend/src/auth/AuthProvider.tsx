@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import * as authApi from '../api/auth'
-import { ApiError, onUnauthenticated } from '../api/client'
+import { ApiError, onMfaSetupRequired, onUnauthenticated } from '../api/client'
 import { AuthContext, SESSION_ENDED_NOTICE, type Auth, type AuthState } from './auth-context'
 
 /**
@@ -41,6 +41,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState((current) =>
           current.status === 'signed_in'
             ? { status: 'signed_out', notice: error.status === 401 ? SESSION_ENDED_NOTICE : error.message }
+            : current,
+        ),
+      ),
+    [],
+  )
+
+  // Two-step sign-in became required mid-session: mark the user so the setup screen takes over.
+  useEffect(
+    () =>
+      onMfaSetupRequired(() =>
+        setState((current) =>
+          current.status === 'signed_in' && !current.user.mfa_setup_required
+            ? { status: 'signed_in', user: { ...current.user, mfa_required: true, mfa_setup_required: true } }
             : current,
         ),
       ),

@@ -120,7 +120,14 @@
 <x-cmd shell="PowerShell" where="backend">
 php artisan lockguard:audit-verify
 </x-cmd>
-<x-tip>Turn on two-step sign-in for yourself first thing: open the Account page (on a phone <b>More → Account</b>; on a computer go to <code>/m/account</code>) and choose <b>Two-step verification</b>. A Super Administrator account without it is a very attractive target.</x-tip>
+<x-tip>Super Administrators and Security Administrators must use two-step sign-in. The first time you sign in without it, LockGuard shows only <b>Set up two-step sign-in</b> until you have done it. A Super Administrator account without it is a very attractive target.</x-tip>
+<h4 id="howto-security-policy">How to: choose which roles need two-step sign-in</h4>
+<ol class="steps">
+  <li><strong>Open Settings → Security policy.</strong> Each role shows how many people have it and how many have not set up two-step sign-in.</li>
+  <li><strong>Tick the roles</strong> that must use it. Super Administrator and Security Administrator are ticked to start with.</li>
+  <li><strong>Save</strong> and confirm your identity. Anyone in a newly ticked role without an authenticator app is asked to set one up the next time they use LockGuard, and can do nothing else until they have.</li>
+</ol>
+<x-caution title="Lost phone and lost recovery codes">An administrator can't reset someone else's authenticator from the app yet. If a person in a required role loses both their phone and their recovery codes, it has to be cleared in the database; they then set up a new one at their next sign-in.</x-caution>
 <x-joke>With great power comes great responsibility, and about 47 notification emails a day.</x-joke>
 
 <!-- ======================= SECURITY ADMINISTRATOR ======================= -->

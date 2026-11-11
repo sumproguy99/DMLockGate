@@ -14,6 +14,8 @@ export type ManagedUser = {
   account_expires_at: string | null
   is_active: boolean
   mfa_enabled: boolean
+  /** Their role must use two-step sign-in. */
+  mfa_required: boolean
   created_at: string | null
   last_login_at: string | null
   last_access_event_at: string | null
