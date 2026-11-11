@@ -76,6 +76,7 @@ enum RoleTemplate: string
                 PermissionKey::LockViewStatus,
                 PermissionKey::LockLock,
                 PermissionKey::LockUnlock,
+                PermissionKey::LockRemoteUnlock,
                 PermissionKey::LockViewHistory,
                 PermissionKey::UsersCreate,
                 PermissionKey::UsersEdit,
@@ -95,10 +96,12 @@ enum RoleTemplate: string
                 PermissionKey::LockViewHistory,
                 PermissionKey::LocationUse,
             ],
+            // Every unlock from the app uses the Remote channel, so Unlock alone would never work.
             self::TemporaryGuest, self::ServiceProvider => [
                 PermissionKey::LockViewStatus,
                 PermissionKey::LockLock,
                 PermissionKey::LockUnlock,
+                PermissionKey::LockRemoteUnlock,
             ],
             self::ReadOnlyAuditor => [
                 PermissionKey::LockViewStatus,

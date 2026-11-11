@@ -95,12 +95,12 @@ class PermissionResolverTest extends TestCase
         }
     }
 
-    public function test_guest_cannot_remote_unlock_or_manage_users(): void
+    public function test_guest_can_unlock_from_the_app_but_cannot_manage_users(): void
     {
         $guest = $this->userWithRole(RoleTemplate::TemporaryGuest);
 
         $this->assertTrue(Gate::forUser($guest)->allows(PermissionKey::LockUnlock->value));
-        $this->assertTrue(Gate::forUser($guest)->denies(PermissionKey::LockRemoteUnlock->value));
+        $this->assertTrue(Gate::forUser($guest)->allows(PermissionKey::LockRemoteUnlock->value));
         $this->assertTrue(Gate::forUser($guest)->denies(PermissionKey::UsersCreate->value));
     }
 
@@ -148,7 +148,7 @@ class PermissionResolverTest extends TestCase
             [PermissionKey::LockUnlock->value => PermissionEffect::Deny],
         );
 
-        $this->assertFalse($preview[PermissionKey::LockRemoteUnlock->value]->granted);
+        $this->assertTrue($preview[PermissionKey::LockRemoteUnlock->value]->granted);
         $this->assertFalse($preview[PermissionKey::LockUnlock->value]->granted);
         $this->assertSame('Denied by an individual override.', $preview[PermissionKey::LockUnlock->value]->reason);
         $this->assertTrue($preview[PermissionKey::LockLock->value]->granted);

@@ -8,6 +8,7 @@ use App\Enums\AccessRequestStatus;
 use App\Enums\DeviceStatus;
 use App\Enums\LockAction;
 use App\Enums\LockConnectionStatus;
+use App\Enums\PermissionEffect;
 use App\Enums\PermissionKey;
 use App\Enums\ReportedLockState;
 use App\Enums\RoleTemplate;
@@ -17,6 +18,7 @@ use App\Models\AuditLog;
 use App\Models\Lock;
 use App\Models\LockCommand;
 use App\Models\LockStateEvent;
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UserDevice;
@@ -147,6 +149,10 @@ class LockCommandServiceTest extends TestCase
     public function test_remote_unlock_needs_the_remote_unlock_permission(): void
     {
         $guest = $this->userWithRole(RoleTemplate::TemporaryGuest);
+        $guest->permissionOverrides()->attach(
+            Permission::query()->where('key', PermissionKey::LockRemoteUnlock->value)->value('id'),
+            ['effect' => PermissionEffect::Deny->value],
+        );
 
         $this->command($guest, 'unlock', stepUp: true)
             ->assertForbidden()
@@ -154,6 +160,33 @@ class LockCommandServiceTest extends TestCase
             ->assertJsonPath('error.message', 'You do not have the "Request remote unlocking" permission.');
 
         $this->command($guest, 'lock')->assertAccepted();
+    }
+
+    /**
+     * Every unlock from the app uses the Remote channel, so each template that offers Unlock must
+     * also include remote unlocking, or its members could lock but never unlock.
+     */
+    #[DataProvider('unlockingTemplates')]
+    public function test_every_template_with_unlock_can_unlock_from_the_app(RoleTemplate $template): void
+    {
+        $this->driver->setState($this->lock, ReportedLockState::Locked);
+        $this->lock->forceFill(['last_reported_state' => ReportedLockState::Locked])->save();
+        $user = $this->userWithRole($template);
+
+        $this->command($user, 'unlock', stepUp: true)->assertAccepted();
+
+        $this->assertSame(ReportedLockState::Unlocked, $this->lock->fresh()->last_reported_state);
+    }
+
+    /**
+     * @return array<string, array{RoleTemplate}>
+     */
+    public static function unlockingTemplates(): array
+    {
+        return collect(RoleTemplate::cases())
+            ->filter(fn (RoleTemplate $template): bool => in_array(PermissionKey::LockUnlock, $template->permissions(), true))
+            ->mapWithKeys(fn (RoleTemplate $template): array => [$template->value => [$template]])
+            ->all();
     }
 
     public function test_a_user_without_access_to_the_lock_is_denied(): void

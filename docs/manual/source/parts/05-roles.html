@@ -15,10 +15,10 @@
 </div>
 
 <h3 id="roles-compare">The comparison chart</h3>
-<p>This is the whole story on one page. Read a column to see everything one role can do, or a row to see who can do one thing. <span class="yes">✓</span> = included, <span class="no">✗</span> = not included, <span class="some">!</span> = not by default (see the note below). Click a role's name to jump to its section.</p>
+<p>This is the whole story on one page. Read a column to see everything one role can do, or a row to see who can do one thing. <span class="yes">✓</span> = included, <span class="no">✗</span> = not included. Click a role's name to jump to its section.</p>
 <!--MATRIX-->
 
-<x-caution title="Why some roles show ! for unlocking">Every unlock sent through the LockGuard app counts as a <b>remote unlock</b>, so it needs two permissions: <code>lock.unlock</code> <em>and</em> <code>lock.remote_unlock</code>. Out of the box only the <b>Super Administrator</b> and <b>Resident</b> roles have both. Property Managers, Temporary Guests and Service Providers can <b>lock</b> from the app but won't see an Unlock button until an administrator adds the <b>"Request remote unlocking"</b> permission to that person as an individual override (<a href="#howto-override">here's how</a>).</x-caution>
+<x-note title="Unlocking from the app takes two permissions">Every unlock sent through the LockGuard app counts as a <b>remote unlock</b>, so it needs <code>lock.unlock</code> <em>and</em> <code>lock.remote_unlock</code>. Every role that can unlock includes both. To let someone lock but not unlock from the app, add a <b>Deny</b> override for <b>"Request remote unlocking"</b> (<a href="#howto-override">here's how</a>). Unlocks still follow the remote-unlock policy, which asks for the password again by default (<a href="#sec-remote">Remote unlocking and its policy</a>).</x-note>
 
 <h4>How many permissions each role has</h4>
 <p>There are 35 permissions in total. Bigger bar = bigger key ring.</p>
@@ -197,7 +197,6 @@ php artisan lockguard:audit-verify
     <li>See everyone's registered devices</li>
   </ul></div>
   <div class="card cant"><h4>{i:circle-x} Cannot</h4><ul class="crosses">
-    <li>Unlock from the app by default (needs the remote-unlock override; see the caution above)</li>
     <li>Assign roles or add overrides (by default)</li>
     <li>Permanently revoke accounts</li>
     <li>Revoke devices or sign people out everywhere</li>
@@ -309,8 +308,7 @@ php artisan lockguard:audit-verify
 <div class="grid g2">
   <div class="card can"><h4>{i:circle-check} Can</h4><ul class="ticks">
     <li>See the status of the doors they were given</li>
-    <li><b>Lock</b> those doors</li>
-    <li>Unlock them, once an administrator adds the remote-unlock override</li>
+    <li><b>Lock and unlock</b> those doors from the app, during their access window</li>
     <li>Manage their own account and phone</li>
   </ul></div>
   <div class="card cant"><h4>{i:circle-x} Cannot</h4><ul class="crosses">
@@ -348,8 +346,7 @@ php artisan lockguard:audit-verify
 <div class="grid g2">
   <div class="card can"><h4>{i:circle-check} Can</h4><ul class="ticks">
     <li>See the status of the doors needed for the job</li>
-    <li><b>Lock</b> them when finished</li>
-    <li>Unlock them, once an administrator adds the remote-unlock override</li>
+    <li><b>Unlock</b> them to get in, and <b>lock</b> them when finished</li>
   </ul></div>
   <div class="card cant"><h4>{i:circle-x} Cannot</h4><ul class="crosses">
     <li>Use doors outside the scheduled window</li>

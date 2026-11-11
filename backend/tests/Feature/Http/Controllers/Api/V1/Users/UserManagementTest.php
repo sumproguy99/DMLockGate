@@ -404,6 +404,11 @@ class UserManagementTest extends TestCase
     {
         $manager = $this->delegatingManager();
         $guest = $this->userWithRole(RoleTemplate::TemporaryGuest);
+        // The guest template includes remote unlocking; start from a guest who had it taken away.
+        $guest->permissionOverrides()->attach(
+            Permission::query()->where('key', PermissionKey::LockRemoteUnlock->value)->value('id'),
+            ['effect' => PermissionEffect::Deny->value],
+        );
 
         $data = $this->actingAs($manager)->postJson(route('api.v1.permission-preview'), [
             'user_id' => $guest->id,
@@ -422,7 +427,7 @@ class UserManagementTest extends TestCase
         $this->assertSame('Denied by an individual override.', collect($data['permissions'])->firstWhere('key', 'lock.unlock')['reason']);
 
         $this->assertSame(['temporary_guest'], $guest->roles()->pluck('key')->all());
-        $this->assertSame(0, $guest->permissionOverrides()->count());
+        $this->assertSame(1, $guest->permissionOverrides()->count());
     }
 
     public function test_permission_preview_for_a_new_user_with_allowed_roles_can_be_saved(): void

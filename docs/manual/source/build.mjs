@@ -25,10 +25,10 @@ const ALL = 'lock.view_status lock.lock lock.unlock lock.remote_unlock lock.prox
 const ROLES = [
   { key: 'super', name: 'Super Administrator', anchor: 'role-super-admin', perms: ALL.filter((p) => p !== 'lock.proximity_unlock') },
   { key: 'security', name: 'Security Administrator', anchor: 'role-security-admin', perms: 'lock.view_status lock.lock lock.view_history users.suspend users.reactivate users.revoke access.grants_revoke devices.view devices.revoke devices.revoke_sessions location.view_reports location.review_audit admin.security_policies admin.notifications admin.incidents_view admin.incidents_manage admin.reports_export'.split(' ') },
-  { key: 'manager', name: 'Property Manager', anchor: 'role-property-manager', perms: 'lock.view_status lock.lock lock.unlock lock.view_history users.create users.edit users.suspend users.reactivate access.grants_create access.grants_revoke access.schedules_manage access.codes_manage devices.view'.split(' ') },
+  { key: 'manager', name: 'Property Manager', anchor: 'role-property-manager', perms: 'lock.view_status lock.lock lock.unlock lock.remote_unlock lock.view_history users.create users.edit users.suspend users.reactivate access.grants_create access.grants_revoke access.schedules_manage access.codes_manage devices.view'.split(' ') },
   { key: 'resident', name: 'Resident', anchor: 'role-resident', perms: 'lock.view_status lock.lock lock.unlock lock.remote_unlock lock.view_history location.use'.split(' ') },
-  { key: 'guest', name: 'Temporary Guest', anchor: 'role-guest', perms: 'lock.view_status lock.lock lock.unlock'.split(' ') },
-  { key: 'service', name: 'Service Provider', anchor: 'role-service-provider', perms: 'lock.view_status lock.lock lock.unlock'.split(' ') },
+  { key: 'guest', name: 'Temporary Guest', anchor: 'role-guest', perms: 'lock.view_status lock.lock lock.unlock lock.remote_unlock'.split(' ') },
+  { key: 'service', name: 'Service Provider', anchor: 'role-service-provider', perms: 'lock.view_status lock.lock lock.unlock lock.remote_unlock'.split(' ') },
   { key: 'auditor', name: 'Read-Only Auditor', anchor: 'role-auditor', perms: 'lock.view_status lock.view_history location.review_audit admin.incidents_view admin.reports_export'.split(' ') },
 ]
 const FEATURES = [

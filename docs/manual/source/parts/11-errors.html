@@ -101,8 +101,8 @@ npm run bridge
 </x-cmd></div></details>
 
 <details class="trouble" id="t-nounlock"><summary>{i:triangle-alert} I can't see an Unlock button</summary><div class="inner">
-<h5>Likely causes</h5><ul><li>Your role (Property Manager, Temporary Guest, Service Provider) doesn't include remote unlocking by default.</li><li>You haven't been given access to that door, or your time window isn't open.</li><li>Commands are switched off for the lock.</li></ul>
-<h5>Fixes</h5><ol><li>Ask an administrator to add the <b>Request remote unlocking</b> override (<a href="#howto-override">how</a>).</li><li>Check your access times with whoever gave you access.</li></ol></div></details>
+<h5>Likely causes</h5><ul><li>Your role doesn't include unlocking (Security Administrator, Read-Only Auditor), or an administrator turned remote unlocking off for you with a Deny override.</li><li>You haven't been given access to that door, or your time window isn't open.</li><li>Commands are switched off for the lock.</li></ul>
+<h5>Fixes</h5><ol><li>Ask an administrator to check your role and overrides for <b>Request unlocking</b> and <b>Request remote unlocking</b> (<a href="#howto-override">how</a>).</li><li>Check your access times with whoever gave you access.</li></ol></div></details>
 
 <details class="trouble" id="t-regcode"><summary>{i:triangle-alert} It asks me for a registration code</summary><div class="inner">
 <p>You're signing in on a device that isn't your registered one, or your browser forgot LockGuard (cleared data, private mode, different browser).</p>
