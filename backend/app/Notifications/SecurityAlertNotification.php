@@ -7,7 +7,7 @@ use Illuminate\Notifications\Notification;
 
 /**
  * An in-app notification about a security alert. Stored in the notifications table with read
- * status; there is no push or email channel yet.
+ * status. The email copy is sent separately by SendAlertEmail, so it can be retried and tracked.
  *
  * mandatory: sent because the person handles incidents. Their preferences can never turn it off.
  */

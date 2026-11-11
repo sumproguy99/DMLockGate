@@ -25,8 +25,10 @@ import { MobileLocationHistoryPage } from './mobile/MobileLocationHistoryPage'
 import { MobileLocationPage } from './mobile/MobileLocationPage'
 import { MobileLockPage } from './mobile/MobileLockPage'
 import { MobileMorePage } from './mobile/MobileMorePage'
+import { MobileNotificationPreferencesPage } from './mobile/MobileNotificationPreferencesPage'
 import { MobileNotificationsPage } from './mobile/MobileNotificationsPage'
 import { MobileShell } from './mobile/MobileShell'
+import { NotificationPreferencesPage } from './pages/NotificationPreferencesPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { AuditLogPage } from './pages/security/AuditLogPage'
 import { IncidentDetailPage } from './pages/security/IncidentDetailPage'
@@ -36,6 +38,7 @@ import { SecurityCenterPage } from './pages/security/SecurityCenterPage'
 import { SystemHealthPage } from './pages/security/SystemHealthPage'
 import { InvitationPage } from './pages/invitation/InvitationPage'
 import { EmailSettingsPage } from './pages/settings/EmailSettingsPage'
+import { NotificationSettingsPage } from './pages/settings/NotificationSettingsPage'
 import { InvitationsPage } from './pages/users/InvitationsPage'
 import { NewUserPage } from './pages/users/NewUserPage'
 import { RolesPage } from './pages/users/RolesPage'
@@ -48,11 +51,15 @@ const ComponentGallery = import.meta.env.DEV ? lazy(() => import('./dev/Componen
 /**
  * The desktop application. "/" opens the mobile app instead on phones, unless this browser chose
  * the desktop view; the redirect happens before the desktop shell renders, so it never flashes.
+ * The notification pages, which alert emails link to, open their phone versions the same way.
  */
 function DesktopShell() {
   const { pathname } = useLocation()
   if (pathname === '/' && prefersMobile()) {
     return <Navigate to="/m" replace />
+  }
+  if ((pathname === '/notifications' || pathname === '/notifications/preferences') && prefersMobile()) {
+    return <Navigate to={`/m${pathname}`} replace />
   }
   return <AppShell />
 }
@@ -146,6 +153,7 @@ export function AppRoutes() {
           }
         />
         <Route path="notifications" element={<MobileNotificationsPage />} />
+        <Route path="notifications/preferences" element={<MobileNotificationPreferencesPage />} />
         <Route path="account" element={<MobileAccountPage />} />
         <Route path="location" element={<MobileLocationPage />} />
         <Route path="location/history" element={<MobileLocationHistoryPage />} />
@@ -162,6 +170,7 @@ export function AppRoutes() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="notifications/preferences" element={<NotificationPreferencesPage />} />
         <Route path="devices" element={<DevicesPage />} />
         <Route
           path="security"
@@ -216,6 +225,14 @@ export function AppRoutes() {
           element={
             <RequirePermission permissions={['admin.notifications']}>
               <EmailSettingsPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="settings/notifications"
+          element={
+            <RequirePermission permissions={['admin.notifications']}>
+              <NotificationSettingsPage />
             </RequirePermission>
           }
         />

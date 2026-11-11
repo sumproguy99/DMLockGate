@@ -7,6 +7,15 @@ import { Timestamp } from '../status/Timestamp'
 import { Button } from '../ui/Button'
 import { StatusBadge } from '../ui/StatusBadge'
 
+/** Whether the notification was also emailed, in words. */
+const EMAIL_WORDS: Record<NonNullable<AppNotification['email_status']>, string> = {
+  queued: 'Email on its way',
+  retrying: 'Email being retried',
+  sent: 'Emailed',
+  failed: 'Email failed',
+  skipped: 'Not emailed',
+}
+
 type NotificationListProps = {
   notifications: readonly AppNotification[]
   /** Where each notification's links go, if anywhere. */
@@ -37,6 +46,7 @@ export function NotificationList({ notifications, links, onMarkRead, marking }: 
               <span className="text-caption text-text-muted">{categoryLabel[notification.category] ?? 'Notice'}</span>
               <Timestamp iso={notification.created_at} className="text-caption text-text-muted" />
               <span className={cx('text-caption font-semibold', unread ? 'text-primary-text' : 'text-text-muted')}>{unread ? 'Unread' : 'Read'}</span>
+              {notification.email_status && <span className="text-caption text-text-muted">{EMAIL_WORDS[notification.email_status]}</span>}
             </div>
             <p className={cx('text-support', unread ? 'font-semibold' : 'font-medium')}>{notification.title}</p>
             {notification.description && <p className="text-support text-text-muted">{notification.description}</p>}

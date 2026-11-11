@@ -91,6 +91,7 @@ const page = <T,>(rows: T[]) => json(200, { data: rows, meta: { current_page: 1,
 const notification = (overrides: Partial<AppNotification> = {}): AppNotification => ({
   id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
   type: 'security_alert',
+  email_status: null,
   category: 'security_incident',
   severity: 'high',
   title: 'Repeated failed sign-ins for Riley Resident',

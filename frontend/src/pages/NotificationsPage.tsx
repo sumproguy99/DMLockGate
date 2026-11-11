@@ -1,5 +1,5 @@
-import { BellOff, CheckCheck } from 'lucide-react'
-import { useSearchParams } from 'react-router'
+import { BellOff, CheckCheck, SlidersHorizontal } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router'
 import type { AppNotification } from '../api/notifications'
 import { hasAnyPermission, useCurrentUser } from '../auth/auth-context'
 import { NotificationList } from '../components/notifications/NotificationList'
@@ -63,11 +63,20 @@ export function NotificationsPage() {
         title="Notifications"
         description={unreadCount === 0 ? 'Everything has been read.' : `${unreadCount} unread.`}
         actions={
-          unreadCount > 0 && (
-            <Button variant="secondary" icon={CheckCheck} loading={markingAll} onClick={markAllRead}>
-              Mark all read
-            </Button>
-          )
+          <>
+            {unreadCount > 0 && (
+              <Button variant="secondary" icon={CheckCheck} loading={markingAll} onClick={markAllRead}>
+                Mark all read
+              </Button>
+            )}
+            <Link
+              to="/notifications/preferences"
+              className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border bg-panel px-4 text-label font-semibold text-text hover:bg-panel-2"
+            >
+              <SlidersHorizontal className="size-4" aria-hidden />
+              Preferences
+            </Link>
+          </>
         }
       />
       <Tabs
@@ -80,8 +89,11 @@ export function NotificationsPage() {
         ]}
       />
       <p className="mt-6 text-caption text-text-muted">
-        Notifications appear in LockGuard only; nothing is sent to your phone or by email yet. Security notifications for people who
-        handle incidents cannot be turned off.
+        Choose what LockGuard tells you, in the app and by email, under{' '}
+        <Link to="/notifications/preferences" className="font-semibold text-primary-text underline">
+          Notification preferences
+        </Link>
+        . Security notifications for people who handle incidents cannot be turned off.
       </p>
     </>
   )

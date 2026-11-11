@@ -37,6 +37,7 @@ class User extends Authenticatable
             'mfa_secret' => 'encrypted',
             'mfa_recovery_codes' => 'encrypted:array',
             'mfa_confirmed_at' => 'datetime',
+            'notification_preferences' => 'array',
             'last_login_at' => 'datetime',
             'last_access_event_at' => 'datetime',
         ];

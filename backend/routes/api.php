@@ -21,10 +21,12 @@ use App\Http\Controllers\Api\V1\Locks\LockCommandController;
 use App\Http\Controllers\Api\V1\Locks\LockController;
 use App\Http\Controllers\Api\V1\Locks\PropertyController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\Security\SecurityAlertController;
 use App\Http\Controllers\Api\V1\Security\SecurityIncidentController;
 use App\Http\Controllers\Api\V1\System\DashboardController;
 use App\Http\Controllers\Api\V1\System\EmailSettingsController;
+use App\Http\Controllers\Api\V1\System\NotificationSettingsController;
 use App\Http\Controllers\Api\V1\System\SystemHealthController;
 use App\Http\Controllers\Api\V1\Users\InvitationController;
 use App\Http\Controllers\Api\V1\Users\PermissionPreviewController;
@@ -85,6 +87,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
         Route::get('notifications/summary', [NotificationController::class, 'summary'])->name('notifications.summary');
         Route::post('notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+        // The caller's own notification preferences, within the administrator's limits.
+        Route::get('notifications/preferences', [NotificationPreferenceController::class, 'show'])->name('notifications.preferences.show');
+        Route::put('notifications/preferences', [NotificationPreferenceController::class, 'update'])->name('notifications.preferences.update');
         Route::post('notifications/{notification}/read', [NotificationController::class, 'markRead'])->whereUuid('notification')->name('notifications.read');
 
         // Security Center: alerts and incidents. Viewing needs admin.incidents_view; acting needs
@@ -132,6 +137,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         // Email settings: how LockGuard sends invitations. Saving needs step-up (it holds a password).
         Route::get('settings/email', [EmailSettingsController::class, 'show'])->name('settings.email.show');
         Route::put('settings/email', [EmailSettingsController::class, 'update'])->middleware('step-up')->name('settings.email.update');
+        // Notification settings: the limits for everyone's preferences, and recent alert email deliveries.
+        Route::get('settings/notifications', [NotificationSettingsController::class, 'show'])->name('settings.notifications.show');
+        Route::put('settings/notifications', [NotificationSettingsController::class, 'update'])->middleware('step-up')->name('settings.notifications.update');
         Route::post('settings/email/test', [EmailSettingsController::class, 'test'])->middleware('throttle:6,1')->name('settings.email.test');
 
         // Suspension is deliberately not behind step-up so an administrator can cut off access at once.

@@ -42,3 +42,48 @@ export async function saveEmailSettings(input: EmailSettingsInput): Promise<Emai
 export async function sendTestEmail(to: string): Promise<{ sent: boolean; error: string | null; mailer: string }> {
   return (await api<{ data: { sent: boolean; error: string | null; mailer: string } }>('/settings/email/test', { method: 'POST', body: { to } })).data
 }
+
+export type AlertEmailSeverity = 'low' | 'medium' | 'high' | 'critical'
+
+/** One alert email and how its delivery went. */
+export type AlertEmailDelivery = {
+  id: number
+  user: string | null
+  recipient: string
+  severity: AlertEmailSeverity
+  title: string
+  alert_id: string | null
+  mandatory: boolean
+  status: 'queued' | 'retrying' | 'sent' | 'failed' | 'skipped'
+  attempts: number
+  /** The mailer that sent it; 'log' or 'array' means it was never really delivered. */
+  mailer: string | null
+  last_error: string | null
+  created_at: string
+  sent_at: string | null
+}
+
+/** The limits everyone's notification preferences work within, and recent alert emails. */
+export type NotificationSettings = {
+  email_enabled: boolean
+  email_min_severity: AlertEmailSeverity
+  required_categories: string[]
+  categories: { category: string; label: string; description: string }[]
+  updated_at: string | null
+  updated_by: string | null
+  /** Whether Email settings are saved and turned on. */
+  mail_configured: boolean
+  fallback_mailer: string
+  retry: { tries: number; backoff_seconds: number[] }
+  recent_deliveries: AlertEmailDelivery[]
+}
+
+export type NotificationSettingsInput = Pick<NotificationSettings, 'email_enabled' | 'email_min_severity' | 'required_categories'>
+
+export async function getNotificationSettings(signal?: AbortSignal): Promise<NotificationSettings> {
+  return (await api<{ data: NotificationSettings }>('/settings/notifications', { signal })).data
+}
+
+export async function saveNotificationSettings(input: NotificationSettingsInput): Promise<NotificationSettings> {
+  return (await api<{ data: NotificationSettings }>('/settings/notifications', { method: 'PUT', body: input })).data
+}

@@ -15,6 +15,8 @@ export type AppNotification = {
   alert_id: string | null
   lock_id: number | null
   mandatory: boolean
+  /** Whether it was also emailed: queued, retrying, sent, failed or skipped. null: not emailed. */
+  email_status: EmailStatus | null
   created_at: string
   read_at: string | null
 }
@@ -45,4 +47,36 @@ export async function markNotificationRead(id: string): Promise<AppNotification>
 
 export async function markAllNotificationsRead(): Promise<number> {
   return (await api<{ data: { marked: number } }>('/notifications/read-all', { method: 'POST' })).data.marked
+}
+
+export type EmailStatus = 'queued' | 'retrying' | 'sent' | 'failed' | 'skipped'
+
+/** One notification category with this person's choices. in_app_required: an administrator keeps it on in the app. */
+export type CategoryPreference = {
+  category: string
+  label: string
+  description: string
+  in_app: boolean
+  email: boolean
+  in_app_required: boolean
+}
+
+export type NotificationPreferences = {
+  categories: CategoryPreference[]
+  /** The address alert emails go to. */
+  email: string
+  /** Whether an administrator has alert email turned on. */
+  email_enabled: boolean
+  /** Alerts below this severity are only shown in the app. */
+  email_min_severity: 'low' | 'medium' | 'high' | 'critical'
+  /** Incident handlers always get security alerts in the app, and High and Critical ones by email. */
+  handles_incidents: boolean
+}
+
+export async function getNotificationPreferences(signal?: AbortSignal): Promise<NotificationPreferences> {
+  return (await api<{ data: NotificationPreferences }>('/notifications/preferences', { signal })).data
+}
+
+export async function saveNotificationPreferences(preferences: Record<string, { in_app: boolean; email: boolean }>): Promise<NotificationPreferences> {
+  return (await api<{ data: NotificationPreferences }>('/notifications/preferences', { method: 'PUT', body: { preferences } })).data
 }

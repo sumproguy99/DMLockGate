@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\NotificationDelivery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 
 /**
- * The signed-in user's own in-app notifications, with read status. Nobody can read or change
+ * The signed-in user's own in-app notifications, with read status and, when one was emailed too,
+ * the email's delivery status. Nobody can read or change
  * anyone else's. Marking a notification read never changes the alert behind it.
  */
 class NotificationController extends Controller
@@ -27,8 +29,12 @@ class NotificationController extends Controller
             ->paginate($filters['per_page'] ?? 30)
             ->withQueryString();
 
+        $emails = NotificationDelivery::query()
+            ->whereIn('notification_id', $page->getCollection()->pluck('id'))
+            ->pluck('status', 'notification_id');
+
         return response()->json([
-            'data' => $page->getCollection()->map(self::present(...))->all(),
+            'data' => $page->getCollection()->map(fn (DatabaseNotification $notification): array => self::present($notification, $emails[$notification->id] ?? null))->all(),
             'meta' => [
                 'current_page' => $page->currentPage(),
                 'last_page' => $page->lastPage(),
@@ -52,7 +58,7 @@ class NotificationController extends Controller
         $found = $request->user()->notifications()->whereKey($notification)->firstOrFail();
         $found->markAsRead();
 
-        return response()->json(['data' => self::present($found)]);
+        return response()->json(['data' => self::present($found, NotificationDelivery::query()->where('notification_id', $found->id)->value('status'))]);
     }
 
     public function markAllRead(Request $request): JsonResponse
@@ -65,7 +71,7 @@ class NotificationController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private static function present(DatabaseNotification $notification): array
+    private static function present(DatabaseNotification $notification, ?string $emailStatus): array
     {
         $data = $notification->data;
 
@@ -79,6 +85,7 @@ class NotificationController extends Controller
             'alert_id' => $data['alert_id'] ?? null,
             'lock_id' => $data['lock_id'] ?? null,
             'mandatory' => (bool) ($data['mandatory'] ?? false),
+            'email_status' => $emailStatus,
             'created_at' => $notification->created_at?->toIso8601ZuluString('millisecond'),
             'read_at' => $notification->read_at?->toIso8601ZuluString('millisecond'),
         ];

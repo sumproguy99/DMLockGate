@@ -100,9 +100,16 @@ export function MobileNotificationsPage() {
         )}
       </section>
 
-      <p className="mt-6 text-caption text-text-muted">
-        Notifications appear in LockGuard only; nothing is sent to your phone in the background yet. Security notifications for people who
-        handle incidents cannot be turned off.
+      <Link
+        to="/m/notifications/preferences"
+        className="mt-6 flex min-h-11 items-center justify-between rounded-lg border border-border bg-panel px-4 text-support font-semibold text-primary-text"
+      >
+        Notification preferences: in the app and by email
+        <ChevronRight className="size-4" aria-hidden />
+      </Link>
+      <p className="mt-3 text-caption text-text-muted">
+        Nothing is pushed to your phone in the background yet; alerts can be emailed. Security notifications for people who handle
+        incidents cannot be turned off.
       </p>
     </>
   )

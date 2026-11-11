@@ -188,7 +188,7 @@ The backend leaves out (returns null for) each section the user may not see, so 
 - lock state sync (newest scheduled poll; a warning after 15 minutes);
 - Eufy integration (the bridge's `/v1/health`, cached 15 seconds, 5-second timeout);
 - audit trail (append-only triggers installed);
-- notifications (in-app only; push and email are not built yet);
+- notifications (in the app and by email, per each person's preferences; push is not built yet);
 - live updates, which show "Not built yet".
 
 **Not on the dashboard, because the backend has no support yet:** lockdown status and quick action (alerts are handled in the Security center), revoked devices, proximity-unlock controls, widget customization.
@@ -355,7 +355,7 @@ Checked on 2026-10-21 against project.md 34.14 and 34.15:
 **Not built, because the backend has no support yet** (each screen that touches one says so):
 - Access codes and access schedules as their own screens; time-limited lock access is on each user's page. The T85D0 has no keypad-code commands.
 - Geofences and proximity detection. Locations are collected only for the location map (see Location map and location requests).
-- Push and email notifications, and per-person notification preferences (built since: Security Center, incidents, stored notifications with read status, the notification center; see Security alerts, incidents and notifications).
+- Push notifications. (Built since: Security Center, incidents, stored notifications with read status, the notification center, and on 2026-11-11 email alerts with per-person preferences at /notifications/preferences and /m/notifications/preferences, administrator limits and delivery tracking at /settings/notifications.)
 - Global search, editable settings (they live in `.env`), role editing, lockdown, and dashboard widget customization.
 
 **Other limitations:**
