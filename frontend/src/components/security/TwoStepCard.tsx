@@ -10,6 +10,7 @@ import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { TextField } from '../ui/Form'
+import { QrCode } from './QrCode'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useToast } from '../ui/toast-context'
 
@@ -161,13 +162,16 @@ export function TwoStepCard({ onDone }: { onDone?: () => void } = {}) {
             </>
           ) : (
             <>
-              {/* A computer usually has no app for otpauth:// links, so the key comes first. */}
+              {/* A computer usually has no app for otpauth:// links, so the phone scans a QR code instead. */}
               <ol className="list-decimal pl-5 text-support text-text-muted">
-                <li>On your phone, open your authenticator app and choose to add an account by entering a setup key.</li>
-                <li>Type the key below. Name the account LockGuard and choose time-based if asked.</li>
+                <li>On your phone, open your authenticator app and choose to add an account by scanning a QR code.</li>
+                <li>Point the phone at the code below.</li>
                 <li>Enter the 6-digit code the app shows.</li>
               </ol>
-              <SetupKey secret={setup.secret} label="Setup key:" />
+              <div className="flex justify-center">
+                <QrCode value={setup.uri} label="QR code to scan with your authenticator app" />
+              </div>
+              <SetupKey secret={setup.secret} label="Can't scan it? Choose to enter a setup key instead, and type this key:" />
               <a href={setup.uri} className={cx(appLinkClass, 'min-h-9 border-0 bg-transparent text-caption text-text-muted underline')}>
                 Using an authenticator app on this computer? Open it here.
               </a>
