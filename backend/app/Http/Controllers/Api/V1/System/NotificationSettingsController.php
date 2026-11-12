@@ -69,6 +69,8 @@ class NotificationSettingsController extends Controller
             'mail_configured' => $mail !== null && ($mail['enabled'] ?? false),
             'fallback_mailer' => (string) config('mail.default'),
             'retry' => ['tries' => SendAlertEmail::TRIES, 'backoff_seconds' => SendAlertEmail::BACKOFF],
+            // How long finished records are kept (lockguard:prune-security, set in .env); 0 keeps them.
+            'retention_days' => array_map('intval', (array) config('lockguard.retention')),
             'recent_deliveries' => NotificationDelivery::query()
                 ->with(['user:id,name', 'alert:id,public_id'])
                 ->latest('id')

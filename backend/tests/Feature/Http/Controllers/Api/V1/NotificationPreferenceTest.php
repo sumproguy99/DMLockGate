@@ -113,7 +113,8 @@ class NotificationPreferenceTest extends TestCase
             ->assertJsonPath('data.recent_deliveries.0.status', 'failed')
             ->assertJsonPath('data.recent_deliveries.0.attempts', 3)
             ->assertJsonPath('data.recent_deliveries.0.last_error', 'Connection refused')
-            ->assertJsonPath('data.retry.tries', 3);
+            ->assertJsonPath('data.retry.tries', 3)
+            ->assertJsonPath('data.retention_days.resolved_alerts_days', config('lockguard.retention.resolved_alerts_days'));
 
         $audit = AuditLog::query()->where('action', 'settings.notifications_updated')->sole();
         $this->assertEqualsCanonicalizing(['email_enabled', 'email_min_severity', 'required_categories'], $audit->metadata['changed']);

@@ -67,6 +67,17 @@ pwsh -File scripts\protect-audit-log.ps1
 </tbody></table></div>
 <x-note>"Condition" alerts (lock offline, jammed, state not confirmed, low battery, integration down, audit protection) <b>resolve themselves</b> when the problem goes away. High and critical alerts are attached to an <b>incident</b> automatically, so they can't be forgotten.</x-note>
 
+<h3 id="sec-retention">How long alerts, incidents and notifications are kept</h3>
+<p>Every night at 3:30 LockGuard deletes finished records past their time. The defaults:</p>
+<div class="table-wrap"><table><thead><tr><th>Record</th><th>Kept for</th><th>Counted from</th></tr></thead><tbody>
+<tr><td>Resolved alerts</td><td>180 days</td><td>When it was resolved</td></tr>
+<tr><td>Closed incidents, with their timeline and their alerts</td><td>365 days</td><td>When it was closed</td></tr>
+<tr><td>Read notifications</td><td>90 days</td><td>When it arrived</td></tr>
+<tr><td>Unread notifications</td><td>365 days</td><td>When it arrived</td></tr>
+<tr><td>Alert email log</td><td>90 days</td><td>When it was sent</td></tr>
+</tbody></table></div>
+<x-note>Open or acknowledged alerts and incidents that aren't closed are <b>never</b> deleted, and an alert stays as long as its incident does. The <a href="#sec-audit">audit log</a> isn't touched, so what happened is still on record after the alert is gone. Each cleanup writes one <code>security.pruned</code> row saying how many records went. Administrators see the current periods under <b>Settings → Notifications → How long records are kept</b>. To change one, set <code>LOCKGUARD_RETENTION_*</code> in the server's <code>.env</code> (<code>0</code> keeps those records for ever); run <code>php artisan lockguard:prune-security</code> to clean up straight away.</x-note>
+
 <h3 id="sec-privacy">Your privacy</h3>
 <ul class="ticks">
   <li>Passwords are stored as one-way scrambles (hashes), never as plain text. Nobody can read yours, not even the Super Administrator.</li>

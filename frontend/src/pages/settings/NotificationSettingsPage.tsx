@@ -56,6 +56,7 @@ export function NotificationSettingsPage() {
         <div className="flex flex-col gap-6">
           <LimitsForm key={settings.data.updated_at ?? 'new'} settings={settings.data} onSaved={settings.reload} />
           <Deliveries settings={settings.data} onReload={settings.reload} />
+          <Retention days={settings.data.retention_days} />
         </div>
       ) : settings.error != null ? (
         <Banner tone="danger" title="Notification settings could not be loaded" action={<Button variant="secondary" size="sm" onClick={settings.reload}>Try again</Button>}>
@@ -248,6 +249,38 @@ function Deliveries({ settings, onReload }: { settings: NotificationSettings; on
         rowKey={(row) => row.id}
         empty="No alert emails yet."
       />
+    </Card>
+  )
+}
+
+const retentionRows: Array<{ key: keyof NotificationSettings['retention_days']; label: string }> = [
+  { key: 'resolved_alerts_days', label: 'Resolved alerts' },
+  { key: 'closed_incidents_days', label: 'Closed incidents, with their timeline' },
+  { key: 'read_notifications_days', label: 'Read notifications' },
+  { key: 'unread_notifications_days', label: 'Unread notifications' },
+  { key: 'deliveries_days', label: 'Alert email log' },
+]
+
+function keptFor(days: number): string {
+  return days > 0 ? `${days} days` : 'Kept for ever'
+}
+
+/** Read-only: how long the daily cleanup keeps finished records. Changed in the server's .env. */
+function Retention({ days }: { days: NotificationSettings['retention_days'] }) {
+  return (
+    <Card
+      title="How long records are kept"
+      description="A daily cleanup deletes finished records older than this. Open alerts, incidents that are not closed, and the audit log are never deleted. Changed on the server (LOCKGUARD_RETENTION_* in .env)."
+    >
+      <dl className="flex flex-col gap-2 text-support">
+        {retentionRows.map(({ key, label }) => (
+          <div key={key} className="flex flex-wrap justify-between gap-2">
+            <dt className="text-text-muted">{label}</dt>
+            <dd className="font-semibold">{keptFor(days[key])}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-3 text-caption text-text-muted">An alert that belongs to an incident is kept as long as the incident.</p>
     </Card>
   )
 }

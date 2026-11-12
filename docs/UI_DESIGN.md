@@ -367,7 +367,7 @@ Checked on 2026-10-21 against project.md 34.14 and 34.15:
 - The activity feed's `before` paging can skip events that share the exact millisecond at a page boundary.
 - Lock commands validate their body before the permission check (the one exception in the access matrix); the errors only describe format.
 - One unexplained Vitest failure was seen on a cold first run during this review. Found on 2026-10-22: the mobile "Locking until confirmed" test raced the command's poll timer under load; the test now holds the lock's report until it has checked the in-between state.
-- Alerts, incidents and notifications are kept indefinitely; there is no retention setting for them yet.
+- Retention periods are set in `.env` (`LOCKGUARD_RETENTION_*`) and only shown, read-only, on Settings > Notifications under **How long records are kept**; they cannot be edited in the app yet.
 
 ## Development
 

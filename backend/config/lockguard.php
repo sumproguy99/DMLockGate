@@ -101,6 +101,32 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Retention of alerts, incidents and notifications
+    |--------------------------------------------------------------------------
+    |
+    | lockguard:prune-security deletes, daily, records older than these many days. 0 keeps them for
+    | ever. Only finished records go: open or acknowledged alerts and incidents that are not closed
+    | are never deleted, and an alert stays as long as the incident it belongs to. The audit log is
+    | the lasting record and is not touched.
+    |
+    | resolved_alerts_days: alerts resolved this long ago (and not part of an incident).
+    | closed_incidents_days: incidents closed this long ago, with their timeline.
+    | read_notifications_days / unread_notifications_days: in-app notifications, by when they were
+    | created; unread ones are kept longer so nobody misses one.
+    | deliveries_days: the alert email delivery log (Settings > Notifications).
+    |
+    */
+
+    'retention' => [
+        'resolved_alerts_days' => (int) env('LOCKGUARD_RETENTION_RESOLVED_ALERTS_DAYS', 180),
+        'closed_incidents_days' => (int) env('LOCKGUARD_RETENTION_CLOSED_INCIDENTS_DAYS', 365),
+        'read_notifications_days' => (int) env('LOCKGUARD_RETENTION_READ_NOTIFICATIONS_DAYS', 90),
+        'unread_notifications_days' => (int) env('LOCKGUARD_RETENTION_UNREAD_NOTIFICATIONS_DAYS', 365),
+        'deliveries_days' => (int) env('LOCKGUARD_RETENTION_DELIVERIES_DAYS', 90),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Security alerts and notifications
     |--------------------------------------------------------------------------
     |

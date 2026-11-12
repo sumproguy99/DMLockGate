@@ -53,6 +53,7 @@ function settings(overrides: Partial<NotificationSettings> = {}): NotificationSe
     mail_configured: true,
     fallback_mailer: 'log',
     retry: { tries: 3, backoff_seconds: [60, 300] },
+    retention_days: { resolved_alerts_days: 180, closed_incidents_days: 365, read_notifications_days: 90, unread_notifications_days: 0, deliveries_days: 90 },
     recent_deliveries: [
       {
         id: 1,
@@ -161,6 +162,9 @@ describe('notification settings', () => {
     expect(await screen.findByText('Front Door is offline')).toBeInTheDocument()
     expect(screen.getByText('Connection refused')).toBeInTheDocument()
     expect(screen.getByText('3 tries')).toBeInTheDocument()
+    const kept = screen.getByRole('heading', { name: 'How long records are kept' }).closest('section') as HTMLElement
+    expect(within(kept).getByText('180 days')).toBeInTheDocument()
+    expect(within(kept).getByText('Kept for ever')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Notification settings' })).toHaveAttribute('aria-current', 'page')
     await expectNoAxeViolations(container)
 

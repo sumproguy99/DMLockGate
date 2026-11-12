@@ -76,6 +76,14 @@ export type NotificationSettings = {
   fallback_mailer: string
   retry: { tries: number; backoff_seconds: number[] }
   recent_deliveries: AlertEmailDelivery[]
+  /** Days finished records are kept before the daily cleanup deletes them; 0 keeps them. Set in .env. */
+  retention_days: {
+    resolved_alerts_days: number
+    closed_incidents_days: number
+    read_notifications_days: number
+    unread_notifications_days: number
+    deliveries_days: number
+  }
 }
 
 export type NotificationSettingsInput = Pick<NotificationSettings, 'email_enabled' | 'email_min_severity' | 'required_categories'>
