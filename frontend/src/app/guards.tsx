@@ -3,13 +3,15 @@ import type { ReactNode } from 'react'
 import { Link, Navigate, useLocation } from 'react-router'
 import { hasAnyPermission, useAuth, useCurrentUser } from '../auth/auth-context'
 import { MfaSetupRequired } from './MfaSetupRequired'
+import { PasswordChangeRequired } from './PasswordChangeRequired'
 import { Card } from '../components/ui/Card'
 import { EmptyState } from '../components/ui/EmptyState'
 import { PageHeader } from '../components/ui/PageHeader'
 
 /**
- * Sends signed-out visitors to sign-in, remembering where they were going. A user whose role must
- * use two-step sign-in and has not set it up sees only the setup screen, at any address.
+ * Sends signed-out visitors to sign-in, remembering where they were going. A user who still has an
+ * administrator-chosen password sees only the screen to choose their own; then a user whose role
+ * must use two-step sign-in and has not set it up sees only the setup screen, at any address.
  */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { state } = useAuth()
@@ -17,6 +19,11 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   if (state.status !== 'signed_in') {
     return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />
+  }
+
+  // The password first: the server refuses two-step setup until it is changed.
+  if (state.user.password_change_required) {
+    return <PasswordChangeRequired />
   }
 
   if (state.user.mfa_setup_required) {

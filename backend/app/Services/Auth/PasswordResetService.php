@@ -96,7 +96,7 @@ class PasswordResetService
         }
 
         $ended = DB::transaction(function () use ($user, $password): array {
-            $user->forceFill(['password' => $password, 'remember_token' => Str::random(60)])->save();
+            $user->forceFill(['password' => $password, 'password_change_required' => false, 'remember_token' => Str::random(60)])->save();
             $this->tokens()->delete($user);
             $ended = $this->sessions->revokeAll($user);
 

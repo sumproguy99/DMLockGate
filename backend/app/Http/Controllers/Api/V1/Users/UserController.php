@@ -85,7 +85,8 @@ class UserController extends Controller
 
         $user = DB::transaction(function () use ($request, $actor, $roles): User {
             $user = User::query()->create($request->safe()->only(['name', 'username', 'email', 'password', 'account_expires_at', 'admin_notes']));
-            $user->forceFill(['status' => UserStatus::Active, 'status_changed_at' => now()])->save();
+            // The administrator chose this password, so the person chooses their own at first sign-in.
+            $user->forceFill(['status' => UserStatus::Active, 'status_changed_at' => now(), 'password_change_required' => true])->save();
             $user->roles()->attach($roles->pluck('id')->mapWithKeys(fn (int $id): array => [$id => ['assigned_by' => $actor->id]])->all());
 
             $this->audit->record('user.created', AuditOutcome::Success, actor: $actor, targets: ['user' => $user->id], metadata: [

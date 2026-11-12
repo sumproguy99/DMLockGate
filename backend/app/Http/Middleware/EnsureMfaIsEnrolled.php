@@ -28,6 +28,7 @@ class EnsureMfaIsEnrolled
         'api.v1.auth.confirm',
         'api.v1.auth.mfa.store',
         'api.v1.auth.mfa.confirm',
+        'api.v1.auth.password.update',
     ];
 
     public function __construct(private readonly SecurityPolicy $policy) {}

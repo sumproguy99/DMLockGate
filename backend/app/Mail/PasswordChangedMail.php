@@ -18,6 +18,7 @@ class PasswordChangedMail extends Mailable
     public function __construct(
         public readonly string $name,
         public readonly string $signInUrl,
+        public readonly bool $changedWhileSignedIn = false,
     ) {}
 
     public function envelope(): Envelope

@@ -79,6 +79,10 @@ describe('two-step sign-in required by role', () => {
     await expectNoAxeViolations(container)
 
     await user.click(screen.getByRole('button', { name: 'Set up two-step verification' }))
+    // On a computer the key comes first, with steps for the phone; the link is only a fallback.
+    expect(await screen.findByText(/On your phone, open your authenticator app/)).toBeInTheDocument()
+    expect(screen.getByText('JBSW Y3DP EHPK 3PXP')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Open in authenticator app' })).not.toBeInTheDocument()
     await user.type(await screen.findByLabelText(/^Code from the app/), '123456')
     await user.click(screen.getByRole('button', { name: 'Turn on' }))
     expect(await screen.findByText('aaaa-1111')).toBeInTheDocument()

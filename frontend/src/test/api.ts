@@ -46,6 +46,7 @@ export function makeUser(overrides: Partial<CurrentUser> = {}): CurrentUser {
     mfa_enabled: false,
     mfa_required: false,
     mfa_setup_required: false,
+    password_change_required: false,
     last_login_at: null,
     roles: [{ key: 'owner', name: 'Owner' }],
     permissions: [],

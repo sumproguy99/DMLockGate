@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import * as authApi from '../api/auth'
-import { ApiError, onMfaSetupRequired, onUnauthenticated } from '../api/client'
+import { ApiError, onMfaSetupRequired, onPasswordChangeRequired, onUnauthenticated } from '../api/client'
 import { AuthContext, SESSION_ENDED_NOTICE, type Auth, type AuthState } from './auth-context'
 
 /**
@@ -41,6 +41,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState((current) =>
           current.status === 'signed_in'
             ? { status: 'signed_out', notice: error.status === 401 ? SESSION_ENDED_NOTICE : error.message }
+            : current,
+        ),
+      ),
+    [],
+  )
+
+  // The server says the password must be replaced first: mark the user so that screen takes over.
+  useEffect(
+    () =>
+      onPasswordChangeRequired(() =>
+        setState((current) =>
+          current.status === 'signed_in' && !current.user.password_change_required
+            ? { status: 'signed_in', user: { ...current.user, password_change_required: true } }
             : current,
         ),
       ),

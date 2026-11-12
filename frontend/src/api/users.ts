@@ -16,6 +16,8 @@ export type ManagedUser = {
   mfa_enabled: boolean
   /** Their role must use two-step sign-in. */
   mfa_required: boolean
+  /** Created with an administrator-chosen password that they have not replaced yet. */
+  password_change_required: boolean
   created_at: string | null
   last_login_at: string | null
   last_access_event_at: string | null

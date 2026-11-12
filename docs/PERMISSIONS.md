@@ -121,7 +121,14 @@ The security policy (`SecurityPolicy`, stored in `app_settings` under `security`
 - **Settings:** `GET /api/v1/settings/security` and `PUT /api/v1/settings/security` (`admin.security_policies`; saving needs step-up), audited as `settings.security_updated` with the roles added and removed. The page is Settings > Security policy.
 - **Resetting someone else's authenticator:** `POST /api/v1/users/{user}/mfa/reset` (`admin.security_policies`, step-up, a reason) is for someone who has lost both their phone and their recovery codes. It clears the authenticator and recovery codes and signs them out everywhere. The usual target rules apply (not your own account, not a revoked one, not someone who holds permissions you lack). It answers 409 `mfa_not_enabled` when there is nothing to reset. It is audited as `user.mfa_reset` (with the reason, `signed_out`, and `mfa_setup_required: true` when their role must use two-step sign-in) and raises a medium **Two-step sign-in turned off** alert. At their next sign-in a required role sets up a new authenticator before anything else; anyone else can sign in with their password alone until they set one up.
 
-## 8. Known gaps
+## 8. Choosing your own password
 
-- Users created directly through the API (not by invitation) keep the administrator-chosen password; there is no forced password change for them.
+An account created directly (`POST /api/v1/users`, where the administrator types the password) gets `password_change_required`. Invitations, `lockguard:create-admin` and existing accounts do not.
+
+- **Enforcement:** the `password-changed` middleware (`EnsurePasswordIsChanged`) runs on every signed-in route before `mfa-enrolled`, sessions and API tokens alike. Until the password is changed the account may only call `auth/me`, `auth/password` and `auth/logout`; everything else answers 403 `password_change_required`. So someone who owes both picks a password first, then sets up two-step sign-in.
+- **Changing it:** `PUT /api/v1/auth/password` (any signed-in user; the current password, a new one of at least 12 characters with letters and numbers, confirmed and different). Five wrong current passwords lock it for five minutes. It clears `password_change_required`, ends the account's other sessions (this one carries on, with the new hash for Sanctum's AuthenticateSession), sends the "password was changed" email, and is audited as `auth.password_changed` (`signed_out`, and `was_required` when it was forced; a wrong current password is a Failure row). A reset by emailed link also clears the requirement.
+- **Sign-in:** `auth.login` records `change_required_by_admin: true` while it is owed. (Audit metadata keys containing "password" are redacted, hence the name.)
+
+## 9. Known gaps
+
 - Creating custom roles through the API is not built yet. Custom roles can only come from the database for now.

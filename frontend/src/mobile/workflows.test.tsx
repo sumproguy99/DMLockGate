@@ -551,6 +551,8 @@ describe('mobile Account security', () => {
         return json(200, { data: { mfa_enabled: true, recovery_codes: ['aaaa-1111', 'bbbb-2222'] } })
       },
     })
+    // A phone: the otpauth:// link opens the authenticator app on the same device.
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(pointer: coarse)', media: query, onchange: null, addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false }))
     renderAt('/m/account')
     const user = userEvent.setup()
 
@@ -560,7 +562,7 @@ describe('mobile Account security', () => {
     await user.click(within(stepUp).getByRole('button', { name: 'Confirm' }))
 
     expect(await screen.findByRole('link', { name: 'Open in authenticator app' })).toHaveAttribute('href', 'otpauth://totp/LockGuard:riley?secret=JBSWY3DPEHPK3PXP')
-    expect(screen.getByText('JBSWY3DPEHPK3PXP')).toBeInTheDocument()
+    expect(screen.getByText('JBSW Y3DP EHPK 3PXP')).toBeInTheDocument()
     await user.type(screen.getByLabelText(/^Code from the app/), '123456')
     await user.click(screen.getByRole('button', { name: 'Turn on' }))
 

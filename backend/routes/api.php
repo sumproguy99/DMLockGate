@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\Auth\MfaChallengeController;
 use App\Http\Controllers\Api\V1\Auth\MfaController;
 use App\Http\Controllers\Api\V1\Auth\OwnDeviceController;
 use App\Http\Controllers\Api\V1\Auth\OwnSessionController;
+use App\Http\Controllers\Api\V1\Auth\PasswordController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
 use App\Http\Controllers\Api\V1\Location\LocationMapController;
@@ -60,10 +61,12 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('device', [AcceptInvitationController::class, 'device'])->name('device');
     });
 
-    Route::middleware(['auth:sanctum', 'active', 'device', 'mfa-enrolled'])->group(function (): void {
+    Route::middleware(['auth:sanctum', 'active', 'device', 'password-changed', 'mfa-enrolled'])->group(function (): void {
         Route::post('auth/logout', [SessionController::class, 'destroy'])->name('auth.logout');
         Route::get('auth/me', CurrentUserController::class)->name('auth.me');
         Route::post('auth/confirm', ConfirmIdentityController::class)->name('auth.confirm');
+        // Change your own password with the current one (also how an administrator-chosen one is replaced).
+        Route::put('auth/password', [PasswordController::class, 'update'])->middleware('throttle:10,1')->name('auth.password.update');
 
         // The user's own sign-ins. Signing out the others protects the account, so it needs no step-up.
         Route::get('auth/sessions', [OwnSessionController::class, 'index'])->name('auth.sessions.index');

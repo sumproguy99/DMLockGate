@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Tells a person their password was just reset, so a reset they did not ask for is noticed.
+ * Tells a person their password was just reset or changed, so a change they did not make is noticed.
  */
 class SendPasswordChangedEmail implements ShouldQueue
 {
@@ -23,7 +23,13 @@ class SendPasswordChangedEmail implements ShouldQueue
 
     public int $tries = 1;
 
-    public function __construct(public readonly int $userId) {}
+    /** Reset with an emailed link; everyone was signed out. */
+    public const RESET = 'reset';
+
+    /** Changed while signed in; the other sessions were signed out. */
+    public const CHANGED = 'changed';
+
+    public function __construct(public readonly int $userId, public readonly string $how = self::RESET) {}
 
     public function handle(MailSettings $settings, AuditLogger $audit): void
     {
@@ -37,6 +43,7 @@ class SendPasswordChangedEmail implements ShouldQueue
             Mail::to($user->email, $user->name)->send(new PasswordChangedMail(
                 name: $user->name,
                 signInUrl: config('lockguard.invitations.public_url').'/login',
+                changedWhileSignedIn: $this->how === self::CHANGED,
             ));
         } catch (Throwable $exception) {
             Log::warning('Password changed email could not be sent.', ['user' => $user->id, 'error' => $exception->getMessage()]);

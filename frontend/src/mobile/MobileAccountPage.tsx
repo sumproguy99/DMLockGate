@@ -8,6 +8,7 @@ import { Timestamp } from '../components/status/Timestamp'
 import { DetailRow as Row } from '../components/system/HealthPanels'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
+import { ChangePasswordCard } from '../components/security/ChangePasswordCard'
 import { TwoStepCard } from '../components/security/TwoStepCard'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { PageHeader } from '../components/ui/PageHeader'
@@ -53,6 +54,7 @@ export function MobileAccountPage() {
           </p>
         </Card>
 
+        <ChangePasswordCard />
         <TwoStepCard />
         <Card title="Trusted devices" headingLevel={2}>
           <p className="text-support text-text-muted">

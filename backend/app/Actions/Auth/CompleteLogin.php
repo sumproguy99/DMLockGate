@@ -54,6 +54,7 @@ class CompleteLogin
             'location_notice' => config('lockguard.location.notice_version'),
             'device' => $device->name,
             ...($this->policy->owesMfaSetup($user) ? ['mfa_setup_required' => true] : []),
+            ...($user->password_change_required ? ['change_required_by_admin' => true] : []),
         ]);
 
         // A user's very first device is not news; any later new one is worth telling them about.

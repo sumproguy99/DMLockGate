@@ -49,6 +49,17 @@ export function onUnauthenticated(listener: Listener): () => void {
   return () => unauthenticatedListeners.delete(listener)
 }
 
+const passwordChangeListeners = new Set<Listener>()
+
+/**
+ * Called when a request is refused because the account must replace an administrator-chosen
+ * password first (password_change_required).
+ */
+export function onPasswordChangeRequired(listener: Listener): () => void {
+  passwordChangeListeners.add(listener)
+  return () => passwordChangeListeners.delete(listener)
+}
+
 const mfaSetupListeners = new Set<Listener>()
 
 /**
@@ -152,6 +163,9 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     const error = await toError(response)
     if ((error.status === 401 && !options.quiet401) || SESSION_ENDING_CODES.has(error.code)) {
       unauthenticatedListeners.forEach((listener) => listener(error))
+    }
+    if (error.code === 'password_change_required') {
+      passwordChangeListeners.forEach((listener) => listener(error))
     }
     if (error.code === 'mfa_setup_required') {
       mfaSetupListeners.forEach((listener) => listener(error))

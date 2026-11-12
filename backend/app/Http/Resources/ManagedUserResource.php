@@ -30,6 +30,7 @@ class ManagedUserResource extends JsonResource
             'account_expires_at' => $this->account_expires_at?->toIso8601String(),
             'is_active' => $this->isActive(),
             'mfa_enabled' => $this->mfa_confirmed_at !== null,
+            'password_change_required' => (bool) $this->password_change_required,
             'mfa_required' => app(SecurityPolicy::class)->requiresMfa($this->resource->loadMissing('roles')),
             'created_at' => $this->created_at?->toIso8601String(),
             'last_login_at' => $this->last_login_at?->toIso8601String(),

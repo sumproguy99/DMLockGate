@@ -71,7 +71,7 @@ export function NewUserPage() {
     setErrors({})
     try {
       const user = await withStepUp('create a user', () => createUser(input))
-      toast({ tone: 'success', title: `${user.name} created`, message: 'Give them their first password through a safe channel.' })
+      toast({ tone: 'success', title: `${user.name} created`, message: 'Give them their first password through a safe channel. They choose their own when they first sign in.' })
       navigate(`/users/${user.id}`)
     } catch (error) {
       if (error instanceof ApiError && error.status === 422) {
@@ -113,7 +113,7 @@ export function NewUserPage() {
               name="password"
               label="First password"
               autoComplete="new-password"
-              hint="At least 12 characters, with letters and numbers."
+              hint="At least 12 characters, with letters and numbers. They choose their own the first time they sign in."
               error={errors.password}
               required
             />

@@ -57,6 +57,7 @@ class RouteAccessMatrixTest extends TestCase
         'api.v1.auth.logout' => self::ALL,
         'api.v1.auth.me' => self::ALL,
         'api.v1.auth.confirm' => self::ALL,
+        'api.v1.auth.password.update' => self::ALL,
         'api.v1.auth.sessions.index' => self::ALL,
         'api.v1.auth.sessions.destroy-others' => self::ALL,
         'api.v1.auth.devices.index' => self::ALL,
@@ -274,6 +275,7 @@ class RouteAccessMatrixTest extends TestCase
 
         return match ($name) {
             'api.v1.auth.confirm' => ['password' => 'password'],
+            'api.v1.auth.password.update' => ['current_password' => 'password', 'password' => 'Matrix-new-pass-123', 'password_confirmation' => 'Matrix-new-pass-123'],
             'api.v1.auth.mfa.confirm' => ['code' => '000000'],
             'api.v1.users.suspend', 'api.v1.users.reactivate', 'api.v1.users.revoke', 'api.v1.users.sessions.revoke', 'api.v1.users.mfa.reset' => ['reason' => 'Access matrix test'],
             'api.v1.users.store' => ['name' => 'New Person', 'email' => Str::random(12).'@example.test', 'password' => 'CorrectHorse123', 'password_confirmation' => 'CorrectHorse123'],

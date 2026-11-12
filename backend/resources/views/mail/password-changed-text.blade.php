@@ -1,6 +1,6 @@
 Your password was changed
 
-Hi {{ $name }}, the password for your DM LockGuard account was just reset using an emailed link, and you were signed out everywhere.
+Hi {{ $name }}, @if ($changedWhileSignedIn)the password for your DM LockGuard account was just changed while signed in, and your other sessions were signed out.@else the password for your DM LockGuard account was just reset using an emailed link, and you were signed out everywhere.@endif
 
 If that was you, you're all set: sign in on your registered phone with your new password ({{ $signInUrl }}).
 

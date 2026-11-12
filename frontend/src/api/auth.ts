@@ -13,6 +13,8 @@ export type CurrentUser = {
   mfa_required: boolean
   /** Required but not set up yet: until it is, the server refuses everything but setting it up. */
   mfa_setup_required: boolean
+  /** An administrator chose the password: until the user picks their own, the server refuses everything else. */
+  password_change_required: boolean
   last_login_at: string | null
   roles: Array<{ key: string; name: string }>
   permissions: string[]
@@ -59,6 +61,15 @@ export async function requestPasswordReset(email: string): Promise<{ message: st
 }
 
 /** Sets a new password with the emailed link. It signs out everywhere and does not sign in. */
+/** Change the signed-in user's password. Other sessions end; this one stays signed in. */
+export async function changePassword(input: {
+  current_password: string
+  password: string
+  password_confirmation: string
+}): Promise<{ signed_out: { browser_logins: number; api_clients: number } }> {
+  return (await api<{ data: { status: 'changed'; signed_out: { browser_logins: number; api_clients: number } } }>('/auth/password', { method: 'PUT', body: input })).data
+}
+
 export async function resetPassword(input: {
   email: string
   token: string
