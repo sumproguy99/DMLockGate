@@ -83,6 +83,7 @@ class RouteAccessMatrixTest extends TestCase
         'api.v1.users.reactivate' => self::USER_ADMINS,
         'api.v1.users.revoke' => ['super_administrator', 'security_administrator'],
         'api.v1.users.sessions.revoke' => ['super_administrator', 'security_administrator'],
+        'api.v1.users.mfa.reset' => self::INCIDENT_HANDLERS,
         // Other people's devices: devices.view, devices.rename, devices.revoke and devices.enroll.
         'api.v1.devices.index' => self::DEVICE_VIEWERS,
         'api.v1.users.devices.index' => self::DEVICE_VIEWERS,
@@ -274,7 +275,7 @@ class RouteAccessMatrixTest extends TestCase
         return match ($name) {
             'api.v1.auth.confirm' => ['password' => 'password'],
             'api.v1.auth.mfa.confirm' => ['code' => '000000'],
-            'api.v1.users.suspend', 'api.v1.users.reactivate', 'api.v1.users.revoke', 'api.v1.users.sessions.revoke' => ['reason' => 'Access matrix test'],
+            'api.v1.users.suspend', 'api.v1.users.reactivate', 'api.v1.users.revoke', 'api.v1.users.sessions.revoke', 'api.v1.users.mfa.reset' => ['reason' => 'Access matrix test'],
             'api.v1.users.store' => ['name' => 'New Person', 'email' => Str::random(12).'@example.test', 'password' => 'CorrectHorse123', 'password_confirmation' => 'CorrectHorse123'],
             'api.v1.users.update' => ['name' => 'Renamed Person'],
             'api.v1.users.roles.update' => ['roles' => ['resident']],

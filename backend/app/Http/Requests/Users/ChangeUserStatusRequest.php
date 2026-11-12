@@ -19,6 +19,7 @@ class ChangeUserStatusRequest extends FormRequest
         'api.v1.users.reactivate' => [PermissionKey::UsersReactivate, 'user.reactivated'],
         'api.v1.users.revoke' => [PermissionKey::UsersRevoke, 'user.revoked'],
         'api.v1.users.sessions.revoke' => [PermissionKey::DevicesRevokeSessions, 'user.sessions_revoked'],
+        'api.v1.users.mfa.reset' => [PermissionKey::AdminSecurityPolicies, 'user.mfa_reset'],
     ];
 
     /**

@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\V1\Users\PermissionPreviewController;
 use App\Http\Controllers\Api\V1\Users\RoleController;
 use App\Http\Controllers\Api\V1\Users\UserController;
 use App\Http\Controllers\Api\V1\Users\UserDeviceController;
+use App\Http\Controllers\Api\V1\Users\UserMfaController;
 use App\Http\Controllers\Api\V1\Users\UserPermissionController;
 use App\Http\Controllers\Api\V1\Users\UserRoleController;
 use App\Http\Controllers\Api\V1\Users\UserSecurityHistoryController;
@@ -155,6 +156,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('users/{user}/reactivate', [UserStatusController::class, 'reactivate'])->name('users.reactivate');
             Route::post('users/{user}/revoke', [UserStatusController::class, 'revoke'])->name('users.revoke');
             Route::post('users/{user}/sessions/revoke', [UserStatusController::class, 'revokeSessions'])->name('users.sessions.revoke');
+            // For someone who lost their phone and recovery codes (admin.security_policies).
+            Route::post('users/{user}/mfa/reset', [UserMfaController::class, 'reset'])->name('users.mfa.reset');
             Route::put('users/{user}/roles', [UserRoleController::class, 'update'])->name('users.roles.update');
             Route::put('users/{user}/permissions', [UserPermissionController::class, 'update'])->name('users.permissions.update');
         });

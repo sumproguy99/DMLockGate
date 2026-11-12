@@ -211,6 +211,7 @@ The backend leaves out (returns null for) each section the user may not see, so 
   - **Suspend:** signs them out everywhere.
   - **Reactivate.**
   - **Sign out everywhere:** ends all sessions but leaves the account active.
+  - **Reset two-step sign-in** (`admin.security_policies`, shown when they have an authenticator): for a lost phone and lost recovery codes. It clears their authenticator and recovery codes and signs them out everywhere. The dialog says whether their role makes them set up a new one at the next sign-in or lets them sign in with a password alone.
   - **Revoke:** permanent, so the dialog says so.
 - **Your own account:** you can't change it; the page says so.
 

@@ -137,6 +137,11 @@ export async function signOutEverywhere(id: number, reason: string): Promise<{ b
   })).data.signed_out
 }
 
+/** Clears another person's authenticator and recovery codes and signs them out everywhere. */
+export async function resetUserMfa(id: number, reason: string): Promise<ManagedUser> {
+  return (await api<{ data: ManagedUser }>(`/users/${id}/mfa/reset`, { method: 'POST', body: { reason } })).data
+}
+
 export async function getSecurityHistory(id: number, cursor?: string | null, signal?: AbortSignal) {
   return api<{ data: SecurityEvent[]; next_cursor: string | null }>(
     `/users/${id}/security-history${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`,

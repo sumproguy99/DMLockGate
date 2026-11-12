@@ -593,7 +593,15 @@
   <li><strong>Tick the roles</strong> that must use it. Super Administrator and Security Administrator are ticked to start with.</li>
   <li><strong>Save</strong> and confirm your identity. Anyone in a newly ticked role without an authenticator app is asked to set one up the next time they use LockGuard, and can do nothing else until they have.</li>
 </ol>
-<aside class="callout caution"><div class="ico"><svg class="i" aria-hidden="true"><use href="#i-triangle-alert"/></svg></div><div class="label">Caution</div><div class="body"><span class="title">Lost phone and lost recovery codes</span>An administrator can't reset someone else's authenticator from the app yet. If a person in a required role loses both their phone and their recovery codes, it has to be cleared in the database; they then set up a new one at their next sign-in.</div></aside>
+<h4 id="howto-reset-mfa">How to: reset someone's two-step sign-in</h4>
+<p>Use this when a person has lost both their phone and their recovery codes. You need to be a Super Administrator or Security Administrator, and you can't do it to your own account.</p>
+<ol class="steps">
+  <li><strong>Make sure it is really them.</strong> Call them or see them in person. Whoever can get a reset can sign in with the password alone.</li>
+  <li><strong>Open Users, then the person, then Reset two-step sign-in.</strong> The button only shows when they have an authenticator set up.</li>
+  <li><strong>Give a reason</strong> (for example "Lost phone and recovery codes") and confirm your identity.</li>
+  <li><strong>Tell them to sign in again.</strong> They are signed out everywhere. If their role must use two-step sign-in, LockGuard asks them to set up the new phone straight away.</li>
+</ol>
+<aside class="callout caution"><div class="ico"><svg class="i" aria-hidden="true"><use href="#i-triangle-alert"/></svg></div><div class="label">Caution</div><div class="body"><span class="title">Every reset raises an alert</span>The reset is recorded in the audit log with your reason, and it raises a <b>Two-step sign-in turned off</b> alert. If you see one you didn't expect, find out who did it.</div></aside>
 <aside class="callout joke"><div class="ico"><svg class="i" aria-hidden="true"><use href="#i-laugh"/></svg></div><div class="label">Byte-sized humor</div><div class="body">With great power comes great responsibility, and about 47 notification emails a day.</div></aside>
 
 <!-- ======================= SECURITY ADMINISTRATOR ======================= -->
@@ -936,6 +944,7 @@
 <li>Ask them to <b>Report lost</b> / <b>Revoke device</b> on that phone. It stops working immediately, and any attempt to use it raises an alert.</li>
 <li>Change your password with <a href="#howto-forgot">Forgot your password?</a> on the sign-in page if the phone wasn't locked with a PIN.</li>
 <li>Get a registration code for your new phone.</li>
+<li>If the lost phone had your authenticator app and you don't have your recovery codes, ask a Super Administrator or Security Administrator to <b>reset your two-step sign-in</b>, then set it up on the new phone.</li>
 </ol></div></aside>
 <aside class="callout joke"><div class="ico"><svg class="i" aria-hidden="true"><use href="#i-laugh"/></svg></div><div class="label">Byte-sized humor</div><div class="body">I lost my phone, so I called it. It was in "Do Not Disturb" mode. Rude.</div></aside>
 
@@ -1297,6 +1306,7 @@
 <tr><td><code>mfa_already_enabled</code></td><td>409</td><td>An authenticator app is already set up.</td><td>Remove it first to add a new one.</td></tr>
 <tr><td><code>mfa_enrollment_not_started</code></td><td>409</td><td>You confirmed before starting setup.</td><td>Start two-step setup again.</td></tr>
 <tr><td><code>mfa_setup_required</code></td><td>403</td><td>Your role must use two-step sign-in and you haven't set it up.</td><td>Follow the Set up two-step sign-in screen.</td></tr>
+<tr><td><code>mfa_not_enabled</code></td><td>409</td><td>You tried to reset two-step sign-in for someone who hasn't set it up.</td><td>Nothing to do: they can already sign in without a code.</td></tr>
 <tr><td><code>mfa_session_expired</code></td><td>401</td><td>Too slow typing the 6-digit code.</td><td>Enter email and password again.</td></tr>
 <tr><td><code>no_lock_access</code></td><td>denied</td><td>You haven't been given this door.</td><td>Ask a Property Manager for access.</td></tr>
 <tr><td><code>not_found</code></td><td>404</td><td>That thing doesn't exist (or was removed).</td><td>Check the link; refresh.</td></tr>

@@ -208,6 +208,36 @@ describe('a user page', () => {
     expect(within(screen.getByRole('alertdialog')).queryByText('That did not work')).not.toBeInTheDocument()
   })
 
+  it('resets a lost authenticator for someone else, only with the security-policy permission', async () => {
+    adminSession({ 'GET /api/v1/users/2': () => json(200, { data: managed({ mfa_enabled: true }) }) })
+    const first = renderAt('/users/2')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Rhea Resident' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reset two-step sign-in' })).not.toBeInTheDocument()
+    first.unmount()
+    vi.unstubAllGlobals()
+
+    const securityAdmin = makeUser({ ...admin, permissions: [...admin.permissions, 'admin.security_policies'] })
+    const fetch = mockFetch({
+      ...signedIn(securityAdmin),
+      'GET /api/v1/users/2': () => json(200, { data: managed({ mfa_enabled: true }) }),
+      'GET /api/v1/users/2/security-history': () => json(200, { data: [], next_cursor: null }),
+      'POST /api/v1/users/2/mfa/reset': () => json(200, { data: managed({ mfa_enabled: false }) }),
+    })
+    renderAt('/users/2')
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Reset two-step sign-in' }))
+    const dialog = screen.getByRole('alertdialog', { name: 'Reset two-step sign-in for Rhea Resident?' })
+    expect(within(dialog).getByText(/can sign in with their password alone until they set up a new authenticator/)).toBeInTheDocument()
+    await user.type(within(dialog).getByRole('textbox', { name: /Reason/ }), 'Lost phone and codes')
+    await user.click(within(dialog).getByRole('button', { name: 'Reset two-step sign-in' }))
+
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
+    expect(posted(fetch, 'POST', '/api/v1/users/2/mfa/reset')).toEqual([{ reason: 'Lost phone and codes' }])
+    expect(await screen.findByText('Two-step sign-in reset')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reset two-step sign-in' })).not.toBeInTheDocument()
+  })
+
   it('creates a registration code for a person bound to one device and shows it once', async () => {
     let created = false
     const fetch = mockFetch({

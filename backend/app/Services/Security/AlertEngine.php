@@ -68,6 +68,7 @@ class AlertEngine
             'user.roles_changed',
             'user.permissions_changed',
             'auth.mfa_disabled',
+            'user.mfa_reset',
             'auth.mfa_recovery_code_used',
             'device.new_sign_in',
             'device.revoked_access_attempt',
@@ -88,6 +89,7 @@ class AlertEngine
             $record->action === 'device.new_sign_in' => $this->deviceEvent($record, AlertRule::NewDeviceSignIn, AlertSeverity::Low, 'signed in on a new device', 'A browser or phone that has not been used with this account before. If the owner does not recognize it, revoke it and change the password.'),
             $record->action === 'device.revoked_access_attempt' => $this->deviceEvent($record, AlertRule::RevokedDeviceAccess, AlertSeverity::High, 'tried to use a revoked device', 'A device that was removed from this account tried to sign in or make a request, and was refused. Find out who has the device.'),
             $record->action === 'device.reported_lost' => $this->deviceEvent($record, AlertRule::DeviceLost, AlertSeverity::High, 'has a device reported lost', 'The device was revoked and the account was signed out everywhere. Check the account\'s recent activity, and help the owner sign in again on a replacement.'),
+            $record->action === 'user.mfa_reset' => $this->accountEvent($record, AlertRule::MfaDisabled, AlertSeverity::Medium, 'had two-step sign-in reset by an administrator', 'An administrator cleared the authenticator app and recovery codes and signed the account out everywhere. Check that the owner asked for this, and that they set up a new authenticator.'),
             $record->action === 'auth.mfa_recovery_code_used' => $this->accountEvent($record, AlertRule::RecoveryCodeUsed, AlertSeverity::Low, 'used a recovery code', 'A one-time recovery code was used instead of the authenticator app. If the owner has lost their phone, help them set up two-step sign-in again.'),
             default => null,
         };

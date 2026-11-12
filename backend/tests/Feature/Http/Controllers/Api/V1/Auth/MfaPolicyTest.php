@@ -3,9 +3,11 @@
 namespace Tests\Feature\Http\Controllers\Api\V1\Auth;
 
 use App\Actions\Auth\CompleteLogin;
+use App\Enums\AlertRule;
 use App\Enums\RoleTemplate;
 use App\Models\AuditLog;
 use App\Models\Role;
+use App\Models\SecurityAlert;
 use App\Models\User;
 use Database\Seeders\PermissionCatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -193,5 +195,69 @@ class MfaPolicyTest extends TestCase
             ->assertUnprocessable();
 
         $this->assertDatabaseMissing('audit_logs', ['action' => 'settings.security_updated', 'outcome' => 'success']);
+    }
+
+    public function test_an_administrator_resets_another_persons_lost_authenticator(): void
+    {
+        $security = $this->userWithRole(RoleTemplate::SecurityAdministrator, mfa: true);
+        $resident = $this->userWithRole(RoleTemplate::Resident, mfa: true);
+        $resident->forceFill(['mfa_recovery_codes' => ['hash-one']])->save();
+
+        $this->confirmed($security)
+            ->postJson(route('api.v1.users.mfa.reset', $resident), ['reason' => 'Lost phone and recovery codes'])
+            ->assertOk()
+            ->assertJsonPath('data.mfa_enabled', false);
+
+        $resident->refresh();
+        $this->assertNull($resident->mfa_secret);
+        $this->assertNull($resident->mfa_confirmed_at);
+        $this->assertNull($resident->mfa_recovery_codes);
+        $audit = AuditLog::query()->where('action', 'user.mfa_reset')->sole();
+        $this->assertSame($security->id, $audit->actor_user_id);
+        $this->assertSame($resident->id, $audit->target_user_id);
+        $this->assertSame('Lost phone and recovery codes', $audit->reason);
+        $this->assertTrue($audit->metadata['was_confirmed']);
+        $this->assertArrayNotHasKey('mfa_setup_required', $audit->metadata);
+        $alert = SecurityAlert::query()->where('rule', AlertRule::MfaDisabled)->sole();
+        $this->assertSame("{$resident->name} had two-step sign-in reset by an administrator", $alert->title);
+
+        // A resident may sign in with their password alone again.
+        $this->signedInAs($resident)->getJson(route('api.v1.auth.me'))->assertOk()->assertJsonPath('data.mfa_setup_required', false);
+    }
+
+    public function test_a_reset_administrator_must_set_up_a_new_authenticator_at_their_next_sign_in(): void
+    {
+        $super = $this->userWithRole(RoleTemplate::SuperAdministrator, mfa: true);
+        $security = $this->userWithRole(RoleTemplate::SecurityAdministrator, mfa: true);
+
+        $this->confirmed($super)
+            ->postJson(route('api.v1.users.mfa.reset', $security), ['reason' => 'New phone, codes lost'])
+            ->assertOk();
+        $this->assertTrue(AuditLog::query()->where('action', 'user.mfa_reset')->sole()->metadata['mfa_setup_required']);
+
+        $this->confirmed($security)->getJson(route('api.v1.users.index'))->assertJsonPath('error.code', 'mfa_setup_required');
+        $this->postJson(route('api.v1.auth.mfa.store'))->assertCreated();
+    }
+
+    public function test_resetting_an_authenticator_is_refused_without_the_right_or_a_reason(): void
+    {
+        $super = $this->userWithRole(RoleTemplate::SuperAdministrator, mfa: true);
+        $security = $this->userWithRole(RoleTemplate::SecurityAdministrator, mfa: true);
+        $manager = $this->userWithRole(RoleTemplate::PropertyManager);
+        $resident = $this->userWithRole(RoleTemplate::Resident, mfa: true);
+        $plain = $this->userWithRole(RoleTemplate::Resident);
+        $body = ['reason' => 'Lost phone'];
+
+        $this->confirmed($manager)->postJson(route('api.v1.users.mfa.reset', $resident), $body)->assertForbidden();
+        $this->confirmed($security)->postJson(route('api.v1.users.mfa.reset', $super), $body)->assertJsonPath('error.code', 'target_outranks_actor');
+        $this->confirmed($security)->postJson(route('api.v1.users.mfa.reset', $security), $body)->assertJsonPath('error.code', 'self_modification_forbidden');
+        $this->signedInAs($super)->postJson(route('api.v1.users.mfa.reset', $resident), $body)->assertJsonPath('error.code', 'step_up_required');
+        $this->confirmed($super)->postJson(route('api.v1.users.mfa.reset', $resident), [])->assertUnprocessable();
+        $this->confirmed($super)->postJson(route('api.v1.users.mfa.reset', $plain), $body)
+            ->assertStatus(409)
+            ->assertJsonPath('error.code', 'mfa_not_enabled');
+
+        $this->assertNotNull($resident->fresh()->mfa_confirmed_at);
+        $this->assertDatabaseMissing('audit_logs', ['action' => 'user.mfa_reset', 'outcome' => 'success']);
     }
 }

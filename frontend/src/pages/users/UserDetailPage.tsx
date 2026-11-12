@@ -1,8 +1,8 @@
-import { ArrowLeft, Ban, LogOut, Pause, Play } from 'lucide-react'
+import { ArrowLeft, Ban, KeyRound, LogOut, Pause, Play } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { ApiError } from '../../api/client'
-import { changeUserStatus, getUser, signOutEverywhere, type ManagedUser, type StatusChange } from '../../api/users'
+import { changeUserStatus, getUser, resetUserMfa, signOutEverywhere, type ManagedUser, type StatusChange } from '../../api/users'
 import { StepUpCancelled, useStepUp } from '../../app/step-up-context'
 import { hasAnyPermission, useCurrentUser } from '../../auth/auth-context'
 import { Banner } from '../../components/ui/Banner'
@@ -20,9 +20,9 @@ import { UserHistoryTab } from './UserHistoryTab'
 import { UserLocksTab } from './UserLocksTab'
 import { UserProfileTab } from './UserProfileTab'
 
-type Action = StatusChange | 'sign_out'
+type Action = StatusChange | 'sign_out' | 'reset_mfa'
 
-const actionCopy: Record<Action, { title: (name: string) => string; consequence: string; confirm: string; tone: 'primary' | 'danger'; done: string }> = {
+const actionCopy: Record<Action, { title: (name: string) => string; consequence: string | ((user: ManagedUser) => string); confirm: string; tone: 'primary' | 'danger'; done: string }> = {
   suspend: {
     title: (name) => `Suspend ${name}?`,
     consequence: 'They are signed out everywhere at once and cannot sign in or use any lock until reactivated.',
@@ -51,6 +51,18 @@ const actionCopy: Record<Action, { title: (name: string) => string; consequence:
     confirm: 'Sign out everywhere',
     tone: 'danger',
     done: 'Signed out everywhere',
+  },
+  reset_mfa: {
+    title: (name) => `Reset two-step sign-in for ${name}?`,
+    consequence: (user) =>
+      `Their authenticator app and recovery codes stop working, and they are signed out everywhere. ${
+        user.mfa_required
+          ? 'Their role must use two-step sign-in, so at their next sign-in they set up a new authenticator before they can do anything else.'
+          : 'They can sign in with their password alone until they set up a new authenticator.'
+      } Do this only once you are sure it is really them asking, for example a lost phone and lost recovery codes.`,
+    confirm: 'Reset two-step sign-in',
+    tone: 'danger',
+    done: 'Two-step sign-in reset',
   },
 }
 
@@ -104,6 +116,7 @@ export function UserDetailPage() {
     { action: 'suspend', label: 'Suspend', icon: Pause, show: can('users.suspend') && user.status === 'active' },
     { action: 'reactivate', label: 'Reactivate', icon: Play, show: can('users.reactivate') && user.status === 'suspended' },
     { action: 'sign_out', label: 'Sign out everywhere', icon: LogOut, show: can('devices.revoke_sessions') && user.status === 'active' },
+    { action: 'reset_mfa', label: 'Reset two-step sign-in', icon: KeyRound, show: can('admin.security_policies') && user.mfa_enabled && user.status !== 'revoked' },
     { action: 'revoke', label: 'Revoke', icon: Ban, show: can('users.revoke') && user.status !== 'revoked' },
   ]
   const visible = isMe ? [] : actions.filter((a) => a.show)
@@ -122,6 +135,10 @@ export function UserDetailPage() {
       if (action === 'sign_out') {
         const ended = await withStepUp(`sign ${user.name} out everywhere`, () => signOutEverywhere(user.id, reason))
         toast({ tone: 'success', title: actionCopy.sign_out.done, message: `${ended.browser_logins + ended.api_clients} session(s) ended.` })
+      } else if (action === 'reset_mfa') {
+        const next = await withStepUp(`reset two-step sign-in for ${user.name}`, () => resetUserMfa(user.id, reason))
+        onSaved(next)
+        toast({ tone: 'success', title: actionCopy.reset_mfa.done, message: `${user.name} sets up a new authenticator app at their next sign-in.` })
       } else {
         const next = await withStepUp(`${action} ${user.name}`, () => changeUserStatus(user.id, action, reason))
         onSaved(next)
@@ -198,7 +215,10 @@ export function UserDetailPage() {
         <ReasonDialog
           open
           title={actionCopy[action].title(user.name)}
-          consequence={actionCopy[action].consequence}
+          consequence={(() => {
+            const consequence = actionCopy[action].consequence
+            return typeof consequence === 'function' ? consequence(user) : consequence
+          })()}
           confirmLabel={actionCopy[action].confirm}
           tone={actionCopy[action].tone}
           busy={busy}

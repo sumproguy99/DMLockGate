@@ -127,7 +127,15 @@ php artisan lockguard:audit-verify
   <li><strong>Tick the roles</strong> that must use it. Super Administrator and Security Administrator are ticked to start with.</li>
   <li><strong>Save</strong> and confirm your identity. Anyone in a newly ticked role without an authenticator app is asked to set one up the next time they use LockGuard, and can do nothing else until they have.</li>
 </ol>
-<x-caution title="Lost phone and lost recovery codes">An administrator can't reset someone else's authenticator from the app yet. If a person in a required role loses both their phone and their recovery codes, it has to be cleared in the database; they then set up a new one at their next sign-in.</x-caution>
+<h4 id="howto-reset-mfa">How to: reset someone's two-step sign-in</h4>
+<p>Use this when a person has lost both their phone and their recovery codes. You need to be a Super Administrator or Security Administrator, and you can't do it to your own account.</p>
+<ol class="steps">
+  <li><strong>Make sure it is really them.</strong> Call them or see them in person. Whoever can get a reset can sign in with the password alone.</li>
+  <li><strong>Open Users, then the person, then Reset two-step sign-in.</strong> The button only shows when they have an authenticator set up.</li>
+  <li><strong>Give a reason</strong> (for example "Lost phone and recovery codes") and confirm your identity.</li>
+  <li><strong>Tell them to sign in again.</strong> They are signed out everywhere. If their role must use two-step sign-in, LockGuard asks them to set up the new phone straight away.</li>
+</ol>
+<x-caution title="Every reset raises an alert">The reset is recorded in the audit log with your reason, and it raises a <b>Two-step sign-in turned off</b> alert. If you see one you didn't expect, find out who did it.</x-caution>
 <x-joke>With great power comes great responsibility, and about 47 notification emails a day.</x-joke>
 
 <!-- ======================= SECURITY ADMINISTRATOR ======================= -->
